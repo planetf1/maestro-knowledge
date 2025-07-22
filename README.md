@@ -186,7 +186,35 @@ The CI runs automatically on:
 - Push to `main` and `develop` branches
 - Pull requests to `main` and `develop` branches
 
-View the latest CI status: ![CI](https://github.com/[username]/maestro-knowledge/workflows/CI/badge.svg)
+View the latest CI status: ![CI](https://github.com/maximilien/maestro-knowledge/actions/workflows/ci.yml/badge.svg)
+
+> **Note**: The CI badge will appear after the first successful workflow run on GitHub.
+
+### Code Quality
+
+This project maintains high code quality standards:
+
+- **Linting**: Uses Ruff for fast Python linting and import sorting
+- **Formatting**: Automatic code formatting with Ruff
+- **Type Hints**: Full type annotation support
+- **Documentation**: Comprehensive docstrings and README
+- **Test Coverage**: Extensive test suite with proper dependency handling
+
+To run code quality checks locally:
+
+```bash
+# Install development dependencies
+uv pip install ruff bandit safety
+
+# Run linting
+uv run ruff check src/ tests/ examples/
+
+# Run formatting check
+uv run ruff format --check src/ tests/ examples/
+
+# Auto-fix formatting issues
+uv run ruff format src/ tests/ examples/
+```
 
 ## Contributing
 
