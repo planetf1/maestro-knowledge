@@ -113,6 +113,22 @@ def main():
         print(f"\n6. Database type: {db.db_type}")
         print("✅ Database type retrieved successfully")
 
+        # 7. Demonstrate document count
+        print("\n7. Document count:")
+        count = db.count_documents()
+        print(f"   - Total documents in collection: {count}")
+
+        # 8. Demonstrate document deletion
+        print("\n8. Demonstrating document deletion:")
+        if retrieved_docs:
+            first_doc_id = retrieved_docs[0].get('id')
+            print(f"   - Deleting document with ID: {first_doc_id}")
+            db.delete_document(first_doc_id)
+            
+            # Check count after deletion
+            new_count = db.count_documents()
+            print(f"   - Documents after deletion: {new_count}")
+
     except Exception as e:
         print(f"❌ Error: {e}")
         print("\nTroubleshooting tips:")

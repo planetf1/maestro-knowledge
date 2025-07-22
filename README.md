@@ -87,6 +87,12 @@ db.write_documents(documents)
 # List documents
 docs = db.list_documents(limit=10)
 
+# Get document count
+count = db.count_documents()
+
+# Delete specific documents
+db.delete_document("doc_id")
+
 # Clean up
 db.cleanup()
 ```
@@ -154,7 +160,12 @@ All vector database implementations provide these core methods:
 
 - `setup()`: Initialize the collection/schema
 - `write_documents(documents)`: Store documents with their vectors
+- `write_document(document)`: Store a single document
 - `list_documents(limit, offset)`: Retrieve documents from the database
+- `count_documents()`: Get the current document count
+- `delete_documents(document_ids)`: Delete multiple documents by ID
+- `delete_document(document_id)`: Delete a single document by ID
+- `delete_collection(collection_name)`: Delete an entire collection
 - `cleanup()`: Clean up resources
 - `db_type`: Property that returns the database type
 

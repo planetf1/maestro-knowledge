@@ -155,6 +155,54 @@ class MilvusVectorDatabase(VectorDatabase):
             )
         return docs
 
+    def count_documents(self) -> int:
+        """Get the current count of documents in the collection."""
+        self._ensure_client()
+        if self.client is None:
+            warnings.warn("Milvus client is not available. Returning 0.")
+            return 0
+
+        # Query to get the count
+        results = self.client.query(
+            self.collection_name,
+            output_fields=["id"],
+            limit=1,
+        )
+        
+        # Get collection statistics
+        stats = self.client.get_collection_stats(self.collection_name)
+        return stats.get("row_count", 0)
+
+    def delete_documents(self, document_ids: List[str]):
+        """Delete documents from Milvus by their IDs."""
+        self._ensure_client()
+        if self.client is None:
+            warnings.warn("Milvus client is not available. Documents not deleted.")
+            return
+
+        # Convert string IDs to integers for Milvus
+        try:
+            int_ids = [int(doc_id) for doc_id in document_ids]
+        except ValueError:
+            raise ValueError("Milvus document IDs must be convertible to integers.")
+
+        # Delete documents by ID
+        self.client.delete(self.collection_name, ids=int_ids)
+
+    def delete_collection(self, collection_name: str = None):
+        """Delete an entire collection from Milvus."""
+        self._ensure_client()
+        if self.client is None:
+            warnings.warn("Milvus client is not available. Collection not deleted.")
+            return
+
+        target_collection = collection_name or self.collection_name
+        
+        if self.client.has_collection(target_collection):
+            self.client.drop_collection(target_collection)
+            if target_collection == self.collection_name:
+                self.collection_name = None
+
     def create_query_agent(self):
         """Create a query agent for Milvus."""
         # Placeholder: Milvus does not have a built-in query agent like Weaviate

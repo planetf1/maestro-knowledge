@@ -111,11 +111,26 @@ def main():
             print(f"   - Text: {doc.get('text', 'N/A')[:100]}...")
             print(f"   - Metadata: {json.dumps(doc.get('metadata', {}), indent=6)}")
 
+        # Demonstrate document count
+        print("\n6. Document count:")
+        count = db.count_documents()
+        print(f"   - Total documents in collection: {count}")
+
+        # Demonstrate document deletion
+        print("\n7. Demonstrating document deletion:")
+        if retrieved_docs:
+            first_doc_id = retrieved_docs[0].get('id')
+            print(f"   - Deleting document with ID: {first_doc_id}")
+            db.delete_document(str(first_doc_id))
+            
+            # Check count after deletion
+            new_count = db.count_documents()
+            print(f"   - Documents after deletion: {new_count}")
+
         # Demonstrate environment variable usage
-        print("\n6. Environment variable configuration:")
+        print("\n8. Environment variable configuration:")
         print(f"   - VECTOR_DB_TYPE: {os.environ.get('VECTOR_DB_TYPE', 'not set')}")
-        print(f"   - MILVUS_HOST: {os.environ.get('MILVUS_HOST', 'not set')}")
-        print(f"   - MILVUS_PORT: {os.environ.get('MILVUS_PORT', 'not set')}")
+        print(f"   - MILVUS_URI: {os.environ.get('MILVUS_URI', 'not set')}")
 
         print("\n✅ Example completed successfully!")
 

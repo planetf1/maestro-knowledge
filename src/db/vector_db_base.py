@@ -48,6 +48,15 @@ class VectorDatabase(ABC):
         """
         pass
 
+    def write_document(self, document: Dict[str, Any]):
+        """
+        Write a single document to the vector database.
+
+        Args:
+            document: Document with 'url', 'text', and 'metadata' fields
+        """
+        return self.write_documents([document])
+
     @abstractmethod
     def list_documents(self, limit: int = 10, offset: int = 0) -> List[Dict[str, Any]]:
         """
@@ -59,6 +68,45 @@ class VectorDatabase(ABC):
 
         Returns:
             List of documents with their properties
+        """
+        pass
+
+    @abstractmethod
+    def count_documents(self) -> int:
+        """
+        Get the current count of documents in the collection.
+
+        Returns:
+            Number of documents in the collection
+        """
+        pass
+
+    @abstractmethod
+    def delete_documents(self, document_ids: List[str]):
+        """
+        Delete documents from the vector database by their IDs.
+
+        Args:
+            document_ids: List of document IDs to delete
+        """
+        pass
+
+    def delete_document(self, document_id: str):
+        """
+        Delete a single document from the vector database by its ID.
+
+        Args:
+            document_id: Document ID to delete
+        """
+        return self.delete_documents([document_id])
+
+    @abstractmethod
+    def delete_collection(self, collection_name: str = None):
+        """
+        Delete an entire collection from the database.
+
+        Args:
+            collection_name: Name of the collection to delete. If None, uses the current collection.
         """
         pass
 
