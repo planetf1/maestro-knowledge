@@ -16,6 +16,19 @@ Maestro Knowledge provides a unified vector database abstraction layer that supp
 
 ## Supported Vector Databases
 
+### Milvus (Recommended)
+- **Implementation**: `MilvusVectorDatabase`
+- **Features**:
+  - High-performance vector database
+  - Scalable architecture
+  - Advanced similarity search
+  - Support for various distance metrics
+  - Production-ready with enterprise features
+- **Requirements**: `pymilvus` Python package
+- **Environment Variables**:
+  - `MILVUS_HOST`: Milvus server host (default: localhost)
+  - `MILVUS_PORT`: Milvus server port (default: 19530)
+
 ### Weaviate
 - **Implementation**: `WeaviateVectorDatabase`
 - **Features**: 
@@ -28,18 +41,6 @@ Maestro Knowledge provides a unified vector database abstraction layer that supp
   - `WEAVIATE_API_KEY`: Your Weaviate API key
   - `WEAVIATE_URL`: Your Weaviate cluster URL
 
-### Milvus
-- **Implementation**: `MilvusVectorDatabase`
-- **Features**:
-  - High-performance vector database
-  - Scalable architecture
-  - Advanced similarity search
-  - Support for various distance metrics
-- **Requirements**: `pymilvus` Python package
-- **Environment Variables**:
-  - `MILVUS_HOST`: Milvus server host (default: localhost)
-  - `MILVUS_PORT`: Milvus server port (default: 19530)
-
 ## Quick Start
 
 ### Installation
@@ -50,8 +51,15 @@ git clone <repository-url>
 cd maestro-knowledge
 
 # Install dependencies (optional - for specific backends)
+pip install pymilvus  # For Milvus support (recommended)
 pip install weaviate  # For Weaviate support
-pip install pymilvus  # For Milvus support
+```
+
+### Run the Example
+
+```bash
+# Run the comprehensive example
+python examples/example.py
 ```
 
 ### Basic Usage
@@ -60,7 +68,7 @@ pip install pymilvus  # For Milvus support
 from src.vector_db_factory import create_vector_database
 
 # Create a vector database instance (automatically selects backend)
-db = create_vector_database("weaviate", "MyCollection")
+db = create_vector_database("milvus", "MyCollection")
 
 # Set up the collection
 db.setup()
@@ -87,11 +95,11 @@ db.cleanup()
 
 ```bash
 # Set your preferred vector database type
-export VECTOR_DB_TYPE=weaviate
+export VECTOR_DB_TYPE=milvus
 
-# Set Weaviate credentials
-export WEAVIATE_API_KEY=your_api_key
-export WEAVIATE_URL=https://your-cluster.weaviate.network
+# Set Milvus connection details (optional - defaults to localhost:19530)
+export MILVUS_HOST=localhost
+export MILVUS_PORT=19530
 ```
 
 ```python
@@ -101,13 +109,41 @@ from src.vector_db_factory import create_vector_database
 db = create_vector_database(collection_name="MyCollection")
 ```
 
+## Project Structure
+
+```
+maestro-knowledge/
+├── src/                          # Source code
+│   ├── vector_db_base.py         # Abstract base class for vector databases
+│   ├── vector_db_factory.py      # Factory function for creating database instances
+│   ├── vector_db_milvus.py       # Milvus implementation (recommended)
+│   ├── vector_db_weaviate.py     # Weaviate implementation
+│   └── vector_db.py              # Main module exports
+├── tests/                        # Test suite
+│   ├── test_vector_db_base.py    # Tests for abstract base class
+│   ├── test_vector_db_factory.py # Tests for factory function
+│   ├── test_vector_db_milvus.py  # Tests for Milvus implementation
+│   ├── test_vector_db_weaviate.py # Tests for Weaviate implementation
+│   └── test_vector_db.py         # Main test module
+├── examples/                     # Usage examples
+│   ├── README.md                 # Examples documentation
+│   └── example.py                # Basic Milvus usage example
+├── .github/                      # GitHub configuration
+│   └── workflows/                # GitHub Actions workflows
+│       └── ci.yml                # Continuous Integration workflow
+├── README.md                     # This file
+├── pyproject.toml               # Project configuration
+├── .gitignore                   # Git ignore rules
+└── tests.sh                     # Test runner script
+```
+
 ## Architecture
 
 ### Core Components
 
 - **`VectorDatabase`** (Abstract Base Class): Defines the interface for all vector database implementations
+- **`MilvusVectorDatabase`**: Concrete implementation for Milvus (recommended)
 - **`WeaviateVectorDatabase`**: Concrete implementation for Weaviate
-- **`MilvusVectorDatabase`**: Concrete implementation for Milvus
 - **`create_vector_database()`**: Factory function for creating database instances
 
 ### Key Methods
@@ -122,6 +158,8 @@ All vector database implementations provide these core methods:
 
 ## Testing
 
+### Local Testing
+
 Run the test suite to verify everything works:
 
 ```bash
@@ -133,6 +171,22 @@ The test suite includes:
 - Factory function tests
 - Backend-specific tests (skipped if dependencies are not available)
 - Proper handling of optional dependencies
+
+### Continuous Integration
+
+This project uses GitHub Actions for continuous integration. The CI pipeline includes:
+
+- **Multi-Python Testing**: Tests run on Python 3.11, 3.12, and 3.13
+- **Dependency Testing**: Separate job with all optional dependencies installed
+- **Code Quality**: Linting with Ruff for code style and formatting
+- **Security Checks**: Bandit and Safety for security vulnerability scanning
+- **Artifact Upload**: Test results and security reports are preserved as artifacts
+
+The CI runs automatically on:
+- Push to `main` and `develop` branches
+- Pull requests to `main` and `develop` branches
+
+View the latest CI status: ![CI](https://github.com/[username]/maestro-knowledge/workflows/CI/badge.svg)
 
 ## Contributing
 

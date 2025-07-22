@@ -4,25 +4,32 @@
 import warnings
 
 # Suppress Pydantic deprecation warnings from dependencies
-warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*class-based `config`.*")
-warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*PydanticDeprecatedSince20.*")
-warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*Support for class-based `config`.*")
+warnings.filterwarnings(
+    "ignore", category=DeprecationWarning, message=".*class-based `config`.*"
+)
+warnings.filterwarnings(
+    "ignore", category=DeprecationWarning, message=".*PydanticDeprecatedSince20.*"
+)
+warnings.filterwarnings(
+    "ignore",
+    category=DeprecationWarning,
+    message=".*Support for class-based `config`.*",
+)
 
-import sys
-import os
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+import sys  # noqa: E402
+import os  # noqa: E402
+import pytest  # noqa: E402
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.vector_db_base import VectorDatabase
+from src.vector_db_base import VectorDatabase  # noqa: E402
 
 
 class TestVectorDatabase:
     """Test cases for the VectorDatabase abstract base class."""
-    
+
     def test_vector_database_abstract(self):
         """Test that VectorDatabase is abstract and cannot be instantiated."""
         with pytest.raises(TypeError):
-            VectorDatabase() 
+            VectorDatabase()
