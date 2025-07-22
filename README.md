@@ -186,7 +186,7 @@ The CI runs automatically on:
 - Push to `main` and `develop` branches
 - Pull requests to `main` and `develop` branches
 
-View the latest CI status: ![CI](https://github.com/maximilien/maestro-knowledge/actions/workflows/ci.yml/badge.svg)
+View the latest CI status: [![CI](https://github.com/AI4quantum/maestro-knowledge/actions/workflows/ci.yml/badge.svg)](https://github.com/AI4quantum/maestro-knowledge/actions/workflows/ci.yml)
 
 > **Note**: The CI badge will appear after the first successful workflow run on GitHub.
 
