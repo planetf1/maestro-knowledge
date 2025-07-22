@@ -32,7 +32,7 @@ try:
 except ImportError:
     WEAVIATE_AVAILABLE = False
 
-from src.vector_db_weaviate import WeaviateVectorDatabase  # noqa: E402
+from src.db.vector_db_weaviate import WeaviateVectorDatabase  # noqa: E402
 
 
 @pytest.mark.skipif(not WEAVIATE_AVAILABLE, reason="weaviate not available")

@@ -32,7 +32,7 @@ from unittest.mock import patch, MagicMock  # noqa: E402
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.vector_db_milvus import MilvusVectorDatabase  # noqa: E402
+from src.db.vector_db_milvus import MilvusVectorDatabase  # noqa: E402
 
 # Check if pymilvus is available
 try:

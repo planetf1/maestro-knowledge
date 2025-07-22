@@ -31,10 +31,10 @@ import os  # noqa: E402
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import from the new modular structure
-from src.vector_db_base import VectorDatabase  # noqa: E402
-from src.vector_db_weaviate import WeaviateVectorDatabase  # noqa: E402
-from src.vector_db_milvus import MilvusVectorDatabase  # noqa: E402
-from src.vector_db_factory import create_vector_database  # noqa: E402
+from src.db.vector_db_base import VectorDatabase  # noqa: E402
+from src.db.vector_db_weaviate import WeaviateVectorDatabase  # noqa: E402
+from src.db.vector_db_milvus import MilvusVectorDatabase  # noqa: E402
+from src.db.vector_db_factory import create_vector_database  # noqa: E402
 
 # Check if pymilvus is available
 try:

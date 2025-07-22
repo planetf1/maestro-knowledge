@@ -23,7 +23,7 @@ import pytest  # noqa: E402
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.vector_db_base import VectorDatabase  # noqa: E402
+from src.db.vector_db_base import VectorDatabase  # noqa: E402
 
 
 class TestVectorDatabase:

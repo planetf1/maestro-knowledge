@@ -17,6 +17,8 @@ A comprehensive example showing how to:
 python examples/example.py
 ```
 
+**Note**: The example uses the new import path `from src.db.vector_db_factory import create_vector_database`
+
 ## Prerequisites
 
 Before running the examples, make sure you have:

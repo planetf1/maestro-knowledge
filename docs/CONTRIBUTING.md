@@ -86,12 +86,13 @@ maestro-knowledge/
 │   ├── CONTRIBUTING.md     # This file
 │   └── PRESENTATION.md
 ├── src/                    # 🐍 Source code
-│   ├── vector_db.py        # Vector database compatibility layer
-│   ├── vector_db_base.py   # Abstract base class
-│   ├── vector_db_weaviate.py # Weaviate implementation
-│   ├── vector_db_milvus.py # Milvus implementation
-│   ├── vector_db_factory.py # Factory function
-│   └── common.py           # Common utilities
+│   ├── db/                 # Vector database implementations
+│   │   ├── __init__.py     # Package exports
+│   │   ├── vector_db_base.py # Abstract base class
+│   │   ├── vector_db_weaviate.py # Weaviate implementation
+│   │   ├── vector_db_milvus.py # Milvus implementation
+│   │   └── vector_db_factory.py # Factory function
+│   └── vector_db.py        # Vector database compatibility layer
 ├── tests/                  # 🧪 Test suite
 │   ├── test_vector_db_base.py
 │   ├── test_vector_db_weaviate.py
@@ -109,27 +110,27 @@ maestro-knowledge/
 When working with vector databases:
 
 1. **Follow the abstraction pattern**: All vector database code should implement the `VectorDatabase` interface
-2. **Create separate files**: New implementations should be in separate files (e.g., `vector_db_pinecone.py`)
-3. **Add tests**: Include comprehensive tests in separate test files (e.g., `test_vector_db_pinecone.py`)
-4. **Update factory function**: Add new database types to `create_vector_database()` in `vector_db_factory.py`
+2. **Create separate files**: New implementations should be in separate files (e.g., `src/db/vector_db_pinecone.py`)
+3. **Add tests**: Include comprehensive tests in separate test files (e.g., `tests/test_vector_db_pinecone.py`)
+4. **Update factory function**: Add new database types to `create_vector_database()` in `src/db/vector_db_factory.py`
 5. **Documentation**: Update [VECTOR_DB_ABSTRACTION.md](VECTOR_DB_ABSTRACTION.md) with new implementations
-6. **Update compatibility layer**: Add imports to `vector_db.py` for backward compatibility
+6. **Update compatibility layer**: Add imports to `src/vector_db.py` for backward compatibility
 
 ### Adding New Vector Database Support
 
 To add support for a new vector database:
 
-1. **Create implementation file**: `src/vector_db_[name].py`
+1. **Create implementation file**: `src/db/vector_db_[name].py`
 2. **Create test file**: `tests/test_vector_db_[name].py`
-3. **Update factory**: Add new type to `create_vector_database()` in `vector_db_factory.py`
-4. **Update compatibility layer**: Add import to `vector_db.py`
+3. **Update factory**: Add new type to `create_vector_database()` in `src/db/vector_db_factory.py`
+4. **Update compatibility layer**: Add import to `src/vector_db.py`
 5. **Update documentation**: Add new database to `VECTOR_DB_ABSTRACTION.md`
 6. **Add environment variables**: Document required environment variables
 
 Example for adding Pinecone support:
 
 ```python
-# src/vector_db_pinecone.py
+# src/db/vector_db_pinecone.py
 from .vector_db_base import VectorDatabase
 
 class PineconeVectorDatabase(VectorDatabase):

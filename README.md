@@ -65,7 +65,7 @@ python examples/example.py
 ### Basic Usage
 
 ```python
-from src.vector_db_factory import create_vector_database
+from src.db.vector_db_factory import create_vector_database
 
 # Create a vector database instance (automatically selects backend)
 db = create_vector_database("milvus", "MyCollection")
@@ -103,7 +103,7 @@ export MILVUS_PORT=19530
 ```
 
 ```python
-from src.vector_db_factory import create_vector_database
+from src.db.vector_db_factory import create_vector_database
 
 # Database type will be automatically determined from VECTOR_DB_TYPE
 db = create_vector_database(collection_name="MyCollection")
@@ -114,10 +114,12 @@ db = create_vector_database(collection_name="MyCollection")
 ```
 maestro-knowledge/
 ├── src/                          # Source code
-│   ├── vector_db_base.py         # Abstract base class for vector databases
-│   ├── vector_db_factory.py      # Factory function for creating database instances
-│   ├── vector_db_milvus.py       # Milvus implementation (recommended)
-│   ├── vector_db_weaviate.py     # Weaviate implementation
+│   ├── db/                       # Vector database implementations
+│   │   ├── __init__.py           # Package exports
+│   │   ├── vector_db_base.py     # Abstract base class for vector databases
+│   │   ├── vector_db_factory.py  # Factory function for creating database instances
+│   │   ├── vector_db_milvus.py   # Milvus implementation (recommended)
+│   │   └── vector_db_weaviate.py # Weaviate implementation
 │   └── vector_db.py              # Main module exports
 ├── tests/                        # Test suite
 │   ├── test_vector_db_base.py    # Tests for abstract base class

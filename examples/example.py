@@ -26,7 +26,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import the factory function
-from src.vector_db_factory import create_vector_database
+from src.db.vector_db_factory import create_vector_database
 
 
 def create_sample_documents() -> List[Dict[str, Any]]:
