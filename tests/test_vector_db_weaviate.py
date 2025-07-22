@@ -58,7 +58,7 @@ class TestWeaviateVectorDatabase:
 
             db = WeaviateVectorDatabase()
 
-            assert db.collection_name == "RagMeDocs"
+            assert db.collection_name == "MaestroDocs"
             assert db.client == mock_client
 
     def test_setup_collection_exists(self):

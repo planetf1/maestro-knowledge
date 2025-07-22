@@ -23,7 +23,7 @@ class VectorDatabase(ABC):
     """Abstract base class for vector database implementations."""
 
     @abstractmethod
-    def __init__(self, collection_name: str = "RagMeDocs"):
+    def __init__(self, collection_name: str = "MaestroDocs"):
         """Initialize the vector database with a collection name."""
         self.collection_name = collection_name
 

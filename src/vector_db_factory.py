@@ -7,7 +7,7 @@ from .vector_db_milvus import MilvusVectorDatabase
 
 
 def create_vector_database(
-    db_type: str = None, collection_name: str = "RagMeDocs"
+    db_type: str = None, collection_name: str = "MaestroDocs"
 ) -> VectorDatabase:
     """
     Factory function to create vector database instances.

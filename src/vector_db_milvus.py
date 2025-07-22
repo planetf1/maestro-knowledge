@@ -24,7 +24,7 @@ from .vector_db_base import VectorDatabase  # noqa: E402
 class MilvusVectorDatabase(VectorDatabase):
     """Milvus implementation of the vector database interface."""
 
-    def __init__(self, collection_name: str = "RagMeDocs"):
+    def __init__(self, collection_name: str = "MaestroDocs"):
         super().__init__(collection_name)
         self.client = None
         self.collection_name = collection_name

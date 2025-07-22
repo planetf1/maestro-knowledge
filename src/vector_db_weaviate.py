@@ -24,7 +24,7 @@ from .vector_db_base import VectorDatabase  # noqa: E402
 class WeaviateVectorDatabase(VectorDatabase):
     """Weaviate implementation of the vector database interface."""
 
-    def __init__(self, collection_name: str = "RagMeDocs"):
+    def __init__(self, collection_name: str = "MaestroDocs"):
         super().__init__(collection_name)
         self.client = None
         self._create_client()
@@ -55,7 +55,7 @@ class WeaviateVectorDatabase(VectorDatabase):
         if not self.client.collections.exists(self.collection_name):
             self.client.collections.create(
                 self.collection_name,
-                description="A dataset with the contents of RagMe docs and website",
+                description="A dataset with the contents of Maestro Knowledge docs and website",
                 vectorizer_config=Configure.Vectorizer.text2vec_weaviate(),
                 properties=[
                     Property(
