@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "maestro-vector-db": {
+      "command": "python",
+      "args": ["-m", "src.maestro_mcp.server"],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    }
+  }
+} 

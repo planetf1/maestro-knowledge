@@ -96,13 +96,21 @@ maestro-knowledge/
 │   │   ├── vector_db_weaviate.py # Weaviate implementation
 │   │   ├── vector_db_milvus.py # Milvus implementation
 │   │   └── vector_db_factory.py # Factory function
+│   ├── maestro_mcp/         # MCP server implementation
+│   │   ├── __init__.py      # Package exports
+│   │   ├── server.py        # Main MCP server
+│   │   ├── mcp_config.json  # MCP client configuration
+│   │   └── README.md        # MCP server documentation
 │   └── vector_db.py         # Vector database compatibility layer
+├── start.sh                 # MCP server start script
+├── stop.sh                  # MCP server stop script
 ├── tests/                   # 🧪 Test suite
 │   ├── test_vector_db_base.py
 │   ├── test_vector_db_weaviate.py
 │   ├── test_vector_db_milvus.py
 │   ├── test_vector_db_factory.py
 │   ├── test_vector_db.py    # Compatibility layer tests
+│   ├── test_mcp_server.py   # MCP server tests
 │   └── test_integration_examples.py # Integration tests for examples
 ├── .github/                 # GitHub configuration
 │   └── workflows/           # GitHub Actions workflows
@@ -125,6 +133,59 @@ When working with vector databases:
 5. **Documentation**: Update [VECTOR_DB_ABSTRACTION.md](VECTOR_DB_ABSTRACTION.md) with new implementations
 6. **Update compatibility layer**: Add imports to `src/vector_db.py` for backward compatibility
 7. **Implement all required methods**: Ensure all abstract methods are implemented (setup, write_documents, list_documents, count_documents, delete_documents, delete_collection, create_query_agent, cleanup)
+
+### MCP Server Development
+
+The MCP (Model Context Protocol) server provides AI agents with access to vector database functionality through a standardized interface.
+
+#### MCP Server Structure
+
+- **`src/maestro_mcp/server.py`**: Main server implementation with tool definitions
+- **`src/maestro_mcp/run_server.py`**: CLI script to run the server
+- **`src/maestro_mcp/mcp_config.json`**: Configuration for MCP clients
+- **`src/maestro_mcp/README.md`**: Detailed MCP server documentation
+
+#### Adding New MCP Tools
+
+To add new tools to the MCP server:
+
+1. **Define the tool**: Add a new `Tool` object to the `handle_list_tools()` function
+2. **Implement the handler**: Add a new elif branch in `handle_call_tool()` function
+3. **Add tests**: Update `tests/test_mcp_server.py` to test the new tool
+4. **Update documentation**: Document the new tool in `src/maestro_mcp/README.md`
+
+Example of adding a new tool:
+
+```python
+# In handle_list_tools()
+Tool(
+    name="new_tool",
+    description="Description of the new tool",
+    inputSchema={
+        "type": "object",
+        "properties": {
+            "param1": {"type": "string", "description": "Parameter description"}
+        },
+        "required": ["param1"]
+    }
+)
+
+# In handle_call_tool()
+elif name == "new_tool":
+    param1 = arguments.get("param1")
+    # Implement tool logic here
+    return CallToolResult(
+        content=[TextContent(type="text", text="Tool executed successfully")]
+    )
+```
+
+#### MCP Server Testing
+
+The MCP server tests in `tests/test_mcp_server.py` validate:
+- Server creation and initialization
+- Tool definitions and structure
+- Import dependencies
+- Error handling
 
 ### Adding New Vector Database Support
 
@@ -192,6 +253,7 @@ The `examples/` directory contains practical examples for each supported vector 
 
 - **`milvus_example.py`**: Demonstrates Milvus usage with proper vector dimensions (1536)
 - **`weaviate_example.py`**: Demonstrates Weaviate usage with metadata handling
+- **`mcp_example.py`**: Demonstrates MCP server functionality and AI agent integration
 
 When adding a new vector database implementation:
 
@@ -283,6 +345,7 @@ This section lists the labels we use to help us track and manage issues and pull
 * `question` - Further information is requested
 * `wontfix` - Issues that won't be fixed
 * `vector-db` - Issues related to vector database implementations
+* `mcp` - Issues related to MCP server functionality
 
 ## Development Process
 
@@ -363,6 +426,7 @@ The test suite follows the modular structure:
 - **Implementation tests**: `test_vector_db_[name].py` - Tests for specific implementations
 - **Factory tests**: `test_vector_db_factory.py` - Tests for factory function
 - **Compatibility tests**: `test_vector_db.py` - Tests for compatibility layer
+- **MCP server tests**: `test_mcp_server.py` - Tests for MCP server functionality
 - **Integration tests**: `test_integration_examples.py` - Tests that validate example files work correctly
 
 Each test file should:
