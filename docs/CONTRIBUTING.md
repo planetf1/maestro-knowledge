@@ -85,27 +85,33 @@ maestro-knowledge/
 │   ├── VECTOR_DB_ABSTRACTION.md
 │   ├── CONTRIBUTING.md     # This file
 │   └── PRESENTATION.md
-├── src/                    # 🐍 Source code
-│   ├── db/                 # Vector database implementations
-│   │   ├── __init__.py     # Package exports
+├── examples/                # 📚 Example implementations
+│   ├── README.md           # Examples documentation
+│   ├── milvus_example.py   # Milvus usage example
+│   └── weaviate_example.py # Weaviate usage example
+├── src/                     # 🐍 Source code
+│   ├── db/                  # Vector database implementations
+│   │   ├── __init__.py      # Package exports
 │   │   ├── vector_db_base.py # Abstract base class
 │   │   ├── vector_db_weaviate.py # Weaviate implementation
 │   │   ├── vector_db_milvus.py # Milvus implementation
 │   │   └── vector_db_factory.py # Factory function
-│   └── vector_db.py        # Vector database compatibility layer
-├── tests/                  # 🧪 Test suite
+│   └── vector_db.py         # Vector database compatibility layer
+├── tests/                   # 🧪 Test suite
 │   ├── test_vector_db_base.py
 │   ├── test_vector_db_weaviate.py
 │   ├── test_vector_db_milvus.py
 │   ├── test_vector_db_factory.py
-│   └── test_vector_db.py   # Compatibility layer
-├── examples/               # 📖 Usage examples
-│   ├── milvus_example.py  # Milvus vector database example
-│   ├── weaviate_example.py # Weaviate vector database example
-│   └── README.md          # Examples documentation
-└── .github/                # GitHub configuration
-    └── workflows/          # GitHub Actions workflows
-        └── ci.yml          # Continuous Integration workflow
+│   ├── test_vector_db.py    # Compatibility layer tests
+│   └── test_integration_examples.py # Integration tests for examples
+├── .github/                 # GitHub configuration
+│   └── workflows/           # GitHub Actions workflows
+│       └── ci.yml           # Continuous Integration workflow
+├── tests.sh                 # Test runner script
+├── lint.sh                  # Linting and formatting script
+├── pyproject.toml           # Project configuration
+└── README.md                # Main project documentation
+```
 ```
 
 ### Vector Database Development
@@ -195,6 +201,15 @@ When adding a new vector database implementation:
 4. **Include cleanup**: Proper resource cleanup in finally blocks
 5. **Update examples/README.md**: Document the new example with prerequisites and usage instructions
 6. **Test the example**: Ensure it runs successfully with proper configuration
+7. **Integration tests**: Examples are automatically validated via `test_integration_examples.py`
+
+The integration tests validate:
+- Example file structure and imports
+- Execution without errors (with mocked dependencies)
+- Environment variable handling
+- Error handling patterns
+- Cleanup procedures
+- Output formatting standards
 
 Example structure for a new database example:
 
@@ -277,16 +292,68 @@ This section lists the labels we use to help us track and manage issues and pull
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## Testing
+## Code Quality and Linting
 
 Before submitting a pull request, please ensure that:
 
 1. All tests pass (`./tests.sh`)
-2. The code is properly formatted
-3. Documentation is updated
-4. New tests are added for new functionality
-5. Warning filters are included for clean test output
-6. Examples are tested and working (if adding new database support)
+2. All linting checks pass (`./lint.sh`)
+3. The code is properly formatted
+4. Documentation is updated
+5. New tests are added for new functionality
+6. Warning filters are included for clean test output
+7. Examples are tested and working (if adding new database support)
+
+### Running Code Quality Checks
+
+We use Ruff for linting and formatting. Run the comprehensive check:
+
+```bash
+./lint.sh
+```
+
+This script will:
+- Check all source files for linting issues
+- Check all test files for linting issues  
+- Check all example files for linting issues
+- Verify code formatting is correct
+
+### Manual Code Quality Commands
+
+If you need to run individual checks:
+
+```bash
+# Install development dependencies
+uv pip install ruff bandit safety
+
+# Run linting only
+uv run ruff check src/ tests/ examples/
+
+# Check formatting only
+uv run ruff format --check src/ tests/ examples/
+
+# Auto-fix formatting issues
+uv run ruff format src/ tests/ examples/
+
+# Run security checks
+uv run bandit -r src/
+uv run safety check
+```
+
+### Integration Tests
+
+We have comprehensive integration tests that validate our examples:
+
+```bash
+# Run all tests including integration tests
+./tests.sh
+
+# The test suite now includes:
+# - Unit tests for core functionality
+# - Integration tests for examples
+# - Mocked database tests
+# - Environment validation tests
+```
 
 ### Test Organization
 
@@ -296,6 +363,7 @@ The test suite follows the modular structure:
 - **Implementation tests**: `test_vector_db_[name].py` - Tests for specific implementations
 - **Factory tests**: `test_vector_db_factory.py` - Tests for factory function
 - **Compatibility tests**: `test_vector_db.py` - Tests for compatibility layer
+- **Integration tests**: `test_integration_examples.py` - Tests that validate example files work correctly
 
 Each test file should:
 - Include appropriate warning filters

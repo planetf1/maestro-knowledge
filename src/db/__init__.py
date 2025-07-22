@@ -14,7 +14,7 @@ from .vector_db_weaviate import WeaviateVectorDatabase
 
 __all__ = [
     "VectorDatabase",
-    "create_vector_database", 
+    "create_vector_database",
     "MilvusVectorDatabase",
     "WeaviateVectorDatabase",
-] 
+]

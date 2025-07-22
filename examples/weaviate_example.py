@@ -60,8 +60,8 @@ def main():
                 "metadata": {
                     "title": "AI and ML Introduction",
                     "category": "technology",
-                    "author": "Dr. Smith"
-                }
+                    "author": "Dr. Smith",
+                },
             },
             {
                 "url": "https://example.com/doc2",
@@ -69,8 +69,8 @@ def main():
                 "metadata": {
                     "title": "Vector Databases Guide",
                     "category": "technology",
-                    "author": "Dr. Johnson"
-                }
+                    "author": "Dr. Johnson",
+                },
             },
             {
                 "url": "https://example.com/doc3",
@@ -78,9 +78,9 @@ def main():
                 "metadata": {
                     "title": "Weaviate Overview",
                     "category": "database",
-                    "author": "Dr. Brown"
-                }
-            }
+                    "author": "Dr. Brown",
+                },
+            },
         ]
         print(f"✅ Prepared {len(documents)} sample documents")
 
@@ -93,14 +93,14 @@ def main():
         print("\n5. Listing documents from database...")
         retrieved_docs = db.list_documents(limit=5, offset=0)
         print(f"✅ Retrieved {len(retrieved_docs)} documents:")
-        
+
         for i, doc in enumerate(retrieved_docs, 1):
             print(f"\n   Document {i}:")
             print(f"   - ID: {doc.get('id', 'N/A')}")
             print(f"   - URL: {doc.get('url', 'N/A')}")
             print(f"   - Text: {doc.get('text', 'N/A')[:100]}...")
-            if doc.get('metadata'):
-                metadata = doc['metadata']
+            if doc.get("metadata"):
+                metadata = doc["metadata"]
                 if isinstance(metadata, str):
                     try:
                         metadata = json.loads(metadata)
@@ -121,10 +121,10 @@ def main():
         # 8. Demonstrate document deletion
         print("\n8. Demonstrating document deletion:")
         if retrieved_docs:
-            first_doc_id = retrieved_docs[0].get('id')
+            first_doc_id = retrieved_docs[0].get("id")
             print(f"   - Deleting document with ID: {first_doc_id}")
             db.delete_document(first_doc_id)
-            
+
             # Check count after deletion
             new_count = db.count_documents()
             print(f"   - Documents after deletion: {new_count}")
@@ -150,4 +150,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

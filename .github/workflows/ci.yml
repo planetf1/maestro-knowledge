@@ -24,18 +24,20 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@v2
 
-    - name: Create virtual environment
-      run: uv venv
-
     - name: Cache dependencies
       uses: actions/cache@v3
       with:
         path: |
-          .venv
           .uv/cache
         key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
         restore-keys: |
           ${{ runner.os }}-uv-
+
+    - name: Create virtual environment
+      run: |
+        # Remove any existing broken virtual environment
+        rm -rf .venv
+        uv venv
 
     - name: Install dependencies
       run: |
@@ -72,18 +74,20 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@v2
 
-    - name: Create virtual environment
-      run: uv venv
-
     - name: Cache dependencies
       uses: actions/cache@v3
       with:
         path: |
-          .venv
           .uv/cache
         key: ${{ runner.os }}-uv-deps-${{ hashFiles('**/pyproject.toml') }}
         restore-keys: |
           ${{ runner.os }}-uv-deps-
+
+    - name: Create virtual environment
+      run: |
+        # Remove any existing broken virtual environment
+        rm -rf .venv
+        uv venv
 
     - name: Install dependencies with optional packages
       run: |
@@ -120,18 +124,20 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@v2
 
-    - name: Create virtual environment
-      run: uv venv
-
     - name: Cache dependencies
       uses: actions/cache@v3
       with:
         path: |
-          .venv
           .uv/cache
         key: ${{ runner.os }}-uv-lint-${{ hashFiles('**/pyproject.toml') }}
         restore-keys: |
           ${{ runner.os }}-uv-lint-
+
+    - name: Create virtual environment
+      run: |
+        # Remove any existing broken virtual environment
+        rm -rf .venv
+        uv venv
 
     - name: Install dependencies
       run: |
@@ -159,18 +165,20 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@v2
 
-    - name: Create virtual environment
-      run: uv venv
-
     - name: Cache dependencies
       uses: actions/cache@v3
       with:
         path: |
-          .venv
           .uv/cache
         key: ${{ runner.os }}-uv-security-${{ hashFiles('**/pyproject.toml') }}
         restore-keys: |
           ${{ runner.os }}-uv-security-
+
+    - name: Create virtual environment
+      run: |
+        # Remove any existing broken virtual environment
+        rm -rf .venv
+        uv venv
 
     - name: Install dependencies
       run: |

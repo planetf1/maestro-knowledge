@@ -162,13 +162,6 @@ class MilvusVectorDatabase(VectorDatabase):
             warnings.warn("Milvus client is not available. Returning 0.")
             return 0
 
-        # Query to get the count
-        results = self.client.query(
-            self.collection_name,
-            output_fields=["id"],
-            limit=1,
-        )
-        
         # Get collection statistics
         stats = self.client.get_collection_stats(self.collection_name)
         return stats.get("row_count", 0)
@@ -197,7 +190,7 @@ class MilvusVectorDatabase(VectorDatabase):
             return
 
         target_collection = collection_name or self.collection_name
-        
+
         if self.client.has_collection(target_collection):
             self.client.drop_collection(target_collection)
             if target_collection == self.collection_name:

@@ -124,7 +124,7 @@ class WeaviateVectorDatabase(VectorDatabase):
     def count_documents(self) -> int:
         """Get the current count of documents in the collection."""
         collection = self.client.collections.get(self.collection_name)
-        
+
         # Query to get the count
         result = collection.query.aggregate.over_all(total_count=True)
         return result.total_count
@@ -132,19 +132,20 @@ class WeaviateVectorDatabase(VectorDatabase):
     def delete_documents(self, document_ids: List[str]):
         """Delete documents from Weaviate by their IDs."""
         collection = self.client.collections.get(self.collection_name)
-        
+
         # Delete documents by UUID
         for doc_id in document_ids:
             try:
                 collection.data.delete_by_id(doc_id)
             except Exception as e:
                 import warnings
+
                 warnings.warn(f"Failed to delete document {doc_id}: {e}")
 
     def delete_collection(self, collection_name: str = None):
         """Delete an entire collection from Weaviate."""
         target_collection = collection_name or self.collection_name
-        
+
         try:
             if self.client.collections.exists(target_collection):
                 self.client.collections.delete(target_collection)
@@ -152,6 +153,7 @@ class WeaviateVectorDatabase(VectorDatabase):
                     self.collection_name = None
         except Exception as e:
             import warnings
+
             warnings.warn(f"Failed to delete collection {target_collection}: {e}")
 
     def create_query_agent(self):

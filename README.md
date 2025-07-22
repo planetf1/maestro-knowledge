@@ -142,7 +142,8 @@ maestro-knowledge/
 ├── README.md                     # This file
 ├── pyproject.toml               # Project configuration
 ├── .gitignore                   # Git ignore rules
-└── tests.sh                     # Test runner script
+├── tests.sh                     # Test runner script
+└── lint.sh                      # Linting and formatting script
 ```
 
 ## Architecture
@@ -216,6 +217,10 @@ This project maintains high code quality standards:
 To run code quality checks locally:
 
 ```bash
+# Run all linting and formatting checks
+./lint.sh
+
+# Or run individual checks:
 # Install development dependencies
 uv pip install ruff bandit safety
 
