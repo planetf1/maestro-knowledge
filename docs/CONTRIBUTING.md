@@ -100,6 +100,9 @@ maestro-knowledge/
 │   ├── test_vector_db_factory.py
 │   └── test_vector_db.py   # Compatibility layer
 ├── examples/               # 📖 Usage examples
+│   ├── milvus_example.py  # Milvus vector database example
+│   ├── weaviate_example.py # Weaviate vector database example
+│   └── README.md          # Examples documentation
 └── .github/                # GitHub configuration
     └── workflows/          # GitHub Actions workflows
         └── ci.yml          # Continuous Integration workflow
@@ -126,6 +129,7 @@ To add support for a new vector database:
 4. **Update compatibility layer**: Add import to `src/vector_db.py`
 5. **Update documentation**: Add new database to `VECTOR_DB_ABSTRACTION.md`
 6. **Add environment variables**: Document required environment variables
+7. **Create example**: Add `examples/[name]_example.py` following the existing pattern
 
 Example for adding Pinecone support:
 
@@ -143,6 +147,48 @@ class PineconeVectorDatabase(VectorDatabase):
         return "pinecone"
         
     # Implement all required methods...
+```
+
+### Working with Examples
+
+The `examples/` directory contains practical examples for each supported vector database:
+
+- **`milvus_example.py`**: Demonstrates Milvus usage with proper vector dimensions (1536)
+- **`weaviate_example.py`**: Demonstrates Weaviate usage with metadata handling
+
+When adding a new vector database implementation:
+
+1. **Follow the existing pattern**: Use the same structure as existing examples
+2. **Include environment validation**: Check for required environment variables
+3. **Add comprehensive error handling**: Use try-catch blocks with helpful error messages
+4. **Include cleanup**: Proper resource cleanup in finally blocks
+5. **Update examples/README.md**: Document the new example with prerequisites and usage instructions
+6. **Test the example**: Ensure it runs successfully with proper configuration
+
+Example structure for a new database example:
+
+```python
+#!/usr/bin/env python3
+"""
+[Database Name] Vector Database Example
+
+This example demonstrates how to use the maestro-knowledge library with [Database Name].
+"""
+
+import sys
+import os
+from src.db.vector_db_factory import create_vector_database
+
+def main():
+    # Check environment variables
+    # Create database instance
+    # Set up database
+    # Write documents
+    # List documents
+    # Cleanup
+
+if __name__ == "__main__":
+    main()
 ```
 
 ## Style Guides
@@ -207,6 +253,7 @@ Before submitting a pull request, please ensure that:
 3. Documentation is updated
 4. New tests are added for new functionality
 5. Warning filters are included for clean test output
+6. Examples are tested and working (if adding new database support)
 
 ### Test Organization
 

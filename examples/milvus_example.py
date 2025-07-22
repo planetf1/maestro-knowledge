@@ -41,8 +41,7 @@ def create_sample_documents() -> List[Dict[str, Any]]:
                 "category": "AI/ML",
                 "tags": ["machine learning", "artificial intelligence", "algorithms"],
             },
-            "vector": [0.1, 0.2, 0.3, 0.4, 0.5]
-            * 153,  # 768-dimensional vector (example)
+            "vector": [0.1] * 1536,  # 1536-dimensional vector (example)
         },
         {
             "url": "https://example.com/doc2",
@@ -53,8 +52,7 @@ def create_sample_documents() -> List[Dict[str, Any]]:
                 "category": "Database",
                 "tags": ["vector database", "similarity search", "embeddings"],
             },
-            "vector": [0.2, 0.3, 0.4, 0.5, 0.6]
-            * 153,  # 768-dimensional vector (example)
+            "vector": [0.2] * 1536,  # 1536-dimensional vector (example)
         },
         {
             "url": "https://example.com/doc3",
@@ -70,8 +68,7 @@ def create_sample_documents() -> List[Dict[str, Any]]:
                     "similarity search",
                 ],
             },
-            "vector": [0.3, 0.4, 0.5, 0.6, 0.7]
-            * 153,  # 768-dimensional vector (example)
+            "vector": [0.3] * 1536,  # 1536-dimensional vector (example)
         },
     ]
 
