@@ -2,6 +2,7 @@
 # Copyright (c) 2025 dr.max
 
 import json
+import os
 import warnings
 from typing import List, Dict, Any
 
@@ -29,6 +30,23 @@ class MilvusVectorDatabase(VectorDatabase):
         self.client = None
         self.collection_name = collection_name
         self._client_created = False
+
+    def supported_embeddings(self) -> List[str]:
+        """
+        Return a list of supported embedding model names for Milvus.
+
+        Milvus supports both pre-computed vectors and can work with external
+        embedding services, but doesn't have built-in embedding models.
+
+        Returns:
+            List of supported embedding model names
+        """
+        return [
+            "default",
+            "text-embedding-ada-002",
+            "text-embedding-3-small",
+            "text-embedding-3-large",
+        ]
 
     def _ensure_client(self):
         """Ensure the client is created, handling import-time issues."""
@@ -84,6 +102,51 @@ class MilvusVectorDatabase(VectorDatabase):
             if original_milvus_uri:
                 os.environ["MILVUS_URI"] = original_milvus_uri
 
+    def _generate_embedding(self, text: str, embedding_model: str) -> List[float]:
+        """
+        Generate embeddings for text using the specified model.
+
+        Args:
+            text: Text to embed
+            embedding_model: Name of the embedding model to use
+
+        Returns:
+            List of floats representing the embedding vector
+        """
+        try:
+            import openai
+
+            # Map model names to OpenAI model names
+            model_mapping = {
+                "text-embedding-ada-002": "text-embedding-ada-002",
+                "text-embedding-3-small": "text-embedding-3-small",
+                "text-embedding-3-large": "text-embedding-3-large",
+            }
+
+            if embedding_model not in model_mapping:
+                raise ValueError(f"Unsupported embedding model: {embedding_model}")
+
+            openai_model = model_mapping[embedding_model]
+
+            # Get OpenAI API key from environment
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError(
+                    "OPENAI_API_KEY environment variable is required for embedding generation"
+                )
+
+            client = openai.OpenAI(api_key=api_key)
+            response = client.embeddings.create(model=openai_model, input=text)
+
+            return response.data[0].embedding
+
+        except ImportError:
+            raise ImportError(
+                "openai package is required for embedding generation. Install with: pip install openai"
+            )
+        except Exception as e:
+            raise RuntimeError(f"Failed to generate embedding: {e}")
+
     def setup(self):
         """Set up Milvus collection if it doesn't exist."""
         self._ensure_client()
@@ -101,25 +164,59 @@ class MilvusVectorDatabase(VectorDatabase):
                 vector_field_name="vector",
             )
 
-    def write_documents(self, documents: List[Dict[str, Any]]):
-        """Write documents to Milvus."""
+    def write_documents(
+        self, documents: List[Dict[str, Any]], embedding: str = "default"
+    ):
+        """
+        Write documents to Milvus.
+
+        Args:
+            documents: List of documents with 'url', 'text', and 'metadata' fields.
+                      Documents may also include a 'vector' field for pre-computed embeddings.
+            embedding: Embedding strategy to use:
+                      - "default": Use pre-computed vector if available, otherwise use text-embedding-ada-002
+                      - Specific model name: Use the specified embedding model to generate vectors
+        """
         self._ensure_client()
         if self.client is None:
             warnings.warn("Milvus client is not available. Documents not written.")
             return
 
-        # Each document should have 'url', 'text', 'metadata', and 'vector' (list of floats)
+        # Validate embedding parameter
+        if embedding not in self.supported_embeddings():
+            raise ValueError(
+                f"Unsupported embedding: {embedding}. Supported: {self.supported_embeddings()}"
+            )
+
+        # Process documents
         data = []
         for i, doc in enumerate(documents):
-            if "vector" not in doc:
-                raise ValueError("Milvus requires a 'vector' field in each document.")
+            doc_vector = None
+
+            # Determine how to get the vector
+            if embedding == "default":
+                # For default, use pre-computed vector if available
+                if "vector" in doc:
+                    doc_vector = doc["vector"]
+                else:
+                    # Generate embedding using default model
+                    doc_vector = self._generate_embedding(
+                        doc.get("text", ""), "text-embedding-ada-002"
+                    )
+            else:
+                # Use specified embedding model
+                doc_vector = self._generate_embedding(doc.get("text", ""), embedding)
+
+            if doc_vector is None:
+                raise ValueError(f"Failed to generate vector for document {i}")
+
             data.append(
                 {
                     "id": i,
                     "url": doc.get("url", ""),
                     "text": doc.get("text", ""),
                     "metadata": json.dumps(doc.get("metadata", {}), ensure_ascii=False),
-                    "vector": doc["vector"],
+                    "vector": doc_vector,
                 }
             )
         self.client.insert(self.collection_name, data)

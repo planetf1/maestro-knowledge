@@ -4,7 +4,7 @@
 
 """
 Example demonstrating how to use the Maestro Vector Database MCP server.
-This example shows how an AI agent might interact with the vector database.
+This example shows how an AI agent might interact with the vector database with flexible embedding strategies.
 """
 
 import sys
@@ -32,6 +32,7 @@ def demonstrate_mcp_server():
     expected_tools = [
         "create_vector_database",
         "setup_database",
+        "get_supported_embeddings",
         "write_documents",
         "write_document",
         "list_documents",
@@ -49,7 +50,7 @@ def demonstrate_mcp_server():
     print(f"\n✓ Total tools available: {len(expected_tools)}")
 
     # Demonstrate direct vector database usage (what the MCP server does internally)
-    print("\n3. Demonstrating vector database operations:")
+    print("\n3. Demonstrating vector database operations with embedding strategies:")
 
     try:
         # Create a vector database
@@ -57,12 +58,17 @@ def demonstrate_mcp_server():
         db = create_vector_database("weaviate", "ExampleDocs")
         print(f"   ✓ Created {db.db_type} database with collection 'ExampleDocs'")
 
-        # Set up the database
-        print("\n   Setting up database...")
-        db.setup()
-        print("   ✓ Database setup complete")
+        # Show supported embeddings
+        print("\n   Getting supported embeddings...")
+        embeddings = db.supported_embeddings()
+        print(f"   ✓ Supported embeddings: {embeddings}")
 
-        # Write some documents
+        # Set up the database with default embedding
+        print("\n   Setting up database with default embedding...")
+        db.setup(embedding="default")
+        print("   ✓ Database setup complete with default embedding")
+
+        # Write some documents with default embedding
         documents = [
             {
                 "url": "https://example.com/doc1",
@@ -81,9 +87,71 @@ def demonstrate_mcp_server():
             },
         ]
 
+        print("\n   Writing documents with default embedding...")
         for doc in documents:
-            db.write_document(doc)
+            db.write_document(doc, embedding="default")
             print(f"   ✓ Wrote document: {doc['url']}")
+
+        # Demonstrate Milvus with pre-computed vectors
+        print("\n4. Demonstrating Milvus with pre-computed vectors:")
+        try:
+            milvus_db = create_vector_database("milvus", "MilvusExampleDocs")
+            print(f"   ✓ Created {milvus_db.db_type} database")
+
+            # Show Milvus supported embeddings
+            milvus_embeddings = milvus_db.supported_embeddings()
+            print(f"   ✓ Milvus supported embeddings: {milvus_embeddings}")
+
+            # Write document with pre-computed vector
+            doc_with_vector = {
+                "url": "https://example.com/milvus-doc",
+                "text": "This document has a pre-computed vector embedding.",
+                "metadata": {"topic": "Vector Databases", "author": "David"},
+                "vector": [0.1] * 1536,  # 1536-dimensional vector
+            }
+
+            milvus_db.write_document(doc_with_vector, embedding="default")
+            print("   ✓ Wrote document with pre-computed vector")
+
+            # Clean up Milvus
+            milvus_db.cleanup()
+            print("   ✓ Milvus cleanup complete")
+
+        except Exception as e:
+            print(f"   ⚠️  Milvus demonstration skipped: {e}")
+
+        # Demonstrate different embedding models (if OpenAI API key is available)
+        print("\n5. Demonstrating different embedding models:")
+        import os
+
+        if os.getenv("OPENAI_API_KEY"):
+            try:
+                # Create a new collection with OpenAI embedding
+                openai_db = create_vector_database("weaviate", "OpenAIExampleDocs")
+                openai_db.setup(embedding="text-embedding-ada-002")
+                print("   ✓ Created database with OpenAI embedding")
+
+                # Write document with OpenAI embedding
+                openai_doc = {
+                    "url": "https://example.com/openai-doc",
+                    "text": "This document uses OpenAI's text-embedding-ada-002 model.",
+                    "metadata": {"topic": "OpenAI", "author": "Eve"},
+                }
+
+                openai_db.write_document(openai_doc, embedding="text-embedding-ada-002")
+                print("   ✓ Wrote document with OpenAI embedding")
+
+                # Clean up OpenAI collection
+                openai_db.delete_collection()
+                openai_db.cleanup()
+                print("   ✓ OpenAI collection cleanup complete")
+
+            except Exception as e:
+                print(f"   ⚠️  OpenAI embedding demonstration failed: {e}")
+        else:
+            print(
+                "   ⚠️  OpenAI API key not set, skipping OpenAI embedding demonstration"
+            )
 
         # Get database info
         print("\n   Getting database info...")
@@ -114,7 +182,11 @@ def demonstrate_mcp_server():
     print("1. Start the server: ./start.sh")
     print("2. Configure your MCP client with the server")
     print("3. Use the tools listed above to interact with vector databases")
-    print("4. Stop the server: ./stop.sh")
+    print("4. Try different embedding strategies:")
+    print("   - Use 'default' for database's default embedding")
+    print("   - Use 'text-embedding-ada-002' for OpenAI embeddings (requires API key)")
+    print("   - Use pre-computed vectors with Milvus")
+    print("5. Stop the server: ./stop.sh")
 
 
 def main():

@@ -34,28 +34,46 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
+    def supported_embeddings(self) -> List[str]:
+        """
+        Return a list of supported embedding model names for this vector database.
+
+        Returns:
+            List of supported embedding model names (e.g., ["default", "text-embedding-ada-002"])
+        """
+        pass
+
+    @abstractmethod
     def setup(self):
         """Set up the database and create collections if they don't exist."""
         pass
 
     @abstractmethod
-    def write_documents(self, documents: List[Dict[str, Any]]):
+    def write_documents(
+        self, documents: List[Dict[str, Any]], embedding: str = "default"
+    ):
         """
         Write documents to the vector database.
 
         Args:
-            documents: List of documents with 'url', 'text', and 'metadata' fields
+            documents: List of documents with 'url', 'text', and 'metadata' fields.
+                       For Milvus, documents may also include a 'vector' field.
+            embedding: Embedding strategy to use. Options:
+                      - "default": Use database's default embedding strategy
+                      - Specific model name: Use the specified embedding model
         """
         pass
 
-    def write_document(self, document: Dict[str, Any]):
+    def write_document(self, document: Dict[str, Any], embedding: str = "default"):
         """
         Write a single document to the vector database.
 
         Args:
-            document: Document with 'url', 'text', and 'metadata' fields
+            document: Document with 'url', 'text', and 'metadata' fields.
+                     For Milvus, document may also include a 'vector' field.
+            embedding: Embedding strategy to use (see write_documents for options)
         """
-        return self.write_documents([document])
+        return self.write_documents([document], embedding)
 
     @abstractmethod
     def list_documents(self, limit: int = 10, offset: int = 0) -> List[Dict[str, Any]]:

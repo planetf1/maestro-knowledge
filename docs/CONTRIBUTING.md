@@ -44,6 +44,7 @@ Explain the problem and include additional details to help maintainers reproduce
 * Are you running Maestro Knowledge in a virtual machine?
   * What are your environment variables?
   * Which vector database are you using? (Weaviate, Milvus, etc.)
+  * Which embedding model are you using? (default, text-embedding-ada-002, etc.)
 
 ### Suggesting Enhancements
 
@@ -120,7 +121,6 @@ maestro-knowledge/
 ├── pyproject.toml           # Project configuration
 └── README.md                # Main project documentation
 ```
-```
 
 ### Vector Database Development
 
@@ -132,7 +132,104 @@ When working with vector databases:
 4. **Update factory function**: Add new database types to `create_vector_database()` in `src/db/vector_db_factory.py`
 5. **Documentation**: Update [VECTOR_DB_ABSTRACTION.md](VECTOR_DB_ABSTRACTION.md) with new implementations
 6. **Update compatibility layer**: Add imports to `src/vector_db.py` for backward compatibility
-7. **Implement all required methods**: Ensure all abstract methods are implemented (setup, write_documents, list_documents, count_documents, delete_documents, delete_collection, create_query_agent, cleanup)
+7. **Implement all required methods**: Ensure all abstract methods are implemented (setup, write_documents, list_documents, count_documents, delete_documents, delete_collection, create_query_agent, cleanup, supported_embeddings)
+
+### Embedding Strategy Implementation
+
+The library now supports flexible embedding strategies. When implementing a new vector database:
+
+#### Required Methods for Embedding Support
+
+1. **`supported_embeddings()`**: Return a list of supported embedding model names
+2. **`write_documents(documents, embedding="default")`**: Handle different embedding strategies
+
+#### Embedding Strategy Patterns
+
+**For databases with built-in vectorizers (like Weaviate):**
+```python
+def supported_embeddings(self) -> List[str]:
+    return [
+        "default",  # Uses database's default vectorizer
+        "text2vec-openai",  # OpenAI integration
+        "text2vec-cohere",  # Cohere integration
+        # Add other supported vectorizers
+    ]
+
+def write_documents(self, documents: List[Dict[str, Any]], embedding: str = "default"):
+    # Validate embedding parameter
+    if embedding not in self.supported_embeddings():
+        raise ValueError(f"Unsupported embedding: {embedding}")
+    
+    # Handle different embedding strategies
+    if embedding == "default":
+        # Use database's default vectorizer
+        pass
+    elif embedding == "text2vec-openai":
+        # Configure OpenAI vectorizer
+        pass
+    # ... handle other embedding types
+```
+
+**For databases requiring external embedding generation (like Milvus):**
+```python
+def supported_embeddings(self) -> List[str]:
+    return [
+        "default",  # Uses pre-computed vectors or default model
+        "text-embedding-ada-002",  # OpenAI Ada-002
+        "text-embedding-3-small",  # OpenAI text-embedding-3-small
+        # Add other supported models
+    ]
+
+def write_documents(self, documents: List[Dict[str, Any]], embedding: str = "default"):
+    # Validate embedding parameter
+    if embedding not in self.supported_embeddings():
+        raise ValueError(f"Unsupported embedding: {embedding}")
+    
+    for doc in documents:
+        if embedding == "default":
+            # Use pre-computed vector if available, otherwise use default model
+            if "vector" in doc:
+                vector = doc["vector"]
+            else:
+                vector = self._generate_embedding(doc["text"], "text-embedding-ada-002")
+        else:
+            # Generate embedding using specified model
+            vector = self._generate_embedding(doc["text"], embedding)
+        
+        # Store document with vector
+        # ...
+```
+
+#### Testing Embedding Functionality
+
+When adding tests for new vector database implementations, include tests for:
+
+1. **Supported embeddings method**:
+```python
+def test_supported_embeddings(self):
+    db = YourVectorDatabase()
+    embeddings = db.supported_embeddings()
+    assert "default" in embeddings
+    # Test other expected embeddings
+```
+
+2. **Write documents with different embeddings**:
+```python
+def test_write_documents_default_embedding(self):
+    # Test with default embedding
+    
+def test_write_documents_custom_embedding(self):
+    # Test with specific embedding model
+    
+def test_write_documents_unsupported_embedding(self):
+    # Test error handling for unsupported embeddings
+```
+
+3. **Embedding model integration**:
+```python
+def test_embedding_model_generation(self):
+    # Test actual embedding generation (with mocking)
+```
 
 ### MCP Server Development
 
@@ -198,6 +295,7 @@ To add support for a new vector database:
 5. **Update documentation**: Add new database to `VECTOR_DB_ABSTRACTION.md`
 6. **Add environment variables**: Document required environment variables
 7. **Create example**: Add `examples/[name]_example.py` following the existing pattern
+8. **Implement embedding support**: Add `supported_embeddings()` and update `write_documents()`
 
 Example for adding Pinecone support:
 
@@ -214,11 +312,15 @@ class PineconeVectorDatabase(VectorDatabase):
     def db_type(self) -> str:
         return "pinecone"
     
+    def supported_embeddings(self) -> List[str]:
+        return ["default", "text-embedding-ada-002", "text-embedding-3-small"]
+    
     def setup(self):
         # Initialize collection/schema
         pass
         
-    def write_documents(self, documents):
+    def write_documents(self, documents, embedding="default"):
+        # Handle different embedding strategies
         # Store documents with vectors
         pass
     
@@ -251,8 +353,8 @@ class PineconeVectorDatabase(VectorDatabase):
 
 The `examples/` directory contains practical examples for each supported vector database:
 
-- **`milvus_example.py`**: Demonstrates Milvus usage with proper vector dimensions (1536)
-- **`weaviate_example.py`**: Demonstrates Weaviate usage with metadata handling
+- **`milvus_example.py`**: Demonstrates Milvus usage with pre-computed vectors and embedding models
+- **`weaviate_example.py`**: Demonstrates Weaviate usage with different embedding models
 - **`mcp_example.py`**: Demonstrates MCP server functionality and AI agent integration
 
 When adding a new vector database implementation:
@@ -264,6 +366,7 @@ When adding a new vector database implementation:
 5. **Update examples/README.md**: Document the new example with prerequisites and usage instructions
 6. **Test the example**: Ensure it runs successfully with proper configuration
 7. **Integration tests**: Examples are automatically validated via `test_integration_examples.py`
+8. **Demonstrate embedding functionality**: Show both pre-computed vectors and embedding model usage
 
 The integration tests validate:
 - Example file structure and imports
@@ -272,6 +375,7 @@ The integration tests validate:
 - Error handling patterns
 - Cleanup procedures
 - Output formatting standards
+- Embedding functionality demonstration
 
 Example structure for a new database example:
 
@@ -290,8 +394,10 @@ from src.db.vector_db_factory import create_vector_database
 def main():
     # Check environment variables
     # Create database instance
-    # Set up database
-    # Write documents
+    # Display supported embeddings
+    # Set up database with specific embedding
+    # Write documents with pre-computed vectors
+    # Write documents using embedding models
     # List documents
     # Count documents
     # Delete documents (demonstrate CRUD operations)
@@ -346,6 +452,7 @@ This section lists the labels we use to help us track and manage issues and pull
 * `wontfix` - Issues that won't be fixed
 * `vector-db` - Issues related to vector database implementations
 * `mcp` - Issues related to MCP server functionality
+* `embeddings` - Issues related to embedding functionality
 
 ## Development Process
 
@@ -366,6 +473,7 @@ Before submitting a pull request, please ensure that:
 5. New tests are added for new functionality
 6. Warning filters are included for clean test output
 7. Examples are tested and working (if adding new database support)
+8. Embedding functionality is properly tested
 
 ### Running Code Quality Checks
 
@@ -416,6 +524,7 @@ We have comprehensive integration tests that validate our examples:
 # - Integration tests for examples
 # - Mocked database tests
 # - Environment validation tests
+# - Embedding functionality tests
 ```
 
 ### Test Organization
@@ -434,6 +543,7 @@ Each test file should:
 - Use mocking to avoid external dependencies
 - Test both success and error cases
 - Include proper cleanup in teardown methods
+- Test embedding functionality when applicable
 
 ## License
 

@@ -47,13 +47,17 @@ class ConcreteVectorDatabase(VectorDatabase):
     def db_type(self) -> str:
         return "test"
 
+    def supported_embeddings(self):
+        return ["default", "test-embedding"]
+
     def setup(self):
         pass
 
-    def write_documents(self, documents):
+    def write_documents(self, documents, embedding="default"):
         for doc in documents:
             doc_copy = doc.copy()
             doc_copy["id"] = str(self.next_id)
+            doc_copy["embedding_used"] = embedding
             self.documents.append(doc_copy)
             self.next_id += 1
 
@@ -84,6 +88,14 @@ class ConcreteVectorDatabase(VectorDatabase):
 class TestConcreteVectorDatabase:
     """Test cases for the concrete implementation of VectorDatabase."""
 
+    def test_supported_embeddings(self):
+        """Test the supported_embeddings method."""
+        db = ConcreteVectorDatabase()
+        embeddings = db.supported_embeddings()
+        assert "default" in embeddings
+        assert "test-embedding" in embeddings
+        assert len(embeddings) == 2
+
     def test_write_document_singular(self):
         """Test the singular write_document method."""
         db = ConcreteVectorDatabase()
@@ -92,6 +104,28 @@ class TestConcreteVectorDatabase:
         db.write_document(doc)
         assert len(db.documents) == 1
         assert db.documents[0]["url"] == "test.com"
+        assert db.documents[0]["embedding_used"] == "default"
+
+    def test_write_document_with_embedding(self):
+        """Test the write_document method with custom embedding."""
+        db = ConcreteVectorDatabase()
+        doc = {"url": "test.com", "text": "test", "metadata": {"key": "value"}}
+
+        db.write_document(doc, embedding="test-embedding")
+        assert len(db.documents) == 1
+        assert db.documents[0]["embedding_used"] == "test-embedding"
+
+    def test_write_documents_with_embedding(self):
+        """Test the write_documents method with custom embedding."""
+        db = ConcreteVectorDatabase()
+        docs = [
+            {"url": "test1.com", "text": "test1", "metadata": {}},
+            {"url": "test2.com", "text": "test2", "metadata": {}},
+        ]
+
+        db.write_documents(docs, embedding="test-embedding")
+        assert len(db.documents) == 2
+        assert all(doc["embedding_used"] == "test-embedding" for doc in db.documents)
 
     def test_delete_document_singular(self):
         """Test the singular delete_document method."""

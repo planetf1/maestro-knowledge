@@ -61,11 +61,26 @@ def create_mcp_server() -> Server:
                 Tool(
                     name="setup_database",
                     description="Set up the current vector database and create collections",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "embedding": {
+                                "type": "string",
+                                "description": "Embedding model to use for the collection (e.g., 'default', 'text-embedding-ada-002')",
+                                "default": "default",
+                            }
+                        },
+                        "required": [],
+                    },
+                ),
+                Tool(
+                    name="get_supported_embeddings",
+                    description="Get list of supported embedding models for the current vector database",
                     inputSchema={"type": "object", "properties": {}, "required": []},
                 ),
                 Tool(
                     name="write_documents",
-                    description="Write documents to the vector database",
+                    description="Write documents to the vector database with specified embedding strategy",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -77,18 +92,28 @@ def create_mcp_server() -> Server:
                                         "url": {"type": "string"},
                                         "text": {"type": "string"},
                                         "metadata": {"type": "object"},
+                                        "vector": {
+                                            "type": "array",
+                                            "items": {"type": "number"},
+                                            "description": "Pre-computed vector embedding (optional, for Milvus)",
+                                        },
                                     },
                                     "required": ["url", "text"],
                                 },
                                 "description": "List of documents to write",
-                            }
+                            },
+                            "embedding": {
+                                "type": "string",
+                                "description": "Embedding strategy to use: 'default' or specific model name (e.g., 'text-embedding-ada-002')",
+                                "default": "default",
+                            },
                         },
                         "required": ["documents"],
                     },
                 ),
                 Tool(
                     name="write_document",
-                    description="Write a single document to the vector database",
+                    description="Write a single document to the vector database with specified embedding strategy",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -103,6 +128,16 @@ def create_mcp_server() -> Server:
                             "metadata": {
                                 "type": "object",
                                 "description": "Additional metadata for the document",
+                            },
+                            "vector": {
+                                "type": "array",
+                                "items": {"type": "number"},
+                                "description": "Pre-computed vector embedding (optional, for Milvus)",
+                            },
+                            "embedding": {
+                                "type": "string",
+                                "description": "Embedding strategy to use: 'default' or specific model name",
+                                "default": "default",
                             },
                         },
                         "required": ["url", "text"],
@@ -223,13 +258,39 @@ def create_mcp_server() -> Server:
                         "No vector database created. Please create one first."
                     )
 
-                current_db.setup()
+                embedding = arguments.get("embedding", "default")
+
+                # Check if the database supports the setup method with embedding parameter
+                if (
+                    hasattr(current_db, "setup")
+                    and len(current_db.setup.__code__.co_varnames) > 1
+                ):
+                    current_db.setup(embedding=embedding)
+                else:
+                    current_db.setup()
 
                 return CallToolResult(
                     content=[
                         TextContent(
                             type="text",
-                            text=f"Successfully set up {current_db.db_type} vector database",
+                            text=f"Successfully set up {current_db.db_type} vector database with embedding '{embedding}'",
+                        )
+                    ]
+                )
+
+            elif name == "get_supported_embeddings":
+                if not current_db:
+                    raise ValueError(
+                        "No vector database created. Please create one first."
+                    )
+
+                embeddings = current_db.supported_embeddings()
+
+                return CallToolResult(
+                    content=[
+                        TextContent(
+                            type="text",
+                            text=f"Supported embeddings for {current_db.db_type}: {json.dumps(embeddings, indent=2)}",
                         )
                     ]
                 )
@@ -241,13 +302,14 @@ def create_mcp_server() -> Server:
                     )
 
                 documents = arguments.get("documents", [])
-                current_db.write_documents(documents)
+                embedding = arguments.get("embedding", "default")
+                current_db.write_documents(documents, embedding=embedding)
 
                 return CallToolResult(
                     content=[
                         TextContent(
                             type="text",
-                            text=f"Successfully wrote {len(documents)} documents to the vector database",
+                            text=f"Successfully wrote {len(documents)} documents to the vector database using embedding '{embedding}'",
                         )
                     ]
                 )
@@ -263,13 +325,19 @@ def create_mcp_server() -> Server:
                     "text": arguments.get("text"),
                     "metadata": arguments.get("metadata", {}),
                 }
-                current_db.write_document(document)
+
+                # Add vector if provided (for Milvus)
+                if "vector" in arguments:
+                    document["vector"] = arguments["vector"]
+
+                embedding = arguments.get("embedding", "default")
+                current_db.write_document(document, embedding=embedding)
 
                 return CallToolResult(
                     content=[
                         TextContent(
                             type="text",
-                            text=f"Successfully wrote document '{document['url']}' to the vector database",
+                            text=f"Successfully wrote document '{document['url']}' to the vector database using embedding '{embedding}'",
                         )
                     ]
                 )
@@ -393,6 +461,7 @@ def create_mcp_server() -> Server:
                     "db_type": current_db.db_type,
                     "collection_name": current_db.collection_name,
                     "document_count": current_db.count_documents(),
+                    "supported_embeddings": current_db.supported_embeddings(),
                 }
 
                 return CallToolResult(

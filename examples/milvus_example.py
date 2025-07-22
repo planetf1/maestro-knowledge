@@ -5,7 +5,7 @@ Example usage of maestro-knowledge with Milvus vector database.
 This example demonstrates:
 1. Setting up environment variables
 2. Creating a vector database instance
-3. Writing documents with vectors
+3. Writing documents with different embedding strategies
 4. Listing and querying documents
 5. Cleanup
 """
@@ -29,8 +29,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.db.vector_db_factory import create_vector_database
 
 
-def create_sample_documents() -> List[Dict[str, Any]]:
-    """Create sample documents with vector embeddings."""
+def create_sample_documents_with_vectors() -> List[Dict[str, Any]]:
+    """Create sample documents with pre-computed vector embeddings."""
     return [
         {
             "url": "https://example.com/doc1",
@@ -73,6 +73,32 @@ def create_sample_documents() -> List[Dict[str, Any]]:
     ]
 
 
+def create_sample_documents_without_vectors() -> List[Dict[str, Any]]:
+    """Create sample documents without pre-computed vectors (will use embedding models)."""
+    return [
+        {
+            "url": "https://example.com/doc4",
+            "text": "Deep learning models have revolutionized natural language processing tasks.",
+            "metadata": {
+                "type": "research",
+                "author": "Dr. Johnson",
+                "category": "AI/ML",
+                "tags": ["deep learning", "NLP", "neural networks"],
+            },
+        },
+        {
+            "url": "https://example.com/doc5",
+            "text": "Semantic search enables finding documents based on meaning rather than exact keyword matches.",
+            "metadata": {
+                "type": "tutorial",
+                "author": "Dr. Brown",
+                "category": "Search",
+                "tags": ["semantic search", "information retrieval", "AI"],
+            },
+        },
+    ]
+
+
 def main():
     """Main example function."""
     print("🚀 Maestro Knowledge - Milvus Vector Database Example")
@@ -84,24 +110,45 @@ def main():
         db = create_vector_database("milvus", "ExampleCollection")
         print(f"✅ Created {db.db_type} database with collection: {db.collection_name}")
 
+        # Display supported embeddings
+        print(f"\n2. Supported embeddings: {db.supported_embeddings()}")
+
         # Set up the collection
-        print("\n2. Setting up collection...")
+        print("\n3. Setting up collection...")
         db.setup()
         print("✅ Collection setup complete")
 
-        # Create sample documents
-        print("\n3. Creating sample documents...")
-        documents = create_sample_documents()
-        print(f"✅ Created {len(documents)} sample documents")
+        # Example 1: Write documents with pre-computed vectors
+        print("\n4. Writing documents with pre-computed vectors...")
+        documents_with_vectors = create_sample_documents_with_vectors()
+        db.write_documents(documents_with_vectors, embedding="default")
+        print(
+            f"✅ Wrote {len(documents_with_vectors)} documents with pre-computed vectors"
+        )
 
-        # Write documents to the database
-        print("\n4. Writing documents to database...")
-        db.write_documents(documents)
-        print("✅ Documents written successfully")
+        # Example 2: Write documents using embedding model (requires OpenAI API key)
+        print("\n5. Writing documents using embedding model...")
+        documents_without_vectors = create_sample_documents_without_vectors()
+
+        # Check if OpenAI API key is available
+        if os.getenv("OPENAI_API_KEY"):
+            try:
+                db.write_documents(
+                    documents_without_vectors, embedding="text-embedding-ada-002"
+                )
+                print(
+                    f"✅ Wrote {len(documents_without_vectors)} documents using text-embedding-ada-002"
+                )
+            except Exception as e:
+                print(f"⚠️  Failed to write documents with embedding model: {e}")
+                print("   This is expected if OpenAI API is not configured properly")
+        else:
+            print("⚠️  OPENAI_API_KEY not set, skipping embedding model example")
+            print("   Set OPENAI_API_KEY to test embedding model functionality")
 
         # List documents from the database
-        print("\n5. Listing documents from database...")
-        retrieved_docs = db.list_documents(limit=5)
+        print("\n6. Listing documents from database...")
+        retrieved_docs = db.list_documents(limit=10)
         print(f"✅ Retrieved {len(retrieved_docs)} documents:")
 
         for i, doc in enumerate(retrieved_docs, 1):
@@ -112,12 +159,12 @@ def main():
             print(f"   - Metadata: {json.dumps(doc.get('metadata', {}), indent=6)}")
 
         # Demonstrate document count
-        print("\n6. Document count:")
+        print("\n7. Document count:")
         count = db.count_documents()
         print(f"   - Total documents in collection: {count}")
 
         # Demonstrate document deletion
-        print("\n7. Demonstrating document deletion:")
+        print("\n8. Demonstrating document deletion:")
         if retrieved_docs:
             first_doc_id = retrieved_docs[0].get("id")
             print(f"   - Deleting document with ID: {first_doc_id}")
@@ -127,10 +174,22 @@ def main():
             new_count = db.count_documents()
             print(f"   - Documents after deletion: {new_count}")
 
+        # Demonstrate different embedding models
+        print("\n9. Embedding model examples:")
+        print(
+            "   - 'default': Uses pre-computed vectors if available, otherwise text-embedding-ada-002"
+        )
+        print("   - 'text-embedding-ada-002': OpenAI's Ada-002 embedding model")
+        print("   - 'text-embedding-3-small': OpenAI's text-embedding-3-small model")
+        print("   - 'text-embedding-3-large': OpenAI's text-embedding-3-large model")
+
         # Demonstrate environment variable usage
-        print("\n8. Environment variable configuration:")
+        print("\n10. Environment variable configuration:")
         print(f"   - VECTOR_DB_TYPE: {os.environ.get('VECTOR_DB_TYPE', 'not set')}")
         print(f"   - MILVUS_URI: {os.environ.get('MILVUS_URI', 'not set')}")
+        print(
+            f"   - OPENAI_API_KEY: {'set' if os.getenv('OPENAI_API_KEY') else 'not set'}"
+        )
 
         print("\n✅ Example completed successfully!")
 
@@ -140,10 +199,11 @@ def main():
         print("   - Milvus server running (or use cloud instance)")
         print("   - pymilvus package installed: pip install pymilvus")
         print("   - Proper environment variables set")
+        print("   - For embedding models: OpenAI API key set (OPENAI_API_KEY)")
 
     finally:
         # Clean up resources
-        print("\n7. Cleaning up...")
+        print("\n11. Cleaning up...")
         try:
             db.cleanup()
             print("✅ Cleanup completed")

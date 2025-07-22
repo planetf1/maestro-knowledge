@@ -29,6 +29,27 @@ class WeaviateVectorDatabase(VectorDatabase):
         self.client = None
         self._create_client()
 
+    def supported_embeddings(self) -> List[str]:
+        """
+        Return a list of supported embedding model names for Weaviate.
+
+        Weaviate supports various vectorizers and can also work with external
+        embedding services.
+
+        Returns:
+            List of supported embedding model names
+        """
+        return [
+            "default",  # Uses text2vec-weaviate
+            "text2vec-weaviate",
+            "text2vec-openai",
+            "text2vec-cohere",
+            "text2vec-huggingface",
+            "text-embedding-ada-002",
+            "text-embedding-3-small",
+            "text-embedding-3-large",
+        ]
+
     def _create_client(self):
         """Create the Weaviate client."""
         import os
@@ -48,15 +69,70 @@ class WeaviateVectorDatabase(VectorDatabase):
             auth_credentials=Auth.api_key(weaviate_api_key),
         )
 
-    def setup(self):
-        """Set up Weaviate collection if it doesn't exist."""
-        from weaviate.classes.config import Configure, Property, DataType
+    def _get_vectorizer_config(self, embedding: str):
+        """
+        Get the appropriate vectorizer configuration for the embedding model.
+
+        Args:
+            embedding: Name of the embedding model to use
+
+        Returns:
+            Vectorizer configuration object
+        """
+        from weaviate.classes.config import Configure
+
+        # Map embedding names to Weaviate vectorizer configurations
+        vectorizer_mapping = {
+            "default": Configure.Vectorizer.text2vec_weaviate(),
+            "text2vec-weaviate": Configure.Vectorizer.text2vec_weaviate(),
+            "text2vec-openai": Configure.Vectorizer.text2vec_openai(
+                model="text-embedding-ada-002",
+                model_version="002",
+                type_="text",
+                vectorize_collection_name=False,
+            ),
+            "text2vec-cohere": Configure.Vectorizer.text2vec_cohere(
+                model="embed-multilingual-v3.0", vectorize_collection_name=False
+            ),
+            "text2vec-huggingface": Configure.Vectorizer.text2vec_huggingface(
+                model="sentence-transformers/all-MiniLM-L6-v2",
+                vectorize_collection_name=False,
+            ),
+        }
+
+        # For OpenAI embedding models, use text2vec-openai with appropriate model
+        if embedding in [
+            "text-embedding-ada-002",
+            "text-embedding-3-small",
+            "text-embedding-3-large",
+        ]:
+            return Configure.Vectorizer.text2vec_openai(
+                model=embedding, vectorize_collection_name=False
+            )
+
+        if embedding not in vectorizer_mapping:
+            raise ValueError(
+                f"Unsupported embedding: {embedding}. Supported: {self.supported_embeddings()}"
+            )
+
+        return vectorizer_mapping[embedding]
+
+    def setup(self, embedding: str = "default"):
+        """
+        Set up Weaviate collection if it doesn't exist.
+
+        Args:
+            embedding: Embedding model to use for the collection
+        """
+        from weaviate.classes.config import Property, DataType
 
         if not self.client.collections.exists(self.collection_name):
+            vectorizer_config = self._get_vectorizer_config(embedding)
+
             self.client.collections.create(
                 self.collection_name,
                 description="A dataset with the contents of Maestro Knowledge docs and website",
-                vectorizer_config=Configure.Vectorizer.text2vec_weaviate(),
+                vectorizer_config=vectorizer_config,
                 properties=[
                     Property(
                         name="url",
@@ -76,8 +152,28 @@ class WeaviateVectorDatabase(VectorDatabase):
                 ],
             )
 
-    def write_documents(self, documents: List[Dict[str, Any]]):
-        """Write documents to Weaviate."""
+    def write_documents(
+        self, documents: List[Dict[str, Any]], embedding: str = "default"
+    ):
+        """
+        Write documents to Weaviate.
+
+        Args:
+            documents: List of documents with 'url', 'text', and 'metadata' fields
+            embedding: Embedding strategy to use:
+                      - "default": Use Weaviate's default text2vec-weaviate
+                      - Specific model name: Use the specified embedding model
+        """
+        # Validate embedding parameter
+        if embedding not in self.supported_embeddings():
+            raise ValueError(
+                f"Unsupported embedding: {embedding}. Supported: {self.supported_embeddings()}"
+            )
+
+        # Ensure collection exists with the correct embedding configuration
+        if not self.client.collections.exists(self.collection_name):
+            self.setup(embedding)
+
         collection = self.client.collections.get(self.collection_name)
         with collection.batch.dynamic() as batch:
             for doc in documents:
