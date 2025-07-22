@@ -5,3 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
+
+[tool.ruff.lint]
+# Disable E402 (module level import not at top) globally
+# This is needed due to our test structure with sys.path.append and warnings.filterwarnings
+ignore = ["E402"]

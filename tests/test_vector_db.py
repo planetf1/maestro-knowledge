@@ -24,17 +24,17 @@ warnings.filterwarnings(
     "ignore", category=UserWarning, message=".*Milvus client is not available.*"
 )
 
-import sys  # noqa: E402
-import os  # noqa: E402
+import sys
+import os
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import from the new modular structure
-from src.db.vector_db_base import VectorDatabase  # noqa: E402
-from src.db.vector_db_weaviate import WeaviateVectorDatabase  # noqa: E402
-from src.db.vector_db_milvus import MilvusVectorDatabase  # noqa: E402
-from src.db.vector_db_factory import create_vector_database  # noqa: E402
+from src.db.vector_db_base import VectorDatabase
+from src.db.vector_db_weaviate import WeaviateVectorDatabase
+from src.db.vector_db_milvus import MilvusVectorDatabase
+from src.db.vector_db_factory import create_vector_database
 
 # Check if pymilvus is available
 try:

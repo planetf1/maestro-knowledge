@@ -16,15 +16,15 @@ warnings.filterwarnings(
     message=".*Support for class-based `config`.*",
 )
 
-import sys  # noqa: E402
-import os  # noqa: E402
-import pytest  # noqa: E402
-from unittest.mock import patch, MagicMock  # noqa: E402
+import sys
+import os
+import pytest
+from unittest.mock import patch, MagicMock
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.db.vector_db_factory import create_vector_database  # noqa: E402
+from src.db.vector_db_factory import create_vector_database
 
 
 class TestCreateVectorDatabase:

@@ -18,7 +18,7 @@ warnings.filterwarnings(
     message=".*Support for class-based `config`.*",
 )
 
-from .vector_db_base import VectorDatabase  # noqa: E402
+from .vector_db_base import VectorDatabase
 
 
 class MilvusVectorDatabase(VectorDatabase):
