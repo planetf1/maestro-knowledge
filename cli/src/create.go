@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -27,6 +29,44 @@ type VectorDatabaseSpec struct {
 	CollectionName string `yaml:"collection_name"`
 	Embedding      string `yaml:"embedding"`
 	Mode           string `yaml:"mode"`
+}
+
+// replaceEnvVars replaces {{ENV_VAR_NAME}} placeholders with environment variable values
+func replaceEnvVars(content string) (string, error) {
+	// Regex to match {{ENV_VAR_NAME}} pattern
+	re := regexp.MustCompile(`\{\{([A-Z_][A-Z0-9_]*)\}\}`)
+
+	var missingVars []string
+
+	result := re.ReplaceAllStringFunc(content, func(match string) string {
+		// Extract the environment variable name from {{ENV_VAR_NAME}}
+		envVarName := strings.Trim(match, "{}")
+
+		// Get the environment variable value
+		envValue := os.Getenv(envVarName)
+
+		if envValue == "" {
+			// If environment variable is not set, collect it for error reporting
+			missingVars = append(missingVars, envVarName)
+			if verbose && !silent {
+				fmt.Printf("Warning: Environment variable %s is not set\n", envVarName)
+			}
+			return "" // Replace with empty string to avoid YAML parsing issues
+		}
+
+		if verbose && !silent {
+			fmt.Printf("Replacing {{%s}} with environment variable value\n", envVarName)
+		}
+
+		return envValue
+	})
+
+	// If there are missing environment variables, return an error
+	if len(missingVars) > 0 {
+		return result, fmt.Errorf("missing required environment variables: %s", strings.Join(missingVars, ", "))
+	}
+
+	return result, nil
 }
 
 var createCmd = &cobra.Command{
@@ -123,8 +163,15 @@ func loadVectorDatabaseConfig(yamlFile string) (*VectorDatabaseConfig, error) {
 		return nil, fmt.Errorf("failed to read YAML file: %w", err)
 	}
 
+	// Replace environment variable placeholders in the YAML content
+	yamlContent := string(data)
+	yamlContent, err = replaceEnvVars(yamlContent)
+	if err != nil {
+		return nil, fmt.Errorf("failed to process environment variables: %w", err)
+	}
+
 	var config VectorDatabaseConfig
-	if err := yaml.Unmarshal(data, &config); err != nil {
+	if err := yaml.Unmarshal([]byte(yamlContent), &config); err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
 

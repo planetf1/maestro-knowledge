@@ -6,7 +6,7 @@ metadata:
     app: testdb
 spec:
   type: weaviate
-  uri: https://your-weaviate-cluster.weaviate.network
+  uri: {{WEAVIATE_URL}}
   collection_name: test_collection
   embedding: text-embedding-3-small
   mode: remote

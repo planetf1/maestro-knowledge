@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 )
 
@@ -17,6 +18,15 @@ var (
 )
 
 func main() {
+	// Load .env file if it exists
+	if err := godotenv.Load(); err != nil {
+		// .env file doesn't exist, which is fine
+		// Only log error if it's not a "file not found" error
+		if !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to load .env file: %v\n", err)
+		}
+	}
+
 	var rootCmd = &cobra.Command{
 		Use:   "maestro-k",
 		Short: "Maestro Knowledge CLI tool",

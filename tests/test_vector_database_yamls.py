@@ -3,10 +3,30 @@ Tests for vector database YAML configuration validation against JSON schema.
 """
 
 import json
+import os
+import re
 import pytest
 import yaml
 from pathlib import Path
 from jsonschema import validate, ValidationError
+
+
+def replace_env_vars_in_yaml(content):
+    """Replace {{ENV_VAR_NAME}} placeholders with environment variable values."""
+    # Regex to match {{ENV_VAR_NAME}} pattern
+    pattern = r"\{\{([A-Z_][A-Z0-9_]*)\}\}"
+
+    def replace_match(match):
+        env_var_name = match.group(1)
+        env_value = os.getenv(env_var_name, "")
+        if env_value == "":
+            # If environment variable is not set, use a default value for testing
+            if env_var_name == "WEAVIATE_URL":
+                return "https://your-weaviate-cluster.weaviate.network"
+            return match.group(0)  # Keep original if no default
+        return env_value
+
+    return re.sub(pattern, replace_match, content)
 
 
 @pytest.fixture
@@ -32,7 +52,12 @@ def remote_weaviate_yaml():
     """Load the remote Weaviate YAML configuration."""
     yaml_path = Path(__file__).parent / "yamls" / "test_remote_weaviate.yaml"
     with open(yaml_path, "r") as f:
-        return yaml.safe_load(f)
+        content = f.read()
+
+    # Replace environment variable placeholders
+    content = replace_env_vars_in_yaml(content)
+
+    return yaml.safe_load(content)
 
 
 class TestVectorDatabaseYAMLValidation:
@@ -69,10 +94,11 @@ class TestVectorDatabaseYAMLValidation:
         assert remote_weaviate_yaml["metadata"]["name"] == "test_remote_weaviate"
         assert remote_weaviate_yaml["metadata"]["labels"]["app"] == "testdb"
         assert remote_weaviate_yaml["spec"]["type"] == "weaviate"
-        assert (
-            remote_weaviate_yaml["spec"]["uri"]
-            == "https://your-weaviate-cluster.weaviate.network"
+        # The URI should be the substituted value (either from env var or default)
+        expected_uri = os.getenv(
+            "WEAVIATE_URL", "https://your-weaviate-cluster.weaviate.network"
         )
+        assert remote_weaviate_yaml["spec"]["uri"] == expected_uri
         assert remote_weaviate_yaml["spec"]["collection_name"] == "test_collection"
         assert remote_weaviate_yaml["spec"]["embedding"] == "text-embedding-3-small"
         assert remote_weaviate_yaml["spec"]["mode"] == "remote"

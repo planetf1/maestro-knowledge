@@ -41,6 +41,12 @@ go build -o maestro-k src/*.go
 
 # List vector databases with verbose output
 ./maestro-k list vector-db --verbose
+
+# Create vector database from YAML file
+./maestro-k create vector-db config.yaml
+
+# Create vector database with environment variable substitution
+./maestro-k create vector-db config.yaml --verbose
 ```
 
 ### MCP Server Configuration
@@ -58,12 +64,21 @@ export MAESTRO_KNOWLEDGE_MCP_SERVER_URI="http://localhost:8030"
 
 #### 2. .env File
 
-Create a `.env` file in the current directory:
+Create a `.env` file in the current directory with your configuration:
 
 ```bash
-echo "MAESTRO_KNOWLEDGE_MCP_SERVER_URI=http://localhost:8030" > .env
-./maestro-k list vector-db
+# MCP Server configuration
+MAESTRO_KNOWLEDGE_MCP_SERVER_URI=http://localhost:8030
+
+# Weaviate configuration (for Weaviate backend)
+WEAVIATE_API_KEY=your-weaviate-api-key
+WEAVIATE_URL=https://your-weaviate-cluster.weaviate.network
+
+# OpenAI configuration (for OpenAI embeddings)
+OPENAI_API_KEY=your-openai-api-key
 ```
+
+The CLI will automatically load the `.env` file if it exists in the current directory.
 
 #### 3. Command-line Flag
 
@@ -74,6 +89,40 @@ Override the MCP server URI via command-line flag:
 ```
 
 **Priority order**: Command-line flag > Environment variable > .env file > Default (http://localhost:8030)
+
+**Supported Environment Variables**:
+- `MAESTRO_KNOWLEDGE_MCP_SERVER_URI`: MCP server URI
+- `WEAVIATE_API_KEY`: Weaviate API key for Weaviate backend
+- `WEAVIATE_URL`: Weaviate cluster URL
+- `OPENAI_API_KEY`: OpenAI API key for embeddings
+
+### Environment Variable Substitution in YAML Files
+
+The CLI supports environment variable substitution in YAML files using the `{{ENV_VAR_NAME}}` syntax. This allows you to use environment variables directly in your configuration files:
+
+```yaml
+apiVersion: maestro/v1alpha1
+kind: VectorDatabase
+metadata:
+  name: my-weaviate-db
+spec:
+  type: weaviate
+  uri: {{WEAVIATE_URL}}
+  collection_name: my_collection
+  embedding: text-embedding-3-small
+  mode: remote
+```
+
+When you run `./maestro-k create vector-db config.yaml`, the CLI will:
+1. Load environment variables from `.env` file (if present)
+2. Replace `{{WEAVIATE_URL}}` with the actual value from the environment
+3. Process the YAML file with the substituted values
+
+**Features**:
+- **Automatic substitution**: All `{{ENV_VAR_NAME}}` placeholders are replaced before YAML parsing
+- **Error handling**: Clear error messages if required environment variables are missing
+- **Verbose logging**: Shows which environment variables are being substituted (when using `--verbose`)
+- **Validation**: Ensures all required environment variables are set before processing
 
 #### URL Format Flexibility
 
