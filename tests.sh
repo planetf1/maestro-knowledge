@@ -118,11 +118,32 @@ if [ "$RUN_CLI_TESTS" = "cli" ] || [ "$RUN_CLI_TESTS" = "all" ]; then
     fi
 
     # Test with invalid YAML (should fail)
-    if ./maestro-k validate --verbose tests/yamls/invalid-test.yaml &> /dev/null; then
+    # Create a temporary invalid YAML file
+    INVALID_YAML_CONTENT='---
+apiVersion: maestro/v1alpha1
+kind: VectorDatabase
+metadata:
+  name: test-milvus
+spec:
+  type: milvus
+  uri: localhost:19530
+  collection_name: test_collection
+  embedding: text-embedding-3-small
+  mode: local
+  # Missing closing quote - this will cause a YAML parsing error
+  api_version: "v1'
+    
+    INVALID_YAML_FILE=$(mktemp)
+    echo "$INVALID_YAML_CONTENT" > "$INVALID_YAML_FILE"
+    
+    if ./maestro-k validate --verbose "$INVALID_YAML_FILE" &> /dev/null; then
         print_warning "⚠ Invalid YAML validation should have failed"
     else
         print_status "✓ Invalid YAML correctly rejected"
     fi
+    
+    # Clean up
+    rm -f "$INVALID_YAML_FILE"
 
     # Step 6: Show CLI info
     print_status "Step 6: Showing CLI info..."

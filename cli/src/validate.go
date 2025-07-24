@@ -71,12 +71,12 @@ func validateFiles(yamlFile, schemaFile string) error {
 
 	// Check if YAML file exists
 	if _, err := os.Stat(yamlFile); os.IsNotExist(err) {
-		return fmt.Errorf("YAML file not found: %s", yamlFile)
+		return fmt.Errorf("yaml file not found: %s", yamlFile)
 	}
 
 	// Check if schema file exists
 	if _, err := os.Stat(schemaFile); os.IsNotExist(err) {
-		return fmt.Errorf("Schema file not found: %s", schemaFile)
+		return fmt.Errorf("schema file not found: %s", schemaFile)
 	}
 
 	if dryRun {
@@ -110,7 +110,7 @@ func performValidation(yamlFile, schemaFile string) error {
 	// Parse YAML to check if it's valid YAML
 	var yamlContent interface{}
 	if err := yaml.Unmarshal(yamlData, &yamlContent); err != nil {
-		return fmt.Errorf("invalid YAML format: %w", err)
+		return fmt.Errorf("invalid yaml format: %w", err)
 	}
 
 	// Step 2: Always validate against schema (default or provided)
@@ -125,7 +125,7 @@ func performValidation(yamlFile, schemaFile string) error {
 	// Convert YAML to JSON for validation
 	jsonData, err := yamlToJSON(yamlData)
 	if err != nil {
-		return fmt.Errorf("failed to convert YAML to JSON: %w", err)
+		return fmt.Errorf("failed to convert yaml to JSON: %w", err)
 	}
 
 	schemaLoader := gojsonschema.NewReferenceLoader("file://" + absSchemaPath)
@@ -143,10 +143,8 @@ func performValidation(yamlFile, schemaFile string) error {
 			fmt.Println("Validation failed:")
 		}
 
-		var errors []string
 		for _, err := range result.Errors() {
 			errorMsg := fmt.Sprintf("- %s: %s", err.Field(), err.Description())
-			errors = append(errors, errorMsg)
 			if verbose {
 				fmt.Println(errorMsg)
 			}
@@ -168,7 +166,7 @@ func yamlToJSON(yamlData []byte) ([]byte, error) {
 
 	// Parse YAML
 	if err := yaml.Unmarshal(yamlData, &yamlContent); err != nil {
-		return nil, fmt.Errorf("failed to parse YAML: %w", err)
+		return nil, fmt.Errorf("failed to parse yaml: %w", err)
 	}
 
 	// Marshal to JSON

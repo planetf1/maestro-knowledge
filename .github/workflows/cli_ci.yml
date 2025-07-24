@@ -58,7 +58,22 @@ jobs:
           ./maestro-k validate --verbose schemas/vector-database-schema.json tests/yamls/local_milvus.yaml
           
           # Test with invalid YAML (should fail)
-          ./maestro-k validate --verbose tests/yamls/invalid-test.yaml || echo "Invalid YAML correctly rejected"
+          echo 'apiVersion: maestro/v1alpha1' > /tmp/invalid-test.yaml
+          echo 'kind: VectorDatabase' >> /tmp/invalid-test.yaml
+          echo 'metadata:' >> /tmp/invalid-test.yaml
+          echo '  name: test-milvus' >> /tmp/invalid-test.yaml
+          echo 'spec:' >> /tmp/invalid-test.yaml
+          echo '  type: milvus' >> /tmp/invalid-test.yaml
+          echo '  uri: localhost:19530' >> /tmp/invalid-test.yaml
+          echo '  collection_name: test_collection' >> /tmp/invalid-test.yaml
+          echo '  embedding: text-embedding-3-small' >> /tmp/invalid-test.yaml
+          echo '  mode: local' >> /tmp/invalid-test.yaml
+          echo '  api_version: "v1' >> /tmp/invalid-test.yaml
+          
+          ./maestro-k validate --verbose /tmp/invalid-test.yaml || echo "Invalid YAML correctly rejected"
+          
+          # Clean up
+          rm -f /tmp/invalid-test.yaml
           
       - name: Upload CLI artifact
         uses: actions/upload-artifact@v4

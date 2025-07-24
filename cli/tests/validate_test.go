@@ -42,12 +42,18 @@ spec:
 func TestValidateWithInvalidYAML(t *testing.T) {
 	// Create an invalid YAML file (missing closing quote)
 	invalidYAML := `---
-name: test-config
-version: 1.0
-database:
-  type: "milvus
-  host: localhost
-`
+apiVersion: maestro/v1alpha1
+kind: VectorDatabase
+metadata:
+  name: test-milvus
+spec:
+  type: milvus
+  uri: localhost:19530
+  collection_name: test_collection
+  embedding: text-embedding-3-small
+  mode: local
+  # Missing closing quote - this will cause a YAML parsing error
+  api_version: "v1`
 
 	tempFile := createTempFile(t, "invalid-*.yaml", invalidYAML)
 	defer os.Remove(tempFile)
@@ -55,10 +61,16 @@ database:
 	cmd := exec.Command("../../maestro-k", "validate", tempFile)
 	output, err := cmd.CombinedOutput()
 
-	// Note: Current implementation doesn't actually parse YAML, so this might pass
-	// In a real implementation, this should fail
+	// The command should fail (exit code != 0)
+	if err == nil {
+		t.Errorf("Expected validation to fail for invalid YAML, but it succeeded. Output: %s", string(output))
+	}
+
+	// Check that the error message contains expected content
 	outputStr := string(output)
-	t.Logf("Output for invalid YAML: %s (error: %v)", outputStr, err)
+	if !contains(outputStr, "invalid yaml format") && !contains(outputStr, "validation failed") {
+		t.Errorf("Expected error message about invalid YAML, got: %s", outputStr)
+	}
 }
 
 // TestValidateWithSchemaFile tests validation with both YAML and schema files
