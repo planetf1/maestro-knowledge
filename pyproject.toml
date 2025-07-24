@@ -20,6 +20,7 @@ dependencies = [
     "pymilvus>=2.4.4",
     "pyyaml>=6.0.2",
     "jsonschema>=4.25.0",
+    "fastmcp>=2.10.6",
 ]
 
 [tool.ruff.lint]

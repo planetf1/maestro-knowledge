@@ -27,7 +27,6 @@ def test_server_creation():
         server = create_mcp_server()
         print("✓ Server created successfully")
         print(f"✓ Server name: {server.name}")
-        print(f"✓ Server version: {server.version}")
 
         # Test that the server has the expected structure
         print("✓ Server structure verified")
@@ -47,6 +46,7 @@ def test_tool_definitions():
         expected_tools = [
             "create_vector_database",
             "setup_database",
+            "get_supported_embeddings",
             "write_documents",
             "write_document",
             "list_documents",
@@ -56,17 +56,18 @@ def test_tool_definitions():
             "delete_collection",
             "cleanup",
             "get_database_info",
+            "list_databases",
         ]
 
         print("✓ Server created with expected tools")
         print(f"✓ Expected {len(expected_tools)} tools")
 
-        # Test that the server has the right structure
-        assert hasattr(server, "list_tools"), "Server missing list_tools method"
-        print("✓ Server has list_tools method")
+        # Test that the server has the right structure for FastMCP
+        assert hasattr(server, "get_tools"), "Server missing get_tools method"
+        print("✓ Server has get_tools method")
 
-        assert hasattr(server, "call_tool"), "Server missing call_tool method"
-        print("✓ Server has call_tool method")
+        assert hasattr(server, "tool"), "Server missing tool decorator"
+        print("✓ Server has tool decorator")
     except Exception as e:
         assert False, f"Failed to test tool definitions: {e}"
 

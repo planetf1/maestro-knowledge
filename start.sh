@@ -11,6 +11,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
 NC='\033[0m' # No Color
 
 # Configuration
@@ -18,6 +19,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PID_FILE="$SCRIPT_DIR/mcp_server.pid"
 LOG_FILE="$SCRIPT_DIR/mcp_server.log"
 PYTHON_MODULE="src.maestro_mcp.server"
+DEFAULT_HOST="localhost"
+DEFAULT_PORT="8030"
 
 # Function to print colored output
 print_status() {
@@ -36,6 +39,10 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+print_info() {
+    echo -e "${PURPLE}[INFO]${NC} $1"
+}
+
 # Check if server is already running
 check_running() {
     if [ -f "$PID_FILE" ]; then
@@ -49,6 +56,65 @@ check_running() {
         fi
     fi
     return 1  # Server is not running
+}
+
+# Parse command line arguments
+parse_args() {
+    MODE="stdio"
+    HOST="$DEFAULT_HOST"
+    PORT="$DEFAULT_PORT"
+    
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --http)
+                MODE="http"
+                shift
+                ;;
+            --host)
+                HOST="$2"
+                shift 2
+                ;;
+            --port)
+                PORT="$2"
+                shift 2
+                ;;
+            --stdio)
+                MODE="stdio"
+                shift
+                ;;
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            *)
+                print_error "Unknown option: $1"
+                show_help
+                exit 1
+                ;;
+        esac
+    done
+}
+
+# Show help information
+show_help() {
+    echo "Maestro Knowledge MCP Server Start Script"
+    echo "=========================================="
+    echo ""
+    echo "Usage: $0 [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  --http              Start HTTP server (default: stdio)"
+    echo "  --stdio             Start stdio server (default)"
+    echo "  --host HOST         HTTP server host (default: localhost)"
+    echo "  --port PORT         HTTP server port (default: 8030)"
+    echo "  -h, --help          Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0                  # Start stdio server"
+    echo "  $0 --http           # Start HTTP server on localhost:8030"
+    echo "  $0 --http --port 9000  # Start HTTP server on localhost:9000"
+    echo "  $0 --http --host 0.0.0.0 --port 8080  # Start HTTP server on all interfaces"
+    echo ""
 }
 
 # Start the MCP server
@@ -65,38 +131,85 @@ start_server() {
     # Create log file if it doesn't exist
     touch "$LOG_FILE"
     
-    # Start the server in background
-    print_status "Launching server with module: $PYTHON_MODULE"
-    
     # Set PYTHONPATH to include the project root
     export PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH"
     
-    # Start the server and capture PID
-    # Note: MCP server runs with stdio, so we need to handle this differently
-    # For now, we'll create a simple test to verify the module works
+    if [ "$MODE" = "http" ]; then
+        start_http_server
+    else
+        start_stdio_server
+    fi
+}
+
+# Start HTTP server
+start_http_server() {
+    print_info "Starting FastMCP HTTP server..."
+    print_status "Host: $HOST"
+    print_status "Port: $PORT"
+    
+    # Start the HTTP server in background
+    python -c "
+import sys
+sys.path.insert(0, '$SCRIPT_DIR')
+from src.maestro_mcp.server import run_http_server_sync
+run_http_server_sync('$HOST', $PORT)
+" > "$LOG_FILE" 2>&1 &
+    
+    local pid=$!
+    echo "$pid" > "$PID_FILE"
+    
+    # Wait a moment for server to start
+    sleep 2
+    
+    # Check if server started successfully
+    if ps -p "$pid" > /dev/null 2>&1; then
+        print_success "FastMCP HTTP server started successfully (PID: $pid)"
+        print_info "🌐 Server URL: http://$HOST:$PORT"
+        print_info "📖 OpenAPI docs: http://$HOST:$PORT/docs"
+        print_info "📚 ReDoc docs: http://$HOST:$PORT/redoc"
+        print_info "🔧 MCP endpoint: http://$HOST:$PORT/mcp/"
+        print_status "Log file: $LOG_FILE"
+        print_status "PID file: $PID_FILE"
+        print_status "To stop server, run: ./stop.sh"
+        print_status "To check status, run: ./stop.sh status"
+    else
+        print_error "Failed to start HTTP server"
+        print_status "Check the log file for details: $LOG_FILE"
+        rm -f "$PID_FILE"
+        return 1
+    fi
+}
+
+# Start stdio server (for MCP clients)
+start_stdio_server() {
+    print_info "Starting FastMCP stdio server..."
+    print_status "Note: This mode is for MCP client communication via stdio"
+    
+    # Test module import
     if python -c "import $PYTHON_MODULE; print('Module imported successfully')" > "$LOG_FILE" 2>&1; then
-        print_success "MCP server module is ready"
-        print_status "Note: MCP server runs with stdio for client communication"
+        print_success "FastMCP stdio server module is ready"
         print_status "To use with MCP clients, run: python -m $PYTHON_MODULE"
         # Create a status file to track that the module is ready
         echo "ready" > "$PID_FILE"
         print_status "Log file: $LOG_FILE"
         print_status "PID file: $PID_FILE"
         print_status "To check status, run: ./stop.sh status"
+        print_info "💡 Tip: Use --http flag to start HTTP server for browser access"
         return 0
     else
         print_error "Failed to import MCP server module"
         print_status "Check the log file for details: $LOG_FILE"
         return 1
     fi
-    
-
 }
 
 # Main execution
 main() {
     print_status "Maestro Knowledge MCP Server Manager"
     print_status "====================================="
+    
+    # Parse command line arguments
+    parse_args "$@"
     
     # Check if Python is available
     if ! command -v python &> /dev/null; then

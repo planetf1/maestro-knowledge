@@ -1,6 +1,17 @@
 # Maestro Vector Database MCP Server
 
-This MCP (Model Context Protocol) server exposes the Maestro Vector Database functionality to AI agents through a standardized interface with flexible embedding strategies.
+This MCP (Model Context Protocol) server exposes the Maestro Vector Database functionality to AI agents through a standardized interface with flexible embedding strategies. The server is built using **FastMCP**, a modern and efficient implementation of the Model Context Protocol.
+
+## FastMCP Implementation
+
+This MCP server has been migrated from the standard MCP library to **FastMCP** for improved performance and developer experience:
+
+### Benefits of FastMCP
+- **Better Performance**: Optimized for high-throughput operations
+- **Type Safety**: Full Pydantic integration for input validation
+- **Modern API**: Cleaner, more intuitive tool definitions
+- **Enhanced Error Handling**: Better error messages and validation
+- **Async Support**: Native async/await support for all operations
 
 ## Features
 
