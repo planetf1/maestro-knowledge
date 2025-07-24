@@ -10,10 +10,12 @@ The `maestro-k` CLI provides tools for validating YAML configuration files and s
 
 - **YAML Validation**: Validate YAML files against JSON schemas
 - **Default Schema**: Automatically uses the project's vector database schema when no schema is provided
+- **Vector Database Management**: Create and delete vector database resources
+- **Field Overrides**: Override YAML configuration values with command-line options
 - **Flexible Input**: Support for both single YAML file validation and schema + YAML file validation
 - **Verbose Output**: Detailed logging for debugging and troubleshooting
 - **Silent Mode**: Clean output for CI/CD pipelines
-- **Dry Run Mode**: Preview validation without making changes
+- **Dry Run Mode**: Preview operations without making changes
 
 ## Installation
 
@@ -69,6 +71,15 @@ maestro-k validate config.yaml
 
 # Validate a YAML file against a specific schema
 maestro-k validate schema.json config.yaml
+
+# Create a vector database from YAML file
+maestro-k create vector-db config.yaml
+
+# Create a vector database with field overrides
+maestro-k create vector-db config.yaml --uri=localhost:8000 --mode=local
+
+# Delete a vector database by name
+maestro-k delete vector-db my-database
 ```
 
 ### Global Options
@@ -91,9 +102,65 @@ maestro-k validate --silent config.yaml
 
 # Dry run to see what would be validated
 maestro-k validate --dry-run config.yaml
+
+# Create vector database with field overrides
+maestro-k create vector-db config.yaml --uri=localhost:8000 --mode=local --verbose
+
+# Dry run creation to preview changes
+maestro-k create vector-db config.yaml --dry-run
+
+# Delete vector database with verbose output
+maestro-k delete vector-db my-database --verbose
 ```
 
 ## Command Reference
+
+### `create` Command
+
+Creates vector database resources from YAML files.
+
+```bash
+maestro-k create (vector-database | vector-db) YAML_FILE [flags]
+```
+
+**Flags:**
+- `--type string`: Override the database type (milvus, weaviate)
+- `--uri string`: Override the connection URI
+- `--collection-name string`: Override the collection name
+- `--embedding string`: Override the embedding model
+- `--mode string`: Override the deployment mode (local, remote)
+
+**Examples:**
+```bash
+# Create from YAML file
+maestro-k create vector-db config.yaml
+
+# Create with field overrides
+maestro-k create vector-db config.yaml --uri=localhost:8000 --mode=local
+
+# Dry run to preview
+maestro-k create vector-db config.yaml --dry-run --verbose
+```
+
+### `delete` Command
+
+Deletes vector database resources by name.
+
+```bash
+maestro-k delete (vector-database | vector-db) NAME [flags]
+```
+
+**Examples:**
+```bash
+# Delete by name
+maestro-k delete vector-db my-database
+
+# Delete with verbose output
+maestro-k delete vector-db my-database --verbose
+
+# Dry run to preview
+maestro-k delete vector-db my-database --dry-run
+```
 
 ### `validate` Command
 

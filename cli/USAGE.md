@@ -4,6 +4,9 @@ Usage:
   maestro-k validate YAML_FILE [options]
   maestro-k validate SCHEMA_FILE YAML_FILE [options]
 
+  maestro-k create (vector-database | vector-db) YAML_FILE [options]
+  maestro-k delete (vector-database | vector-db) NAME [options]
+
   maestro-k (-h | --help)
   maestro-k (-v | --version)
 

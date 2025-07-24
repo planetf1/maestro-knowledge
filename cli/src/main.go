@@ -32,6 +32,8 @@ A command-line interface for working with Maestro Knowledge configurations.`,
 
 	// Add commands
 	rootCmd.AddCommand(validateCmd)
+	rootCmd.AddCommand(createCmd)
+	rootCmd.AddCommand(deleteCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

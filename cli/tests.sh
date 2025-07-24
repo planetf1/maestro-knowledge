@@ -58,7 +58,7 @@ go test -race ./src
 # Run specific test files if they exist
 if [ -f "tests/main_test.go" ]; then
     print_status "Running main tests..."
-    go test -v tests/main_test.go tests/validate_test.go
+    go test -v tests/main_test.go tests/validate_test.go tests/create_test.go tests/delete_test.go
 fi
 
 print_status "All CLI tests completed successfully!" 
