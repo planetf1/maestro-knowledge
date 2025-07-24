@@ -309,8 +309,21 @@ class TestWeaviateVectorDatabase:
             mock_collection = MagicMock()
             mock_result = MagicMock()
 
-            mock_result.total_count = 5
-            mock_collection.query.aggregate.over_all.return_value = mock_result
+            # Create mock objects to simulate the fetch_objects result
+            mock_object1 = MagicMock()
+            mock_object2 = MagicMock()
+            mock_object3 = MagicMock()
+            mock_object4 = MagicMock()
+            mock_object5 = MagicMock()
+
+            mock_result.objects = [
+                mock_object1,
+                mock_object2,
+                mock_object3,
+                mock_object4,
+                mock_object5,
+            ]
+            mock_collection.query.fetch_objects.return_value = mock_result
             mock_client.collections.get.return_value = mock_collection
             mock_connect.return_value = mock_client
 

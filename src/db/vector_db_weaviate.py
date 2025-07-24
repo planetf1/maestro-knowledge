@@ -221,9 +221,17 @@ class WeaviateVectorDatabase(VectorDatabase):
         """Get the current count of documents in the collection."""
         collection = self.client.collections.get(self.collection_name)
 
-        # Query to get the count
-        result = collection.query.aggregate.over_all(total_count=True)
-        return result.total_count
+        # Query to get the count - use a simple approach
+        try:
+            # Get all objects and count them (with a reasonable limit)
+            result = collection.query.fetch_objects(limit=10000)
+            return len(result.objects)
+        except Exception as e:
+            # If we can't get the count, return 0
+            import warnings
+
+            warnings.warn(f"Could not get document count for Weaviate collection: {e}")
+            return 0
 
     def delete_documents(self, document_ids: List[str]):
         """Delete documents from Weaviate by their IDs."""

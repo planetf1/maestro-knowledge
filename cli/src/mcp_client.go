@@ -280,6 +280,27 @@ func (c *MCPClient) SetupDatabase(dbName, embedding string) error {
 	return nil
 }
 
+// DeleteVectorDatabase calls the cleanup tool on the MCP server
+func (c *MCPClient) DeleteVectorDatabase(dbName string) error {
+	params := map[string]interface{}{
+		"input": map[string]interface{}{
+			"db_name": dbName,
+		},
+	}
+
+	response, err := c.callMCPServer("cleanup", params)
+	if err != nil {
+		return err
+	}
+
+	// The response should be a success message
+	if response.Result == nil {
+		return fmt.Errorf("no response from MCP server")
+	}
+
+	return nil
+}
+
 // Close closes the MCP client
 func (c *MCPClient) Close() error {
 	if c.client != nil {

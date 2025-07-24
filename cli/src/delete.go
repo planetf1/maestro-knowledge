@@ -64,16 +64,41 @@ func performVectorDatabaseDeletion(name string) error {
 		fmt.Printf("Deleting vector database '%s'\n", name)
 	}
 
-	// TODO: Implement actual vector database deletion logic
-	// This would typically involve:
-	// 1. Looking up the vector database configuration by name
-	// 2. Connecting to the vector database
-	// 3. Dropping the collection
-	// 4. Cleaning up any associated resources
-	// 5. Removing the configuration
+	// Get MCP server URI
+	serverURI, err := getMCPServerURI(mcpServerURI)
+	if err != nil {
+		return fmt.Errorf("failed to get MCP server URI: %w", err)
+	}
 
 	if verbose {
-		fmt.Println("Vector database deletion logic would be implemented here")
+		fmt.Printf("Connecting to MCP server at: %s\n", serverURI)
+	}
+
+	// Create MCP client
+	client, err := NewMCPClient(serverURI)
+	if err != nil {
+		return fmt.Errorf("failed to create MCP client: %w", err)
+	}
+	defer client.Close()
+
+	// Call the MCP server to delete the database with panic recovery
+	var deleteErr error
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// Convert panic to a user-friendly error
+				deleteErr = fmt.Errorf("MCP server could not be reached at %s. Please ensure the server is running and accessible", serverURI)
+			}
+		}()
+		deleteErr = client.DeleteVectorDatabase(name)
+	}()
+
+	if deleteErr != nil {
+		return fmt.Errorf("failed to delete vector database: %w", deleteErr)
+	}
+
+	if verbose {
+		fmt.Println("Vector database deletion completed successfully")
 	}
 
 	return nil

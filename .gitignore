@@ -215,3 +215,6 @@ __marimo__/
 
 # Maestro Knowledge CLI binary
 maestro-k
+
+# Lock files (root directory only)
+*.lock
