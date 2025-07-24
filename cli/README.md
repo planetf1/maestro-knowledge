@@ -141,7 +141,7 @@ Found 2 vector database(s):
 ### Complete Workflow
 
 1. **Start the MCP server**:
-   ```bash
+```bash
    cd /path/to/maestro-knowledge
    ./start.sh --http
    ```
@@ -192,7 +192,7 @@ If you get connection errors:
    ```
 
 2. **Verify the server URI**:
-   ```bash
+```bash
    ./maestro-k list vector-db --mcp-server-uri="http://localhost:8030" --verbose
    ```
 
