@@ -227,8 +227,8 @@ maestro-knowledge/
 │   ├── test_integration_*.py # Integration tests
 │   ├── test_vector_database_yamls.py # YAML schema validation tests
 │   └── yamls/               # YAML configuration examples
-│       ├── local_milvus.yaml
-│       └── remote_weaviate.yaml
+│       ├── test_local_milvus.yaml
+│       └── test_remote_weaviate.yaml
 ├── examples/                # Usage examples
 │   ├── weaviate_example.py  # Weaviate usage
 │   ├── milvus_example.py    # Milvus usage

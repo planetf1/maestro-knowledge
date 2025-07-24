@@ -22,7 +22,7 @@ def schema():
 @pytest.fixture
 def local_milvus_yaml():
     """Load the local Milvus YAML configuration."""
-    yaml_path = Path(__file__).parent / "yamls" / "local_milvus.yaml"
+    yaml_path = Path(__file__).parent / "yamls" / "test_local_milvus.yaml"
     with open(yaml_path, "r") as f:
         return yaml.safe_load(f)
 
@@ -30,7 +30,7 @@ def local_milvus_yaml():
 @pytest.fixture
 def remote_weaviate_yaml():
     """Load the remote Weaviate YAML configuration."""
-    yaml_path = Path(__file__).parent / "yamls" / "remote_weaviate.yaml"
+    yaml_path = Path(__file__).parent / "yamls" / "test_remote_weaviate.yaml"
     with open(yaml_path, "r") as f:
         return yaml.safe_load(f)
 
@@ -54,7 +54,7 @@ class TestVectorDatabaseYAMLValidation:
         """Test that local Milvus YAML has the expected structure."""
         assert local_milvus_yaml["apiVersion"] == "maestro/v1alpha1"
         assert local_milvus_yaml["kind"] == "VectorDatabase"
-        assert local_milvus_yaml["metadata"]["name"] == "local_milvus"
+        assert local_milvus_yaml["metadata"]["name"] == "test_local_milvus"
         assert local_milvus_yaml["metadata"]["labels"]["app"] == "testdb"
         assert local_milvus_yaml["spec"]["type"] == "milvus"
         assert local_milvus_yaml["spec"]["uri"] == "localhost:19530"
@@ -66,7 +66,7 @@ class TestVectorDatabaseYAMLValidation:
         """Test that remote Weaviate YAML has the expected structure."""
         assert remote_weaviate_yaml["apiVersion"] == "maestro/v1alpha1"
         assert remote_weaviate_yaml["kind"] == "VectorDatabase"
-        assert remote_weaviate_yaml["metadata"]["name"] == "remote_weaviate"
+        assert remote_weaviate_yaml["metadata"]["name"] == "test_remote_weaviate"
         assert remote_weaviate_yaml["metadata"]["labels"]["app"] == "testdb"
         assert remote_weaviate_yaml["spec"]["type"] == "weaviate"
         assert (

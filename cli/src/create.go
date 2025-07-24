@@ -75,7 +75,7 @@ func init() {
 }
 
 func createVectorDatabase(yamlFile string) error {
-	if verbose {
+	if verbose && !silent {
 		fmt.Printf("Creating vector database from: %s\n", yamlFile)
 	}
 
@@ -84,19 +84,21 @@ func createVectorDatabase(yamlFile string) error {
 		return fmt.Errorf("YAML file not found: %s", yamlFile)
 	}
 
-	if dryRun {
-		fmt.Println("[DRY RUN] Would create vector database")
-		return nil
-	}
-
 	// Read and parse YAML file
 	config, err := loadVectorDatabaseConfig(yamlFile)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	// Apply overrides
+	// Apply overrides (this will show override messages if verbose is enabled and not silent)
 	applyOverrides(config)
+
+	if dryRun {
+		if !silent {
+			fmt.Println("[DRY RUN] Would create vector database")
+		}
+		return nil
+	}
 
 	// Validate the configuration
 	if err := validateVectorDatabaseConfig(config); err != nil {
@@ -131,35 +133,35 @@ func loadVectorDatabaseConfig(yamlFile string) (*VectorDatabaseConfig, error) {
 
 func applyOverrides(config *VectorDatabaseConfig) {
 	if overrideType != "" {
-		if verbose {
+		if verbose && !silent {
 			fmt.Printf("Overriding type: %s -> %s\n", config.Spec.Type, overrideType)
 		}
 		config.Spec.Type = overrideType
 	}
 
 	if overrideURI != "" {
-		if verbose {
+		if verbose && !silent {
 			fmt.Printf("Overriding URI: %s -> %s\n", config.Spec.URI, overrideURI)
 		}
 		config.Spec.URI = overrideURI
 	}
 
 	if overrideCollectionName != "" {
-		if verbose {
+		if verbose && !silent {
 			fmt.Printf("Overriding collection name: %s -> %s\n", config.Spec.CollectionName, overrideCollectionName)
 		}
 		config.Spec.CollectionName = overrideCollectionName
 	}
 
 	if overrideEmbedding != "" {
-		if verbose {
+		if verbose && !silent {
 			fmt.Printf("Overriding embedding: %s -> %s\n", config.Spec.Embedding, overrideEmbedding)
 		}
 		config.Spec.Embedding = overrideEmbedding
 	}
 
 	if overrideMode != "" {
-		if verbose {
+		if verbose && !silent {
 			fmt.Printf("Overriding mode: %s -> %s\n", config.Spec.Mode, overrideMode)
 		}
 		config.Spec.Mode = overrideMode

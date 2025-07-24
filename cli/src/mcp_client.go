@@ -176,17 +176,30 @@ func (c *MCPClient) callMCPServer(method string, params interface{}) (*MCPRespon
 		ID:      1,
 	}
 
-	// Extract the result from the response
+	// Check if the response indicates an error
 	if response != nil && len(response.Content) > 0 {
 		// Try to get text content
 		if textContent, ok := mcp.AsTextContent(response.Content[0]); ok {
+			// Check if the content contains an error message
+			contentText := textContent.Text
+			if strings.Contains(contentText, "ValueError:") ||
+				strings.Contains(contentText, "Error:") ||
+				strings.Contains(contentText, "Exception:") {
+				// This is an error response
+				result.Error = &MCPError{
+					Code:    -1,
+					Message: contentText,
+				}
+				return result, nil
+			}
+
 			// Try to parse as JSON first
 			var jsonResult interface{}
-			if err := json.Unmarshal([]byte(textContent.Text), &jsonResult); err == nil {
+			if err := json.Unmarshal([]byte(contentText), &jsonResult); err == nil {
 				result.Result = jsonResult
 			} else {
 				// If not JSON, use as string
-				result.Result = textContent.Text
+				result.Result = contentText
 			}
 		}
 	}
@@ -250,6 +263,11 @@ func (c *MCPClient) CreateVectorDatabase(dbName, dbType, collectionName string) 
 		return err
 	}
 
+	// Check for error in response
+	if response.Error != nil {
+		return fmt.Errorf("MCP server error: %s", response.Error.Message)
+	}
+
 	// The response should be a success message
 	if response.Result == nil {
 		return fmt.Errorf("no response from MCP server")
@@ -272,6 +290,11 @@ func (c *MCPClient) SetupDatabase(dbName, embedding string) error {
 		return err
 	}
 
+	// Check for error in response
+	if response.Error != nil {
+		return fmt.Errorf("MCP server error: %s", response.Error.Message)
+	}
+
 	// The response should be a success message
 	if response.Result == nil {
 		return fmt.Errorf("no response from MCP server")
@@ -291,6 +314,11 @@ func (c *MCPClient) DeleteVectorDatabase(dbName string) error {
 	response, err := c.callMCPServer("cleanup", params)
 	if err != nil {
 		return err
+	}
+
+	// Check for error in response
+	if response.Error != nil {
+		return fmt.Errorf("MCP server error: %s", response.Error.Message)
 	}
 
 	// The response should be a success message

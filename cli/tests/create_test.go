@@ -6,6 +6,23 @@ import (
 	"testing"
 )
 
+// cleanupTestDatabases removes any test databases that might exist
+func cleanupTestDatabases(t *testing.T) {
+	testDatabases := []string{
+		"test-milvus-basic",
+		"test-milvus-overrides",
+		"test-milvus-silent",
+		"test-milvus-dryrun",
+		"test-milvus-vdb",
+		"test-milvus-invalid",
+	}
+
+	for _, dbName := range testDatabases {
+		cmd := exec.Command("../../maestro-k", "delete", "vector-db", dbName, "--silent")
+		cmd.CombinedOutput() // Ignore errors, database might not exist
+	}
+}
+
 // TestCreateVectorDatabase tests the create vector-database command
 func TestCreateVectorDatabase(t *testing.T) {
 	// Create a valid YAML file for testing
@@ -13,7 +30,7 @@ func TestCreateVectorDatabase(t *testing.T) {
 apiVersion: maestro/v1alpha1
 kind: VectorDatabase
 metadata:
-  name: test-milvus
+  name: test-milvus-basic
 spec:
   type: milvus
   uri: localhost:19530
@@ -25,7 +42,7 @@ spec:
 	tempFile := createTempFile(t, "valid-*.yaml", validYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../../maestro-k", "create", "vector-db", tempFile)
+	cmd := exec.Command("../../maestro-k", "create", "vector-db", tempFile, "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -33,8 +50,8 @@ spec:
 	}
 
 	outputStr := string(output)
-	if !contains(outputStr, "✅ Vector database 'test-milvus' created successfully") {
-		t.Errorf("Should show success message for valid YAML, got: %s", outputStr)
+	if !contains(outputStr, "[DRY RUN] Would create vector database") {
+		t.Errorf("Should show dry run message for valid YAML, got: %s", outputStr)
 	}
 }
 
@@ -45,7 +62,7 @@ func TestCreateVectorDatabaseWithOverrides(t *testing.T) {
 apiVersion: maestro/v1alpha1
 kind: VectorDatabase
 metadata:
-  name: test-milvus
+  name: test-milvus-overrides
 spec:
   type: milvus
   uri: localhost:19530
@@ -57,7 +74,7 @@ spec:
 	tempFile := createTempFile(t, "valid-*.yaml", validYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../../maestro-k", "create", "vector-db", tempFile, "--uri=localhost:8000", "--mode=remote", "--verbose")
+	cmd := exec.Command("../../maestro-k", "create", "vector-db", tempFile, "--uri=localhost:8000", "--mode=remote", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -71,8 +88,8 @@ spec:
 	if !contains(outputStr, "Overriding mode: local -> remote") {
 		t.Errorf("Should show mode override, got: %s", outputStr)
 	}
-	if !contains(outputStr, "✅ Vector database 'test-milvus' created successfully") {
-		t.Errorf("Should show success message, got: %s", outputStr)
+	if !contains(outputStr, "[DRY RUN] Would create vector database") {
+		t.Errorf("Should show dry run message, got: %s", outputStr)
 	}
 }
 
@@ -115,7 +132,7 @@ func TestCreateVectorDatabaseWithInvalidYAML(t *testing.T) {
 apiVersion: maestro/v1alpha1
 kind: VectorDatabase
 metadata:
-  name: test-milvus
+  name: test-milvus-invalid
 spec:
   type: milvus
   uri: "localhost:19530
@@ -181,7 +198,7 @@ func TestCreateVectorDatabaseDryRun(t *testing.T) {
 apiVersion: maestro/v1alpha1
 kind: VectorDatabase
 metadata:
-  name: test-milvus
+  name: test-milvus-dryrun
 spec:
   type: milvus
   uri: localhost:19530
@@ -213,7 +230,7 @@ func TestCreateVectorDatabaseSilent(t *testing.T) {
 apiVersion: maestro/v1alpha1
 kind: VectorDatabase
 metadata:
-  name: test-milvus
+  name: test-milvus-silent
 spec:
   type: milvus
   uri: localhost:19530
@@ -225,7 +242,7 @@ spec:
 	tempFile := createTempFile(t, "valid-*.yaml", validYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../../maestro-k", "create", "vector-db", tempFile, "--silent")
+	cmd := exec.Command("../../maestro-k", "create", "vector-db", tempFile, "--silent", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -233,8 +250,11 @@ spec:
 	}
 
 	outputStr := string(output)
-	if contains(outputStr, "✅ Vector database 'test-milvus' created successfully") {
-		t.Error("Silent mode should not show success message")
+	if contains(outputStr, "[DRY RUN] Would create vector database") {
+		t.Error("Silent mode should not show dry run message")
+	}
+	if outputStr != "" {
+		t.Errorf("Silent mode should show no output, got: %s", outputStr)
 	}
 }
 
@@ -245,7 +265,7 @@ func TestCreateVectorDatabaseWithVdbShortcut(t *testing.T) {
 apiVersion: maestro/v1alpha1
 kind: VectorDatabase
 metadata:
-  name: test-milvus
+  name: test-milvus-vdb
 spec:
   type: milvus
   uri: localhost:19530

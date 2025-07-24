@@ -98,7 +98,7 @@ if [ "$RUN_CLI_TESTS" = "cli" ] || [ "$RUN_CLI_TESTS" = "all" ]; then
     print_status "Step 5: Testing YAML validation..."
 
     # Test with valid YAML
-    if ./maestro-k validate --verbose tests/yamls/local_milvus.yaml &> /dev/null; then
+    if ./maestro-k validate --verbose tests/yamls/test_local_milvus.yaml &> /dev/null; then
         print_status "✓ Valid YAML validation works"
     else
         print_error "Valid YAML validation failed"
@@ -107,7 +107,7 @@ if [ "$RUN_CLI_TESTS" = "cli" ] || [ "$RUN_CLI_TESTS" = "all" ]; then
 
     # Test with schema validation (if schema exists)
     if [ -f "schemas/vector-database-schema.json" ]; then
-        if ./maestro-k validate --verbose schemas/vector-database-schema.json tests/yamls/local_milvus.yaml &> /dev/null; then
+        if ./maestro-k validate --verbose schemas/vector-database-schema.json tests/yamls/test_local_milvus.yaml &> /dev/null; then
             print_status "✓ Schema validation works"
         else
             print_error "Schema validation failed"

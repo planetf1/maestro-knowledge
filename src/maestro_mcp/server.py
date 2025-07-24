@@ -125,38 +125,52 @@ def create_mcp_server() -> FastMCP:
     @app.tool()
     async def create_vector_database_tool(input: CreateVectorDatabaseInput) -> str:
         """Create a new vector database instance."""
-        logger.info(
-            f"Creating vector database: {input.db_name} of type {input.db_type}"
-        )
-        logger.info(f"Current vector_databases keys: {list(vector_databases.keys())}")
+        try:
+            logger.info(
+                f"Creating vector database: {input.db_name} of type {input.db_type}"
+            )
+            logger.info(
+                f"Current vector_databases keys: {list(vector_databases.keys())}"
+            )
 
-        # Check if database with this name already exists
-        if input.db_name in vector_databases:
-            raise ValueError(f"Vector database '{input.db_name}' already exists")
+            # Check if database with this name already exists
+            if input.db_name in vector_databases:
+                error_msg = f"Vector database '{input.db_name}' already exists"
+                logger.error(error_msg)
+                return f"Error: {error_msg}"
 
-        # Create new database instance
-        vector_databases[input.db_name] = create_vector_database(
-            input.db_type, input.collection_name
-        )
+            # Create new database instance
+            vector_databases[input.db_name] = create_vector_database(
+                input.db_type, input.collection_name
+            )
 
-        logger.info(
-            f"Created database. Updated vector_databases keys: {list(vector_databases.keys())}"
-        )
+            logger.info(
+                f"Created database. Updated vector_databases keys: {list(vector_databases.keys())}"
+            )
 
-        return f"Successfully created {input.db_type} vector database '{input.db_name}' with collection '{input.collection_name}'"
+            return f"Successfully created {input.db_type} vector database '{input.db_name}' with collection '{input.collection_name}'"
+        except Exception as e:
+            error_msg = f"Failed to create vector database '{input.db_name}': {str(e)}"
+            logger.error(error_msg)
+            return f"Error: {error_msg}"
 
     @app.tool()
     async def setup_database(input: SetupDatabaseInput) -> str:
         """Set up a vector database and create collections."""
-        db = get_database_by_name(input.db_name)
+        try:
+            db = get_database_by_name(input.db_name)
 
-        # Check if the database supports the setup method with embedding parameter
-        if hasattr(db, "setup") and len(db.setup.__code__.co_varnames) > 1:
-            db.setup(embedding=input.embedding)
-        else:
-            db.setup()
+            # Check if the database supports the setup method with embedding parameter
+            if hasattr(db, "setup") and len(db.setup.__code__.co_varnames) > 1:
+                db.setup(embedding=input.embedding)
+            else:
+                db.setup()
 
-        return f"Successfully set up {db.db_type} vector database '{input.db_name}' with embedding '{input.embedding}'"
+            return f"Successfully set up {db.db_type} vector database '{input.db_name}' with embedding '{input.embedding}'"
+        except Exception as e:
+            error_msg = f"Failed to set up vector database '{input.db_name}': {str(e)}"
+            logger.error(error_msg)
+            return f"Error: {error_msg}"
 
     @app.tool()
     async def get_supported_embeddings(input: GetSupportedEmbeddingsInput) -> str:

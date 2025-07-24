@@ -1,12 +1,12 @@
 apiVersion: maestro/v1alpha1
 kind: VectorDatabase
 metadata:
-  name: local_milvus
+  name: test_remote_weaviate
   labels:
     app: testdb
 spec:
-  type: milvus
-  uri: localhost:19530
+  type: weaviate
+  uri: https://your-weaviate-cluster.weaviate.network
   collection_name: test_collection
   embedding: text-embedding-3-small
-  mode: local
+  mode: remote

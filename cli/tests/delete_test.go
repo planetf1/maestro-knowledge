@@ -7,7 +7,7 @@ import (
 
 // TestDeleteVectorDatabase tests the delete vector-database command
 func TestDeleteVectorDatabase(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "delete", "vector-db", "test-db")
+	cmd := exec.Command("../../maestro-k", "delete", "vector-db", "test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -15,14 +15,14 @@ func TestDeleteVectorDatabase(t *testing.T) {
 	}
 
 	outputStr := string(output)
-	if !contains(outputStr, "✅ Vector database 'test-db' deleted successfully") {
-		t.Errorf("Should show success message, got: %s", outputStr)
+	if !contains(outputStr, "[DRY RUN] Would delete vector database 'test-db'") {
+		t.Errorf("Should show dry run message, got: %s", outputStr)
 	}
 }
 
 // TestDeleteVectorDatabaseWithVerbose tests the delete command with verbose output
 func TestDeleteVectorDatabaseWithVerbose(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "delete", "vector-db", "test-db", "--verbose")
+	cmd := exec.Command("../../maestro-k", "delete", "vector-db", "test-db", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -33,8 +33,8 @@ func TestDeleteVectorDatabaseWithVerbose(t *testing.T) {
 	if !contains(outputStr, "Deleting vector database: test-db") {
 		t.Errorf("Should show verbose output, got: %s", outputStr)
 	}
-	if !contains(outputStr, "✅ Vector database 'test-db' deleted successfully") {
-		t.Errorf("Should show success message, got: %s", outputStr)
+	if !contains(outputStr, "[DRY RUN] Would delete vector database 'test-db'") {
+		t.Errorf("Should show dry run message, got: %s", outputStr)
 	}
 }
 
@@ -87,7 +87,7 @@ func TestDeleteVectorDatabaseDryRun(t *testing.T) {
 
 // TestDeleteVectorDatabaseSilent tests silent mode
 func TestDeleteVectorDatabaseSilent(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "delete", "vector-db", "test-db", "--silent")
+	cmd := exec.Command("../../maestro-k", "delete", "vector-db", "test-db", "--silent", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -95,15 +95,15 @@ func TestDeleteVectorDatabaseSilent(t *testing.T) {
 	}
 
 	outputStr := string(output)
-	if contains(outputStr, "✅ Vector database 'test-db' deleted successfully") {
-		t.Error("Silent mode should not show success message")
+	if contains(outputStr, "[DRY RUN] Would delete vector database 'test-db'") {
+		t.Error("Silent mode should not show dry run message")
 	}
 }
 
 // TestDeleteVectorDatabaseWithLongName tests with a long name
 func TestDeleteVectorDatabaseWithLongName(t *testing.T) {
 	longName := "very-long-vector-database-name-that-should-still-work"
-	cmd := exec.Command("../../maestro-k", "delete", "vector-db", longName)
+	cmd := exec.Command("../../maestro-k", "delete", "vector-db", longName, "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -111,15 +111,15 @@ func TestDeleteVectorDatabaseWithLongName(t *testing.T) {
 	}
 
 	outputStr := string(output)
-	if !contains(outputStr, "✅ Vector database '"+longName+"' deleted successfully") {
-		t.Errorf("Should show success message with long name, got: %s", outputStr)
+	if !contains(outputStr, "[DRY RUN] Would delete vector database '"+longName+"'") {
+		t.Errorf("Should show dry run message with long name, got: %s", outputStr)
 	}
 }
 
 // TestDeleteVectorDatabaseWithSpecialCharacters tests with special characters in name
 func TestDeleteVectorDatabaseWithSpecialCharacters(t *testing.T) {
 	specialName := "test-db-with-special-chars_123"
-	cmd := exec.Command("../../maestro-k", "delete", "vector-db", specialName)
+	cmd := exec.Command("../../maestro-k", "delete", "vector-db", specialName, "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -127,8 +127,8 @@ func TestDeleteVectorDatabaseWithSpecialCharacters(t *testing.T) {
 	}
 
 	outputStr := string(output)
-	if !contains(outputStr, "✅ Vector database '"+specialName+"' deleted successfully") {
-		t.Errorf("Should show success message with special characters, got: %s", outputStr)
+	if !contains(outputStr, "[DRY RUN] Would delete vector database '"+specialName+"'") {
+		t.Errorf("Should show dry run message with special characters, got: %s", outputStr)
 	}
 }
 

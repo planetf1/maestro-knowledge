@@ -32,6 +32,14 @@ try:
 except ImportError:
     WEAVIATE_AVAILABLE = False
 
+# Check if weaviate agents are available
+try:
+    import weaviate.agents  # noqa: F401
+
+    WEAVIATE_AGENTS_AVAILABLE = True
+except ImportError:
+    WEAVIATE_AGENTS_AVAILABLE = False
+
 from src.db.vector_db_weaviate import WeaviateVectorDatabase
 
 
@@ -361,6 +369,9 @@ class TestWeaviateVectorDatabase:
             mock_client.collections.delete.assert_called_once_with("TestCollection")
             assert db.collection_name is None
 
+    @pytest.mark.skipif(
+        not WEAVIATE_AGENTS_AVAILABLE, reason="weaviate agents not available"
+    )
     def test_create_query_agent(self):
         """Test creating a query agent."""
         with (

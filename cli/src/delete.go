@@ -39,7 +39,9 @@ func deleteVectorDatabase(name string) error {
 	}
 
 	if dryRun {
-		fmt.Printf("[DRY RUN] Would delete vector database '%s'\n", name)
+		if !silent {
+			fmt.Printf("[DRY RUN] Would delete vector database '%s'\n", name)
+		}
 		return nil
 	}
 

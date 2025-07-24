@@ -52,10 +52,10 @@ jobs:
         run: |
           echo "Testing YAML validation..."
           # Test with valid YAML
-          ./maestro-k validate --verbose tests/yamls/local_milvus.yaml
+          ./maestro-k validate --verbose tests/yamls/test_local_milvus.yaml
           
           # Test with schema validation
-          ./maestro-k validate --verbose schemas/vector-database-schema.json tests/yamls/local_milvus.yaml
+          ./maestro-k validate --verbose schemas/vector-database-schema.json tests/yamls/test_local_milvus.yaml
           
           # Test with invalid YAML (should fail)
           echo 'apiVersion: maestro/v1alpha1' > /tmp/invalid-test.yaml

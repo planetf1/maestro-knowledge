@@ -1,7 +1,7 @@
 apiVersion: maestro/v1alpha1
 kind: VectorDatabase
 metadata:
-  name: local_milvus
+  name: test_local_milvus
   labels:
     app: testdb
 spec:

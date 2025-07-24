@@ -1,7 +1,7 @@
 apiVersion: maestro/v1alpha1
 kind: VectorDatabase
 metadata:
-  name: remote_weaviate
+  name: test_remote_weaviate
   labels:
     app: testdb
 spec:
