@@ -60,7 +60,7 @@ check_running() {
 
 # Parse command line arguments
 parse_args() {
-    MODE="stdio"
+    MODE="http"
     HOST="$DEFAULT_HOST"
     PORT="$DEFAULT_PORT"
     
@@ -103,15 +103,16 @@ show_help() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  --http              Start HTTP server (default: stdio)"
-    echo "  --stdio             Start stdio server (default)"
+    echo "  --http              Start HTTP server (default)"
+    echo "  --stdio             Start stdio server"
     echo "  --host HOST         HTTP server host (default: localhost)"
     echo "  --port PORT         HTTP server port (default: 8030)"
     echo "  -h, --help          Show this help message"
     echo ""
     echo "Examples:"
-    echo "  $0                  # Start stdio server"
+    echo "  $0                  # Start HTTP server on localhost:8030"
     echo "  $0 --http           # Start HTTP server on localhost:8030"
+    echo "  $0 --stdio          # Start stdio server"
     echo "  $0 --http --port 9000  # Start HTTP server on localhost:9000"
     echo "  $0 --http --host 0.0.0.0 --port 8080  # Start HTTP server on all interfaces"
     echo ""

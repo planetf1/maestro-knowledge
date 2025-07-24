@@ -220,15 +220,61 @@ func performVectorDatabaseCreation(config *VectorDatabaseConfig) error {
 		fmt.Printf("  Mode: %s\n", config.Spec.Mode)
 	}
 
-	// TODO: Implement actual vector database creation logic
-	// This would typically involve:
-	// 1. Connecting to the vector database
-	// 2. Creating the collection
-	// 3. Setting up the embedding model
-	// 4. Storing the configuration
+	// Get MCP server URI
+	serverURI, err := getMCPServerURI(mcpServerURI)
+	if err != nil {
+		return fmt.Errorf("failed to get MCP server URI: %w", err)
+	}
 
 	if verbose {
-		fmt.Println("Vector database creation logic would be implemented here")
+		fmt.Printf("Connecting to MCP server at: %s\n", serverURI)
+	}
+
+	// Create MCP client
+	client, err := NewMCPClient(serverURI)
+	if err != nil {
+		return fmt.Errorf("failed to create MCP client: %w", err)
+	}
+	defer client.Close()
+
+	// Call the MCP server to create the database with panic recovery
+	var createErr error
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// Convert panic to a user-friendly error
+				createErr = fmt.Errorf("MCP server could not be reached at %s. Please ensure the server is running and accessible", serverURI)
+			}
+		}()
+		createErr = client.CreateVectorDatabase(config.Metadata.Name, config.Spec.Type, config.Spec.CollectionName)
+	}()
+
+	if createErr != nil {
+		return fmt.Errorf("failed to create vector database: %w", createErr)
+	}
+
+	// Setup the database (create collections and configure embedding)
+	if verbose {
+		fmt.Printf("Setting up vector database with embedding: %s\n", config.Spec.Embedding)
+	}
+
+	var setupErr error
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// Convert panic to a user-friendly error
+				setupErr = fmt.Errorf("MCP server could not be reached at %s. Please ensure the server is running and accessible", serverURI)
+			}
+		}()
+		setupErr = client.SetupDatabase(config.Metadata.Name, config.Spec.Embedding)
+	}()
+
+	if setupErr != nil {
+		return fmt.Errorf("failed to setup vector database: %w", setupErr)
+	}
+
+	if verbose {
+		fmt.Println("Vector database creation completed successfully")
 	}
 
 	return nil

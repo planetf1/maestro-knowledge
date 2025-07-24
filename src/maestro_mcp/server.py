@@ -9,8 +9,6 @@ from typing import Any, Dict, List
 
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
 
 from ..db.vector_db_factory import create_vector_database
 from ..db.vector_db_base import VectorDatabase
@@ -121,22 +119,17 @@ class GetDatabaseInfoInput(BaseModel):
 def create_mcp_server() -> FastMCP:
     """Create and configure the FastMCP server with vector database tools."""
 
-    # Create a FastAPI app with OpenAPI documentation
-    fastapi_app = FastAPI(
-        title="Maestro Vector Database MCP Server",
-        description="A Model Context Protocol server for vector database operations",
-        version="0.1.0",
-        openapi_url="/openapi.json",
-        docs_url="/docs",
-        redoc_url="/redoc",
-    )
-
-    # Create FastMCP server from the FastAPI app
-    app = FastMCP.from_fastapi(fastapi_app, name="maestro-vector-db")
+    # Create FastMCP server directly
+    app = FastMCP("maestro-vector-db")
 
     @app.tool()
     async def create_vector_database_tool(input: CreateVectorDatabaseInput) -> str:
         """Create a new vector database instance."""
+        logger.info(
+            f"Creating vector database: {input.db_name} of type {input.db_type}"
+        )
+        logger.info(f"Current vector_databases keys: {list(vector_databases.keys())}")
+
         # Check if database with this name already exists
         if input.db_name in vector_databases:
             raise ValueError(f"Vector database '{input.db_name}' already exists")
@@ -144,6 +137,10 @@ def create_mcp_server() -> FastMCP:
         # Create new database instance
         vector_databases[input.db_name] = create_vector_database(
             input.db_type, input.collection_name
+        )
+
+        logger.info(
+            f"Created database. Updated vector_databases keys: {list(vector_databases.keys())}"
         )
 
         return f"Successfully created {input.db_type} vector database '{input.db_name}' with collection '{input.collection_name}'"
@@ -221,7 +218,7 @@ def create_mcp_server() -> FastMCP:
 
     @app.tool()
     async def delete_document(input: DeleteDocumentInput) -> str:
-        """Delete a single document from a vector database by its ID."""
+        """Delete a single document from a vector database."""
         db = get_database_by_name(input.db_name)
         db.delete_document(input.document_id)
 
@@ -229,41 +226,43 @@ def create_mcp_server() -> FastMCP:
 
     @app.tool()
     async def delete_collection(input: DeleteCollectionInput) -> str:
-        """Delete an entire collection from a database."""
+        """Delete an entire collection from a vector database."""
         db = get_database_by_name(input.db_name)
         db.delete_collection(input.collection_name)
 
-        return f"Successfully deleted collection '{input.collection_name or db.collection_name}' from vector database '{input.db_name}'"
+        return f"Successfully deleted collection '{input.collection_name}' from vector database '{input.db_name}'"
 
     @app.tool()
     async def cleanup(input: CleanupInput) -> str:
-        """Clean up resources and close database connections for a specific database."""
+        """Clean up resources and close connections for a vector database."""
         db = get_database_by_name(input.db_name)
         db.cleanup()
         del vector_databases[input.db_name]
 
-        return f"Successfully cleaned up vector database '{input.db_name}'"
+        return f"Successfully cleaned up and removed vector database '{input.db_name}'"
 
     @app.tool()
     async def get_database_info(input: GetDatabaseInfoInput) -> str:
         """Get information about a vector database."""
         db = get_database_by_name(input.db_name)
-
         info = {
-            "db_name": input.db_name,
-            "db_type": db.db_type,
-            "collection_name": db.collection_name,
+            "name": input.db_name,
+            "type": db.db_type,
+            "collection": db.collection_name,
             "document_count": db.count_documents(),
-            "supported_embeddings": db.supported_embeddings(),
         }
 
         return (
-            f"Database Information for '{input.db_name}':\n{json.dumps(info, indent=2)}"
+            f"Database information for '{input.db_name}':\n{json.dumps(info, indent=2)}"
         )
 
     @app.tool()
     async def list_databases() -> str:
         """List all available vector database instances."""
+        logger.info(
+            f"Listing databases. Current vector_databases keys: {list(vector_databases.keys())}"
+        )
+
         if not vector_databases:
             return "No vector databases are currently active"
 
@@ -278,6 +277,7 @@ def create_mcp_server() -> FastMCP:
                 }
             )
 
+        logger.info(f"Returning {len(db_list)} databases")
         return f"Available vector databases:\n{json.dumps(db_list, indent=2)}"
 
     return app
@@ -289,83 +289,18 @@ async def main():
     await app.run()
 
 
-async def run_http_server(host: str = "localhost", port: int = 8000):
+async def run_http_server(host: str = "localhost", port: int = 8030):
     """Run the MCP server with HTTP interface."""
-    # Create a FastAPI app with OpenAPI documentation
-    fastapi_app = FastAPI(
-        title="Maestro Vector Database MCP Server",
-        description="A Model Context Protocol server for vector database operations",
-        version="0.1.0",
-        openapi_url="/openapi.json",
-        docs_url="/docs",
-        redoc_url="/redoc",
-    )
-
     # Create the MCP server
     mcp_app = create_mcp_server()
-
-    # Mount the MCP server on the FastAPI app
-    fastapi_app.mount("/mcp", mcp_app.http_app())
-
-    # Add a root endpoint that redirects to docs
-    @fastapi_app.get("/")
-    async def root():
-        return HTMLResponse("""
-        <html>
-            <head>
-                <title>Maestro Vector Database MCP Server</title>
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 40px; }
-                    .container { max-width: 800px; margin: 0 auto; }
-                    .button { display: inline-block; padding: 10px 20px; margin: 10px; 
-                             background-color: #007bff; color: white; text-decoration: none; 
-                             border-radius: 5px; }
-                    .button:hover { background-color: #0056b3; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h1>Maestro Vector Database MCP Server</h1>
-                    <p>Welcome to the Maestro Vector Database MCP Server!</p>
-                    <p>This server provides tools for managing vector databases including Weaviate and Milvus.</p>
-                    <h2>Available Endpoints:</h2>
-                    <ul>
-                        <li><a href="/docs" class="button">📖 OpenAPI Documentation</a></li>
-                        <li><a href="/redoc" class="button">📚 ReDoc Documentation</a></li>
-                        <li><a href="/mcp/" class="button">🔧 MCP Endpoint</a></li>
-                    </ul>
-                    <h2>Tools Available:</h2>
-                    <ul>
-                        <li>create_vector_database_tool - Create a new vector database instance</li>
-                        <li>setup_database - Set up a vector database and create collections</li>
-                        <li>get_supported_embeddings - Get list of supported embedding models</li>
-                        <li>write_documents - Write documents to a vector database</li>
-                        <li>write_document - Write a single document to a vector database</li>
-                        <li>list_documents - List documents from a vector database</li>
-                        <li>count_documents - Get the current count of documents</li>
-                        <li>delete_documents - Delete documents from a vector database</li>
-                        <li>delete_document - Delete a single document</li>
-                        <li>delete_collection - Delete an entire collection</li>
-                        <li>cleanup - Clean up resources and close connections</li>
-                        <li>get_database_info - Get information about a vector database</li>
-                        <li>list_databases - List all available vector database instances</li>
-                    </ul>
-                </div>
-            </body>
-        </html>
-        """)
 
     print(f"Starting FastMCP HTTP server on http://{host}:{port}")
     print(f"Open your browser to http://{host}:{port} to access the MCP server")
     print(f"📖 OpenAPI docs: http://{host}:{port}/docs")
     print(f"📚 ReDoc docs: http://{host}:{port}/redoc")
 
-    # Run the FastAPI app
-    import uvicorn
-
-    config = uvicorn.Config(fastapi_app, host=host, port=port)
-    server = uvicorn.Server(config)
-    await server.serve()
+    # Run the MCP server directly
+    await mcp_app.run_http_async(host=host, port=port)
 
 
 def run_server():
@@ -379,7 +314,7 @@ def run_server():
         sys.exit(1)
 
 
-def run_http_server_sync(host: str = "localhost", port: int = 8000):
+def run_http_server_sync(host: str = "localhost", port: int = 8030):
     """Synchronous entry point for running the HTTP server."""
     try:
         asyncio.run(run_http_server(host, port))
