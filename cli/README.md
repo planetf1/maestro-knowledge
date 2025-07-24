@@ -78,6 +78,9 @@ maestro-k create vector-db config.yaml
 # Create a vector database with field overrides
 maestro-k create vector-db config.yaml --uri=localhost:8000 --mode=local
 
+# List vector databases
+maestro-k list vector-db
+
 # Delete a vector database by name
 maestro-k delete vector-db my-database
 ```
@@ -111,6 +114,9 @@ maestro-k create vector-db config.yaml --dry-run
 
 # Delete vector database with verbose output
 maestro-k delete vector-db my-database --verbose
+
+# List vector databases with verbose output
+maestro-k list vector-db --verbose
 ```
 
 ## Command Reference
@@ -140,6 +146,26 @@ maestro-k create vector-db config.yaml --uri=localhost:8000 --mode=local
 
 # Dry run to preview
 maestro-k create vector-db config.yaml --dry-run --verbose
+```
+
+### `list` Command
+
+Lists vector database resources.
+
+```bash
+maestro-k list (vector-database | vector-db) [flags]
+```
+
+**Examples:**
+```bash
+# List all vector databases
+maestro-k list vector-db
+
+# List with verbose output
+maestro-k list vector-db --verbose
+
+# Dry run to preview listing
+maestro-k list vector-db --dry-run
 ```
 
 ### `delete` Command

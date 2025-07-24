@@ -6,6 +6,7 @@ Usage:
 
   maestro-k create (vector-database | vector-db) YAML_FILE [options]
   maestro-k delete (vector-database | vector-db) NAME [options]
+  maestro-k list (vector-database | vector-db) NAME [options]
 
   maestro-k (-h | --help)
   maestro-k (-v | --version)
