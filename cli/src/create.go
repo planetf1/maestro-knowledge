@@ -30,25 +30,26 @@ type VectorDatabaseSpec struct {
 }
 
 var createCmd = &cobra.Command{
-	Use:   "create (vector-database | vector-db) YAML_FILE",
+	Use:   "create (vector-database | vector-db | vdb) YAML_FILE",
 	Short: "Create vector database resources",
 	Long: `Create vector database resources from YAML files.
 	
 Usage:
   maestro-k create vector-database YAML_FILE [options]
   maestro-k create vector-db YAML_FILE [options]
+  maestro-k create vdb YAML_FILE [options]
 
 Examples:
   maestro-k create vector-db config.yaml
-  maestro-k create vector-db config.yaml --uri=localhost:8000 --mode=local`,
+  maestro-k create vdb config.yaml --uri=localhost:8000 --mode=local`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		resourceType := args[0]
 		yamlFile := args[1]
 
 		// Validate resource type
-		if resourceType != "vector-database" && resourceType != "vector-db" {
-			return fmt.Errorf("unsupported resource type: %s. Use 'vector-database' or 'vector-db'", resourceType)
+		if resourceType != "vector-database" && resourceType != "vector-db" && resourceType != "vdb" {
+			return fmt.Errorf("unsupported resource type: %s. Use 'vector-database', 'vector-db', or 'vdb'", resourceType)
 		}
 
 		return createVectorDatabase(yamlFile)

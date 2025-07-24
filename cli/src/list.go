@@ -7,25 +7,26 @@ import (
 )
 
 var listCmd = &cobra.Command{
-	Use:   "list (vector-database | vector-db)",
+	Use:   "list (vector-database | vector-db | vdb)",
 	Short: "List vector database resources",
 	Long: `List vector database resources.
 
 Usage:
   maestro-k list vector-database [options]
   maestro-k list vector-db [options]
+  maestro-k list vdb [options]
 
 Examples:
   maestro-k list vector-db
   maestro-k list vector-database --verbose
-  maestro-k list vector-db --mcp-server-uri=http://localhost:8000`,
+  maestro-k list vdb --mcp-server-uri=http://localhost:8000`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		resourceType := args[0]
 
 		// Validate resource type
-		if resourceType != "vector-database" && resourceType != "vector-db" {
-			return fmt.Errorf("unsupported resource type: %s. Use 'vector-database' or 'vector-db'", resourceType)
+		if resourceType != "vector-database" && resourceType != "vector-db" && resourceType != "vdb" {
+			return fmt.Errorf("unsupported resource type: %s. Use 'vector-database', 'vector-db', or 'vdb'", resourceType)
 		}
 
 		return listVectorDatabases()

@@ -237,3 +237,35 @@ spec:
 		t.Error("Silent mode should not show success message")
 	}
 }
+
+// TestCreateVectorDatabaseWithVdbShortcut tests the create command with vdb shortcut
+func TestCreateVectorDatabaseWithVdbShortcut(t *testing.T) {
+	// Create a valid YAML file for testing
+	validYAML := `---
+apiVersion: maestro/v1alpha1
+kind: VectorDatabase
+metadata:
+  name: test-milvus
+spec:
+  type: milvus
+  uri: localhost:19530
+  collection_name: test_collection
+  embedding: text-embedding-3-small
+  mode: local
+`
+
+	tempFile := createTempFile(t, "valid-*.yaml", validYAML)
+	defer os.Remove(tempFile)
+
+	cmd := exec.Command("../../maestro-k", "create", "vdb", tempFile, "--dry-run")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("Create command with vdb shortcut failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !contains(outputStr, "[DRY RUN] Would create vector database") {
+		t.Errorf("Should show dry run message, got: %s", outputStr)
+	}
+}

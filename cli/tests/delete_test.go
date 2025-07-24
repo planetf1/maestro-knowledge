@@ -131,3 +131,18 @@ func TestDeleteVectorDatabaseWithSpecialCharacters(t *testing.T) {
 		t.Errorf("Should show success message with special characters, got: %s", outputStr)
 	}
 }
+
+// TestDeleteVectorDatabaseWithVdbShortcut tests the delete command with vdb shortcut
+func TestDeleteVectorDatabaseWithVdbShortcut(t *testing.T) {
+	cmd := exec.Command("../../maestro-k", "delete", "vdb", "test-db", "--dry-run")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("Delete command with vdb shortcut failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !contains(outputStr, "[DRY RUN] Would delete vector database 'test-db'") {
+		t.Errorf("Should show dry run message, got: %s", outputStr)
+	}
+}

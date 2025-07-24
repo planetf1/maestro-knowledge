@@ -7,25 +7,26 @@ import (
 )
 
 var deleteCmd = &cobra.Command{
-	Use:   "delete (vector-database | vector-db) NAME",
+	Use:   "delete (vector-database | vector-db | vdb) NAME",
 	Short: "Delete vector database resources",
 	Long: `Delete vector database resources by name.
 	
 Usage:
   maestro-k delete vector-database NAME [options]
   maestro-k delete vector-db NAME [options]
+  maestro-k delete vdb NAME [options]
 
 Examples:
   maestro-k delete vector-db my-milvus-db
-  maestro-k delete vector-database my-weaviate-db`,
+  maestro-k delete vdb my-weaviate-db`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		resourceType := args[0]
 		name := args[1]
 
 		// Validate resource type
-		if resourceType != "vector-database" && resourceType != "vector-db" {
-			return fmt.Errorf("unsupported resource type: %s. Use 'vector-database' or 'vector-db'", resourceType)
+		if resourceType != "vector-database" && resourceType != "vector-db" && resourceType != "vdb" {
+			return fmt.Errorf("unsupported resource type: %s. Use 'vector-database', 'vector-db', or 'vdb'", resourceType)
 		}
 
 		return deleteVectorDatabase(name)

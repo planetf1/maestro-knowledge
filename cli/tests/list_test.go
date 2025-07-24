@@ -122,6 +122,21 @@ func TestListVectorDatabaseWithVectorDatabase(t *testing.T) {
 	}
 }
 
+func TestListVectorDatabaseWithVdbShortcut(t *testing.T) {
+	// Test with the "vdb" shortcut
+	cmd := exec.Command("../../maestro-k", "list", "vdb", "--dry-run")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("List command with vdb shortcut failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "[DRY RUN] Would list vector databases") {
+		t.Errorf("Expected dry-run message, got: %s", outputStr)
+	}
+}
+
 func TestListVectorDatabaseWithMultipleFlags(t *testing.T) {
 	cmd := exec.Command("../../maestro-k", "list", "vector-db", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
