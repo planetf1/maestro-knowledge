@@ -4,25 +4,26 @@ This MCP (Model Context Protocol) server exposes the Maestro Vector Database fun
 
 ## Features
 
-The MCP server provides the following tools for vector database operations:
+The MCP server provides the following tools for vector database operations with support for multiple simultaneous databases:
 
 ### Database Management
-- **create_vector_database**: Create a new vector database instance (Weaviate or Milvus)
-- **setup_database**: Set up the current vector database and create collections with specified embedding
-- **get_supported_embeddings**: Get list of supported embedding models for the current database
-- **cleanup**: Clean up resources and close database connections
-- **get_database_info**: Get information about the current vector database including supported embeddings
+- **create_vector_database**: Create a new vector database instance (Weaviate or Milvus) with a unique name
+- **setup_database**: Set up a vector database and create collections with specified embedding
+- **get_supported_embeddings**: Get list of supported embedding models for a specific database
+- **cleanup**: Clean up resources and close database connections for a specific database
+- **get_database_info**: Get information about a specific vector database including supported embeddings
+- **list_databases**: List all available vector database instances
 
 ### Document Operations
-- **write_document**: Write a single document to the vector database with specified embedding strategy
-- **write_documents**: Write multiple documents to the vector database with specified embedding strategy
-- **list_documents**: List documents from the vector database
-- **count_documents**: Get the current count of documents in the collection
+- **write_document**: Write a single document to a specific vector database with specified embedding strategy
+- **write_documents**: Write multiple documents to a specific vector database with specified embedding strategy
+- **list_documents**: List documents from a specific vector database
+- **count_documents**: Get the current count of documents in a specific collection
 
 ### Document Management
-- **delete_document**: Delete a single document by ID
-- **delete_documents**: Delete multiple documents by IDs
-- **delete_collection**: Delete an entire collection from the database
+- **delete_document**: Delete a single document by ID from a specific database
+- **delete_documents**: Delete multiple documents by IDs from a specific database
+- **delete_collection**: Delete an entire collection from a specific database
 
 ## Embedding Strategies
 
@@ -45,6 +46,22 @@ The MCP server supports flexible embedding strategies for both vector databases:
 - `text-embedding-ada-002`: OpenAI's Ada-002 embedding model
 - `text-embedding-3-small`: OpenAI's text-embedding-3-small model
 - `text-embedding-3-large`: OpenAI's text-embedding-3-large model
+
+## Multi-Database Support
+
+The MCP server now supports managing multiple vector databases simultaneously. Each database is identified by a unique name, allowing you to:
+
+- Create and manage multiple databases of different types (Weaviate, Milvus)
+- Use different databases for different purposes or projects
+- Operate on specific databases by providing the database name in tool calls
+- List all available databases and their status
+
+### Key Benefits
+
+- **Isolation**: Each database operates independently with its own collections and documents
+- **Flexibility**: Mix different database types (Weaviate and Milvus) in the same session
+- **Organization**: Use descriptive names to organize databases by project or purpose
+- **Resource Management**: Clean up specific databases without affecting others
 
 ## Usage
 
@@ -84,42 +101,65 @@ Add the following to your MCP client configuration:
 
 ### Example Usage
 
-Here's how an AI agent might interact with the vector database:
+Here's how an AI agent might interact with multiple vector databases:
 
-1. **Create a vector database**:
+1. **Create multiple vector databases**:
    ```json
    {
      "name": "create_vector_database",
      "arguments": {
+       "db_name": "project_a_db",
        "db_type": "weaviate",
-       "collection_name": "MyDocuments"
+       "collection_name": "ProjectADocuments"
+     }
+   }
+   ```
+   ```json
+   {
+     "name": "create_vector_database",
+     "arguments": {
+       "db_name": "project_b_db",
+       "db_type": "milvus",
+       "collection_name": "ProjectBDocuments"
      }
    }
    ```
 
-2. **Get supported embeddings**:
+2. **List all available databases**:
    ```json
    {
-     "name": "get_supported_embeddings",
+     "name": "list_databases",
      "arguments": {}
    }
    ```
 
-3. **Set up the database with specific embedding**:
+3. **Get supported embeddings for a specific database**:
+   ```json
+   {
+     "name": "get_supported_embeddings",
+     "arguments": {
+       "db_name": "project_a_db"
+     }
+   }
+   ```
+
+4. **Set up a specific database with embedding**:
    ```json
    {
      "name": "setup_database",
      "arguments": {
+       "db_name": "project_a_db",
        "embedding": "text-embedding-ada-002"
      }
    }
    ```
 
-4. **Write a document with default embedding**:
+5. **Write documents to different databases**:
    ```json
    {
      "name": "write_document",
      "arguments": {
+       "db_name": "project_a_db",
        "url": "https://example.com/doc1",
        "text": "This is the content of the document",
        "metadata": {
@@ -130,12 +170,11 @@ Here's how an AI agent might interact with the vector database:
      }
    }
    ```
-
-5. **Write a document with pre-computed vector (Milvus)**:
    ```json
    {
      "name": "write_document",
      "arguments": {
+       "db_name": "project_b_db",
        "url": "https://example.com/doc2",
        "text": "This document has a pre-computed vector",
        "metadata": {
@@ -148,11 +187,12 @@ Here's how an AI agent might interact with the vector database:
    }
    ```
 
-6. **Write multiple documents with specific embedding**:
+6. **Write multiple documents to a specific database**:
    ```json
    {
      "name": "write_documents",
      "arguments": {
+       "db_name": "project_a_db",
        "documents": [
          {
            "url": "https://example.com/doc3",
@@ -170,22 +210,35 @@ Here's how an AI agent might interact with the vector database:
    }
    ```
 
-7. **List documents**:
+7. **List documents from a specific database**:
    ```json
    {
      "name": "list_documents",
      "arguments": {
+       "db_name": "project_a_db",
        "limit": 10,
        "offset": 0
      }
    }
    ```
 
-8. **Get database information**:
+8. **Get information about a specific database**:
    ```json
    {
      "name": "get_database_info",
-     "arguments": {}
+     "arguments": {
+       "db_name": "project_a_db"
+     }
+   }
+   ```
+
+9. **Clean up a specific database**:
+   ```json
+   {
+     "name": "cleanup",
+     "arguments": {
+       "db_name": "project_a_db"
+     }
    }
    ```
 

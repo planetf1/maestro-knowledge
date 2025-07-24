@@ -5,7 +5,7 @@ import asyncio
 import json
 import logging
 import sys
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from mcp.server import Server
 from mcp.server.models import InitializationOptions
@@ -24,8 +24,17 @@ from ..db.vector_db_base import VectorDatabase
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global variable to store the current vector database instance
-current_db: Optional[VectorDatabase] = None
+# Dictionary to store vector database instances keyed by name
+vector_databases: Dict[str, VectorDatabase] = {}
+
+
+def get_database_by_name(db_name: str) -> VectorDatabase:
+    """Get a vector database instance by name."""
+    if db_name not in vector_databases:
+        raise ValueError(
+            f"Vector database '{db_name}' not found. Please create it first."
+        )
+    return vector_databases[db_name]
 
 
 def create_mcp_server() -> Server:
@@ -44,6 +53,10 @@ def create_mcp_server() -> Server:
                     inputSchema={
                         "type": "object",
                         "properties": {
+                            "db_name": {
+                                "type": "string",
+                                "description": "Unique name for the vector database instance",
+                            },
                             "db_type": {
                                 "type": "string",
                                 "enum": ["weaviate", "milvus"],
@@ -55,35 +68,52 @@ def create_mcp_server() -> Server:
                                 "default": "MaestroDocs",
                             },
                         },
-                        "required": ["db_type"],
+                        "required": ["db_name", "db_type"],
                     },
                 ),
                 Tool(
                     name="setup_database",
-                    description="Set up the current vector database and create collections",
+                    description="Set up a vector database and create collections",
                     inputSchema={
                         "type": "object",
                         "properties": {
+                            "db_name": {
+                                "type": "string",
+                                "description": "Name of the vector database instance to set up",
+                            },
                             "embedding": {
                                 "type": "string",
                                 "description": "Embedding model to use for the collection (e.g., 'default', 'text-embedding-ada-002')",
                                 "default": "default",
-                            }
+                            },
                         },
-                        "required": [],
+                        "required": ["db_name"],
                     },
                 ),
                 Tool(
                     name="get_supported_embeddings",
-                    description="Get list of supported embedding models for the current vector database",
-                    inputSchema={"type": "object", "properties": {}, "required": []},
-                ),
-                Tool(
-                    name="write_documents",
-                    description="Write documents to the vector database with specified embedding strategy",
+                    description="Get list of supported embedding models for a vector database",
                     inputSchema={
                         "type": "object",
                         "properties": {
+                            "db_name": {
+                                "type": "string",
+                                "description": "Name of the vector database instance",
+                            }
+                        },
+                        "required": ["db_name"],
+                    },
+                ),
+                Tool(
+                    name="write_documents",
+                    description="Write documents to a vector database with specified embedding strategy",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "db_name": {
+                                "type": "string",
+                                "description": "Name of the vector database instance",
+                            },
                             "documents": {
                                 "type": "array",
                                 "items": {
@@ -108,15 +138,19 @@ def create_mcp_server() -> Server:
                                 "default": "default",
                             },
                         },
-                        "required": ["documents"],
+                        "required": ["db_name", "documents"],
                     },
                 ),
                 Tool(
                     name="write_document",
-                    description="Write a single document to the vector database with specified embedding strategy",
+                    description="Write a single document to a vector database with specified embedding strategy",
                     inputSchema={
                         "type": "object",
                         "properties": {
+                            "db_name": {
+                                "type": "string",
+                                "description": "Name of the vector database instance",
+                            },
                             "url": {
                                 "type": "string",
                                 "description": "URL of the document",
@@ -140,15 +174,19 @@ def create_mcp_server() -> Server:
                                 "default": "default",
                             },
                         },
-                        "required": ["url", "text"],
+                        "required": ["db_name", "url", "text"],
                     },
                 ),
                 Tool(
                     name="list_documents",
-                    description="List documents from the vector database",
+                    description="List documents from a vector database",
                     inputSchema={
                         "type": "object",
                         "properties": {
+                            "db_name": {
+                                "type": "string",
+                                "description": "Name of the vector database instance",
+                            },
                             "limit": {
                                 "type": "integer",
                                 "description": "Maximum number of documents to return",
@@ -160,65 +198,109 @@ def create_mcp_server() -> Server:
                                 "default": 0,
                             },
                         },
-                        "required": [],
+                        "required": ["db_name"],
                     },
                 ),
                 Tool(
                     name="count_documents",
-                    description="Get the current count of documents in the collection",
-                    inputSchema={"type": "object", "properties": {}, "required": []},
-                ),
-                Tool(
-                    name="delete_documents",
-                    description="Delete documents from the vector database by their IDs",
+                    description="Get the current count of documents in a collection",
                     inputSchema={
                         "type": "object",
                         "properties": {
+                            "db_name": {
+                                "type": "string",
+                                "description": "Name of the vector database instance",
+                            }
+                        },
+                        "required": ["db_name"],
+                    },
+                ),
+                Tool(
+                    name="delete_documents",
+                    description="Delete documents from a vector database by their IDs",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "db_name": {
+                                "type": "string",
+                                "description": "Name of the vector database instance",
+                            },
                             "document_ids": {
                                 "type": "array",
                                 "items": {"type": "string"},
                                 "description": "List of document IDs to delete",
-                            }
+                            },
                         },
-                        "required": ["document_ids"],
+                        "required": ["db_name", "document_ids"],
                     },
                 ),
                 Tool(
                     name="delete_document",
-                    description="Delete a single document from the vector database by its ID",
+                    description="Delete a single document from a vector database by its ID",
                     inputSchema={
                         "type": "object",
                         "properties": {
+                            "db_name": {
+                                "type": "string",
+                                "description": "Name of the vector database instance",
+                            },
                             "document_id": {
                                 "type": "string",
                                 "description": "Document ID to delete",
-                            }
+                            },
                         },
-                        "required": ["document_id"],
+                        "required": ["db_name", "document_id"],
                     },
                 ),
                 Tool(
                     name="delete_collection",
-                    description="Delete an entire collection from the database",
+                    description="Delete an entire collection from a database",
                     inputSchema={
                         "type": "object",
                         "properties": {
+                            "db_name": {
+                                "type": "string",
+                                "description": "Name of the vector database instance",
+                            },
                             "collection_name": {
                                 "type": "string",
-                                "description": "Name of the collection to delete. If not provided, uses the current collection.",
-                            }
+                                "description": "Name of the collection to delete. If not provided, uses the database's collection.",
+                            },
                         },
-                        "required": [],
+                        "required": ["db_name"],
                     },
                 ),
                 Tool(
                     name="cleanup",
-                    description="Clean up resources and close database connections",
-                    inputSchema={"type": "object", "properties": {}, "required": []},
+                    description="Clean up resources and close database connections for a specific database",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "db_name": {
+                                "type": "string",
+                                "description": "Name of the vector database instance to clean up",
+                            }
+                        },
+                        "required": ["db_name"],
+                    },
                 ),
                 Tool(
                     name="get_database_info",
-                    description="Get information about the current vector database",
+                    description="Get information about a vector database",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "db_name": {
+                                "type": "string",
+                                "description": "Name of the vector database instance",
+                            }
+                        },
+                        "required": ["db_name"],
+                    },
+                ),
+                Tool(
+                    name="list_databases",
+                    description="List all available vector database instances",
                     inputSchema={"type": "object", "properties": {}, "required": []},
                 ),
             ]
@@ -227,99 +309,84 @@ def create_mcp_server() -> Server:
     @server.call_tool()
     async def handle_call_tool(name: str, arguments: Dict[str, Any]) -> CallToolResult:
         """Handle tool calls for vector database operations."""
-        global current_db
 
         try:
             if name == "create_vector_database":
+                db_name = arguments.get("db_name")
                 db_type = arguments.get("db_type")
                 collection_name = arguments.get("collection_name", "MaestroDocs")
 
-                # Clean up existing database if any
-                if current_db:
-                    try:
-                        current_db.cleanup()
-                    except Exception as e:
-                        logger.warning(f"Error cleaning up previous database: {e}")
+                # Check if database with this name already exists
+                if db_name in vector_databases:
+                    raise ValueError(f"Vector database '{db_name}' already exists")
 
-                current_db = create_vector_database(db_type, collection_name)
+                # Create new database instance
+                vector_databases[db_name] = create_vector_database(
+                    db_type, collection_name
+                )
 
                 return CallToolResult(
                     content=[
                         TextContent(
                             type="text",
-                            text=f"Successfully created {db_type} vector database with collection '{collection_name}'",
+                            text=f"Successfully created {db_type} vector database '{db_name}' with collection '{collection_name}'",
                         )
                     ]
                 )
 
             elif name == "setup_database":
-                if not current_db:
-                    raise ValueError(
-                        "No vector database created. Please create one first."
-                    )
-
+                db_name = arguments.get("db_name")
+                db = get_database_by_name(db_name)
                 embedding = arguments.get("embedding", "default")
 
                 # Check if the database supports the setup method with embedding parameter
-                if (
-                    hasattr(current_db, "setup")
-                    and len(current_db.setup.__code__.co_varnames) > 1
-                ):
-                    current_db.setup(embedding=embedding)
+                if hasattr(db, "setup") and len(db.setup.__code__.co_varnames) > 1:
+                    db.setup(embedding=embedding)
                 else:
-                    current_db.setup()
+                    db.setup()
 
                 return CallToolResult(
                     content=[
                         TextContent(
                             type="text",
-                            text=f"Successfully set up {current_db.db_type} vector database with embedding '{embedding}'",
+                            text=f"Successfully set up {db.db_type} vector database '{db_name}' with embedding '{embedding}'",
                         )
                     ]
                 )
 
             elif name == "get_supported_embeddings":
-                if not current_db:
-                    raise ValueError(
-                        "No vector database created. Please create one first."
-                    )
-
-                embeddings = current_db.supported_embeddings()
+                db_name = arguments.get("db_name")
+                db = get_database_by_name(db_name)
+                embeddings = db.supported_embeddings()
 
                 return CallToolResult(
                     content=[
                         TextContent(
                             type="text",
-                            text=f"Supported embeddings for {current_db.db_type}: {json.dumps(embeddings, indent=2)}",
+                            text=f"Supported embeddings for {db.db_type} vector database '{db_name}': {json.dumps(embeddings, indent=2)}",
                         )
                     ]
                 )
 
             elif name == "write_documents":
-                if not current_db:
-                    raise ValueError(
-                        "No vector database created. Please create one first."
-                    )
-
+                db_name = arguments.get("db_name")
+                db = get_database_by_name(db_name)
                 documents = arguments.get("documents", [])
                 embedding = arguments.get("embedding", "default")
-                current_db.write_documents(documents, embedding=embedding)
+                db.write_documents(documents, embedding=embedding)
 
                 return CallToolResult(
                     content=[
                         TextContent(
                             type="text",
-                            text=f"Successfully wrote {len(documents)} documents to the vector database using embedding '{embedding}'",
+                            text=f"Successfully wrote {len(documents)} documents to vector database '{db_name}' using embedding '{embedding}'",
                         )
                     ]
                 )
 
             elif name == "write_document":
-                if not current_db:
-                    raise ValueError(
-                        "No vector database created. Please create one first."
-                    )
-
+                db_name = arguments.get("db_name")
+                db = get_database_by_name(db_name)
                 document = {
                     "url": arguments.get("url"),
                     "text": arguments.get("text"),
@@ -331,144 +398,156 @@ def create_mcp_server() -> Server:
                     document["vector"] = arguments["vector"]
 
                 embedding = arguments.get("embedding", "default")
-                current_db.write_document(document, embedding=embedding)
+                db.write_document(document, embedding=embedding)
 
                 return CallToolResult(
                     content=[
                         TextContent(
                             type="text",
-                            text=f"Successfully wrote document '{document['url']}' to the vector database using embedding '{embedding}'",
+                            text=f"Successfully wrote document '{document['url']}' to vector database '{db_name}' using embedding '{embedding}'",
                         )
                     ]
                 )
 
             elif name == "list_documents":
-                if not current_db:
-                    raise ValueError(
-                        "No vector database created. Please create one first."
-                    )
-
+                db_name = arguments.get("db_name")
+                db = get_database_by_name(db_name)
                 limit = arguments.get("limit", 10)
                 offset = arguments.get("offset", 0)
-                documents = current_db.list_documents(limit, offset)
+                documents = db.list_documents(limit, offset)
 
                 return CallToolResult(
                     content=[
                         TextContent(
                             type="text",
-                            text=f"Found {len(documents)} documents:\n"
+                            text=f"Found {len(documents)} documents in vector database '{db_name}':\n"
                             + json.dumps(documents, indent=2, default=str),
                         )
                     ]
                 )
 
             elif name == "count_documents":
-                if not current_db:
-                    raise ValueError(
-                        "No vector database created. Please create one first."
-                    )
-
-                count = current_db.count_documents()
+                db_name = arguments.get("db_name")
+                db = get_database_by_name(db_name)
+                count = db.count_documents()
 
                 return CallToolResult(
                     content=[
                         TextContent(
-                            type="text", text=f"Current document count: {count}"
+                            type="text",
+                            text=f"Document count in vector database '{db_name}': {count}",
                         )
                     ]
                 )
 
             elif name == "delete_documents":
-                if not current_db:
-                    raise ValueError(
-                        "No vector database created. Please create one first."
-                    )
-
+                db_name = arguments.get("db_name")
+                db = get_database_by_name(db_name)
                 document_ids = arguments.get("document_ids", [])
-                current_db.delete_documents(document_ids)
+                db.delete_documents(document_ids)
 
                 return CallToolResult(
                     content=[
                         TextContent(
                             type="text",
-                            text=f"Successfully deleted {len(document_ids)} documents",
+                            text=f"Successfully deleted {len(document_ids)} documents from vector database '{db_name}'",
                         )
                     ]
                 )
 
             elif name == "delete_document":
-                if not current_db:
-                    raise ValueError(
-                        "No vector database created. Please create one first."
-                    )
-
+                db_name = arguments.get("db_name")
+                db = get_database_by_name(db_name)
                 document_id = arguments.get("document_id")
-                current_db.delete_document(document_id)
+                db.delete_document(document_id)
 
                 return CallToolResult(
                     content=[
                         TextContent(
                             type="text",
-                            text=f"Successfully deleted document '{document_id}'",
+                            text=f"Successfully deleted document '{document_id}' from vector database '{db_name}'",
                         )
                     ]
                 )
 
             elif name == "delete_collection":
-                if not current_db:
-                    raise ValueError(
-                        "No vector database created. Please create one first."
-                    )
-
+                db_name = arguments.get("db_name")
+                db = get_database_by_name(db_name)
                 collection_name = arguments.get("collection_name")
-                current_db.delete_collection(collection_name)
+                db.delete_collection(collection_name)
 
                 return CallToolResult(
                     content=[
                         TextContent(
                             type="text",
-                            text=f"Successfully deleted collection '{collection_name or current_db.collection_name}'",
+                            text=f"Successfully deleted collection '{collection_name or db.collection_name}' from vector database '{db_name}'",
                         )
                     ]
                 )
 
             elif name == "cleanup":
-                if current_db:
-                    current_db.cleanup()
-                    current_db = None
+                db_name = arguments.get("db_name")
+                db = get_database_by_name(db_name)
+                db.cleanup()
+                del vector_databases[db_name]
 
                 return CallToolResult(
                     content=[
                         TextContent(
                             type="text",
-                            text="Successfully cleaned up vector database resources",
+                            text=f"Successfully cleaned up vector database '{db_name}'",
                         )
                     ]
                 )
 
             elif name == "get_database_info":
-                if not current_db:
-                    return CallToolResult(
-                        content=[
-                            TextContent(
-                                type="text",
-                                text="No vector database is currently active",
-                            )
-                        ]
-                    )
+                db_name = arguments.get("db_name")
+                db = get_database_by_name(db_name)
 
                 info = {
-                    "db_type": current_db.db_type,
-                    "collection_name": current_db.collection_name,
-                    "document_count": current_db.count_documents(),
-                    "supported_embeddings": current_db.supported_embeddings(),
+                    "db_name": db_name,
+                    "db_type": db.db_type,
+                    "collection_name": db.collection_name,
+                    "document_count": db.count_documents(),
+                    "supported_embeddings": db.supported_embeddings(),
                 }
 
                 return CallToolResult(
                     content=[
                         TextContent(
                             type="text",
-                            text=f"Database Information:\n{json.dumps(info, indent=2)}",
+                            text=f"Database Information for '{db_name}':\n{json.dumps(info, indent=2)}",
+                        )
+                    ]
+                )
+
+            elif name == "list_databases":
+                if not vector_databases:
+                    return CallToolResult(
+                        content=[
+                            TextContent(
+                                type="text",
+                                text="No vector databases are currently active",
+                            )
+                        ]
+                    )
+
+                db_list = []
+                for db_name, db in vector_databases.items():
+                    db_list.append(
+                        {
+                            "name": db_name,
+                            "type": db.db_type,
+                            "collection": db.collection_name,
+                            "document_count": db.count_documents(),
+                        }
+                    )
+
+                return CallToolResult(
+                    content=[
+                        TextContent(
+                            type="text",
+                            text=f"Available vector databases:\n{json.dumps(db_list, indent=2)}",
                         )
                     ]
                 )
