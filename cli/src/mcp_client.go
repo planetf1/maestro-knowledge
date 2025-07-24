@@ -303,6 +303,21 @@ func (c *MCPClient) SetupDatabase(dbName, embedding string) error {
 	return nil
 }
 
+// DatabaseExists checks if a database with the given name exists
+func (c *MCPClient) DatabaseExists(dbName string) (bool, error) {
+	databases, err := c.ListDatabases()
+	if err != nil {
+		return false, fmt.Errorf("failed to list databases: %w", err)
+	}
+
+	for _, db := range databases {
+		if db.Name == dbName {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // DeleteVectorDatabase calls the cleanup tool on the MCP server
 func (c *MCPClient) DeleteVectorDatabase(dbName string) error {
 	params := map[string]interface{}{

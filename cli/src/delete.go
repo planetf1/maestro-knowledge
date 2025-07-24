@@ -84,6 +84,15 @@ func performVectorDatabaseDeletion(name string) error {
 	}
 	defer client.Close()
 
+	// Check if database exists before deleting
+	exists, err := client.DatabaseExists(name)
+	if err != nil {
+		return fmt.Errorf("failed to check if database exists: %w", err)
+	}
+	if !exists {
+		return fmt.Errorf("vector database '%s' does not exist", name)
+	}
+
 	// Call the MCP server to delete the database with panic recovery
 	var deleteErr error
 	func() {

@@ -148,6 +148,12 @@ start_http_server() {
     print_status "Host: $HOST"
     print_status "Port: $PORT"
     
+    # Load .env file if it exists
+    if [ -f "$SCRIPT_DIR/.env" ]; then
+        print_status "Loading environment variables from .env file..."
+        export $(grep -v '^#' "$SCRIPT_DIR/.env" | xargs)
+    fi
+    
     # Start the HTTP server in background
     python -c "
 import sys
@@ -185,6 +191,12 @@ run_http_server_sync('$HOST', $PORT)
 start_stdio_server() {
     print_info "Starting FastMCP stdio server..."
     print_status "Note: This mode is for MCP client communication via stdio"
+    
+    # Load .env file if it exists
+    if [ -f "$SCRIPT_DIR/.env" ]; then
+        print_status "Loading environment variables from .env file..."
+        export $(grep -v '^#' "$SCRIPT_DIR/.env" | xargs)
+    fi
     
     # Test module import
     if python -c "import $PYTHON_MODULE; print('Module imported successfully')" > "$LOG_FILE" 2>&1; then

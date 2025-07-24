@@ -287,6 +287,15 @@ func performVectorDatabaseCreation(config *VectorDatabaseConfig) error {
 	}
 	defer client.Close()
 
+	// Check if database already exists
+	exists, err := client.DatabaseExists(config.Metadata.Name)
+	if err != nil {
+		return fmt.Errorf("failed to check if database exists: %w", err)
+	}
+	if exists {
+		return fmt.Errorf("vector database '%s' already exists", config.Metadata.Name)
+	}
+
 	// Call the MCP server to create the database with panic recovery
 	var createErr error
 	func() {
