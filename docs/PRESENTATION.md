@@ -178,12 +178,24 @@ spec:
 - **Go CLI tests** - 47 tests
 - **Integration tests** - End-to-end workflows
 - **Schema validation** - YAML validation
+- **CLI integration tests** - Full CLI workflow testing
 
 ## Quality Tools
-- **Ruff** - Python linting
+- **Ruff** - Python linting and formatting
 - **Go fmt** - Go formatting
 - **Pytest** - Python testing
 - **GitHub Actions** - CI/CD
+
+## Pre-PR Test Suite
+```bash
+./lint.sh && ./start.sh && ./tests.sh all && ./test-integration.sh && ./stop.sh
+```
+This comprehensive sequence ensures:
+- Code quality and formatting
+- MCP server functionality
+- All unit tests pass
+- Integration tests pass
+- CLI tool integration works
 
 ---
 
@@ -197,11 +209,17 @@ maestro-knowledge/
 │   └── vector_db.py       # Factory interface
 ├── cli/                   # Go CLI tool
 │   ├── src/              # Go source
-│   └── tests/            # CLI tests
+│   ├── tests/            # CLI tests
+│   └── examples/         # CLI examples
 ├── tests/                # Python tests
 ├── examples/             # Usage examples
 ├── schemas/              # YAML schemas
-└── docs/                 # Documentation
+├── docs/                 # Documentation
+├── start.sh              # MCP server start
+├── stop.sh               # MCP server stop
+├── lint.sh               # Code quality
+├── tests.sh              # Test runner
+└── test-integration.sh   # Integration tests
 ```
 
 ---
@@ -275,6 +293,9 @@ uv run pytest
 # Go CLI
 cd cli
 go test ./...
+
+# Comprehensive testing (before PR)
+./lint.sh && ./start.sh && ./tests.sh all && ./test-integration.sh && ./stop.sh
 ```
 
 ## Guidelines
@@ -282,6 +303,8 @@ go test ./...
 - **Error handling** for Go
 - **Comprehensive tests**
 - **Documentation** updates
+- **Pre-PR test suite** must pass
+- **Integration testing** with CLI tool
 
 ---
 

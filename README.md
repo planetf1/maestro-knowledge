@@ -128,6 +128,54 @@ For OpenAI embedding models, set the following environment variable:
 export OPENAI_API_KEY="your-openai-api-key"
 ```
 
+## CLI Tool
+
+The project includes a Go-based CLI tool for managing vector databases through the MCP server.
+
+### Installation
+
+```bash
+# Build the CLI tool
+cd cli
+go build -o maestro-k src/*.go
+
+# Or use the build script
+./build.sh
+```
+
+### Basic Usage
+
+```bash
+# List vector databases
+./maestro-k list vector-db
+
+# Create vector database from YAML
+./maestro-k create vector-db config.yaml
+
+# Delete vector database
+./maestro-k delete vector-db my-db
+
+# Validate YAML configuration
+./maestro-k validate config.yaml
+```
+
+### Configuration
+
+The CLI supports multiple configuration methods:
+
+```bash
+# Environment variable
+export MAESTRO_KNOWLEDGE_MCP_SERVER_URI="http://localhost:8030"
+
+# Command-line flag
+./maestro-k list vector-db --mcp-server-uri="http://localhost:8030"
+
+# .env file
+echo "MAESTRO_KNOWLEDGE_MCP_SERVER_URI=http://localhost:8030" > .env
+```
+
+For more details, see [cli/README.md](cli/README.md).
+
 ## MCP Server
 
 The project includes a Model Context Protocol (MCP) server that exposes vector database functionality to AI agents through a standardized interface.
@@ -191,17 +239,43 @@ See the [examples/](examples/) directory for usage examples:
 - [Milvus Example](examples/milvus_example.py) - Shows Milvus with pre-computed vectors and embedding models
 - [MCP Server Example](examples/mcp_example.py)
 
+## Available Scripts
+
+The project includes several utility scripts for development and testing:
+
+```bash
+# Code quality and formatting
+./lint.sh                    # Run linting and formatting checks
+
+# MCP server management
+./start.sh                   # Start the MCP server
+./stop.sh                    # Stop the MCP server
+
+# Testing
+./tests.sh                   # Run all Python tests
+./test-integration.sh        # Run CLI integration tests
+
+# CLI tool
+cd cli && ./build.sh         # Build the CLI tool
+```
+
 ## Testing
 
 ```bash
-# Run tests
+# Run all tests
 ./tests.sh
+
+# Run comprehensive test suite (recommended before PR)
+./lint.sh && ./start.sh && ./tests.sh all && ./test-integration.sh && ./stop.sh
 
 # Or run individual test files
 python -m pytest tests/
 
 # Run YAML schema validation tests
 pytest tests/test_vector_database_yamls.py -v
+
+# Run integration tests
+./test-integration.sh
 ```
 
 ## Project Structure
@@ -219,8 +293,17 @@ maestro-knowledge/
 │   │   ├── mcp_config.json  # MCP client configuration
 │   │   └── README.md        # MCP server documentation
 │   └── vector_db.py         # Main module exports
+├── cli/                     # Go CLI tool
+│   ├── src/                 # Go source code
+│   ├── tests/               # CLI tests
+│   ├── examples/            # CLI usage examples
+│   ├── build.sh             # Build script
+│   └── README.md            # CLI documentation
 ├── start.sh                 # MCP server start script
 ├── stop.sh                  # MCP server stop script
+├── lint.sh                  # Code linting and formatting
+├── tests.sh                 # Test runner script
+├── test-integration.sh      # Integration tests
 ├── tests/                   # Test suite
 │   ├── test_vector_db_*.py  # Vector database tests
 │   ├── test_mcp_server.py   # MCP server tests
@@ -231,13 +314,14 @@ maestro-knowledge/
 │       └── test_remote_weaviate.yaml
 ├── examples/                # Usage examples
 │   ├── weaviate_example.py  # Weaviate usage
-│   ├── milvus_example.py    # Milvus usage
+│   ├── milvate_example.py   # Milvus usage
 │   └── mcp_example.py       # MCP server usage
 ├── schemas/                 # JSON schemas
 │   ├── vector-database-schema.json # Vector database configuration schema
 │   └── README.md            # Schema documentation
 └── docs/                    # Documentation
-    └── CONTRIBUTING.md      # Contribution guidelines
+    ├── CONTRIBUTING.md      # Contribution guidelines
+    └── PRESENTATION.md      # Project presentation
 ```
 
 ## Environment Variables
@@ -249,6 +333,16 @@ maestro-knowledge/
 ## Contributing
 
 See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for contribution guidelines.
+
+### Pre-Pull Request Checklist
+
+Before submitting a pull request, run the comprehensive test suite:
+
+```bash
+./lint.sh && ./start.sh && ./tests.sh all && ./test-integration.sh && ./stop.sh
+```
+
+This ensures code quality, functionality, and integration with the CLI tool.
 
 ## License
 

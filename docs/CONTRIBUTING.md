@@ -462,9 +462,26 @@ This section lists the labels we use to help us track and manage issues and pull
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## Code Quality and Linting
+## Pre-Pull Request Checklist
 
-Before submitting a pull request, please ensure that:
+Before submitting a pull request, you **MUST** run the following sequence of commands to ensure code quality and functionality:
+
+```bash
+./lint.sh && ./start.sh && ./tests.sh all && ./test-integration.sh && ./stop.sh
+```
+
+This comprehensive test sequence will:
+1. **Lint and format code** (`./lint.sh`) - Ensures code follows style guidelines
+2. **Start the MCP server** (`./start.sh`) - Prepares the environment for testing
+3. **Run all tests** (`./tests.sh all`) - Validates unit tests and functionality
+4. **Run integration tests** (`./test-integration.sh`) - Tests end-to-end functionality
+5. **Stop the MCP server** (`./stop.sh`) - Cleans up the environment
+
+**⚠️ Important**: This sequence must pass completely before submitting a PR. If any step fails, fix the issues and run the sequence again.
+
+### Additional Pre-PR Requirements
+
+In addition to the automated checks above, please ensure that:
 
 1. All tests pass (`./tests.sh`)
 2. All linting checks pass (`./lint.sh`)
@@ -474,6 +491,8 @@ Before submitting a pull request, please ensure that:
 6. Warning filters are included for clean test output
 7. Examples are tested and working (if adding new database support)
 8. Embedding functionality is properly tested
+
+## Code Quality and Linting
 
 ### Running Code Quality Checks
 
