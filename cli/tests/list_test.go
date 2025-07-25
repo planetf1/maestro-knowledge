@@ -251,3 +251,96 @@ func TestListVectorDatabaseURLNormalization(t *testing.T) {
 		})
 	}
 }
+
+func TestListEmbeddings(t *testing.T) {
+	// Use dry-run mode since we don't have a real MCP server running
+	cmd := exec.Command("../../maestro-k", "list", "embeddings", "test-db", "--dry-run")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("List embeddings command failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "[DRY RUN] Would list embeddings for vector database 'test-db'") {
+		t.Errorf("Expected dry-run message, got: %s", outputStr)
+	}
+}
+
+func TestListEmbeddingsWithVerbose(t *testing.T) {
+	// Use dry-run mode since we don't have a real MCP server running
+	cmd := exec.Command("../../maestro-k", "list", "embeddings", "test-db", "--verbose", "--dry-run")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("List embeddings command with verbose failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "Listing embeddings for vector database 'test-db'") {
+		t.Errorf("Expected verbose message 'Listing embeddings for vector database 'test-db'', got: %s", outputStr)
+	}
+
+	if !strings.Contains(outputStr, "[DRY RUN] Would list embeddings for vector database 'test-db'") {
+		t.Errorf("Expected dry-run message, got: %s", outputStr)
+	}
+}
+
+func TestListEmbeddingsWithEmbedAlias(t *testing.T) {
+	// Test the 'embed' alias
+	cmd := exec.Command("../../maestro-k", "list", "embed", "test-db", "--dry-run")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("List embed command failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "[DRY RUN] Would list embeddings for vector database 'test-db'") {
+		t.Errorf("Expected dry-run message, got: %s", outputStr)
+	}
+}
+
+func TestListEmbeddingsWithVdbEmbedAlias(t *testing.T) {
+	// Test the 'vdb-embed' alias
+	cmd := exec.Command("../../maestro-k", "list", "vdb-embed", "test-db", "--dry-run")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("List vdb-embed command failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "[DRY RUN] Would list embeddings for vector database 'test-db'") {
+		t.Errorf("Expected dry-run message, got: %s", outputStr)
+	}
+}
+
+func TestListEmbeddingsMissingVdbName(t *testing.T) {
+	cmd := exec.Command("../../maestro-k", "list", "embeddings")
+	output, err := cmd.CombinedOutput()
+
+	// Should fail with missing VDB_NAME
+	if err == nil {
+		t.Error("Expected command to fail with missing VDB_NAME, but it succeeded")
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "VDB_NAME is required for embeddings command") {
+		t.Errorf("Expected error about missing VDB_NAME, got: %s", outputStr)
+	}
+}
+
+func TestListEmbeddingsHelp(t *testing.T) {
+	cmd := exec.Command("../../maestro-k", "list", "embeddings", "--help")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("List embeddings help command failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "embeddings VDB_NAME") {
+		t.Errorf("Expected help to mention embeddings VDB_NAME, got: %s", outputStr)
+	}
+}

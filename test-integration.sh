@@ -189,7 +189,62 @@ else
     fi
 fi
 
-# 8. Delete a vector database
+# 8. Test embeddings functionality on existing database
+print_status "Testing embeddings functionality on existing database..."
+EMBEDDINGS_OUTPUT=$(./maestro-k list embeddings test_local_milvus --verbose)
+if [[ "$EMBEDDINGS_OUTPUT" == *"Supported embeddings for milvus vector database 'test_local_milvus'"* ]] && [[ "$EMBEDDINGS_OUTPUT" == *"text-embedding-3-small"* ]]; then
+    print_success "Embeddings listing works for existing database"
+else
+    print_error "Failed to list embeddings for existing database"
+    echo "Output: $EMBEDDINGS_OUTPUT"
+    exit 1
+fi
+
+# 9. Test embeddings functionality with different aliases
+print_status "Testing embeddings functionality with 'embed' alias..."
+EMBED_ALIAS_OUTPUT=$(./maestro-k list embed test_local_milvus --verbose)
+if [[ "$EMBED_ALIAS_OUTPUT" == *"Supported embeddings for milvus vector database 'test_local_milvus'"* ]]; then
+    print_success "Embeddings listing works with 'embed' alias"
+else
+    print_error "Failed to list embeddings with 'embed' alias"
+    echo "Output: $EMBED_ALIAS_OUTPUT"
+    exit 1
+fi
+
+# 10. Test embeddings functionality with 'vdb-embed' alias
+print_status "Testing embeddings functionality with 'vdb-embed' alias..."
+VDB_EMBED_ALIAS_OUTPUT=$(./maestro-k list vdb-embed test_local_milvus --verbose)
+if [[ "$VDB_EMBED_ALIAS_OUTPUT" == *"Supported embeddings for milvus vector database 'test_local_milvus'"* ]]; then
+    print_success "Embeddings listing works with 'vdb-embed' alias"
+else
+    print_error "Failed to list embeddings with 'vdb-embed' alias"
+    echo "Output: $VDB_EMBED_ALIAS_OUTPUT"
+    exit 1
+fi
+
+# 11. Test embeddings functionality on non-existing database (should fail)
+print_status "Testing embeddings functionality on non-existing database (should fail)..."
+EMBEDDINGS_NONEXISTENT_OUTPUT=$(./maestro-k list embeddings non_existent_database 2>&1 || true)
+if [[ "$EMBEDDINGS_NONEXISTENT_OUTPUT" == *"vector database 'non_existent_database' does not exist"* ]]; then
+    print_success "Embeddings listing correctly fails for non-existing database"
+else
+    print_error "Embeddings listing should have failed for non-existing database"
+    echo "Output: $EMBEDDINGS_NONEXISTENT_OUTPUT"
+    exit 1
+fi
+
+# 12. Test embeddings functionality with missing VDB_NAME (should fail)
+print_status "Testing embeddings functionality with missing VDB_NAME (should fail)..."
+EMBEDDINGS_MISSING_NAME_OUTPUT=$(./maestro-k list embeddings 2>&1 || true)
+if [[ "$EMBEDDINGS_MISSING_NAME_OUTPUT" == *"VDB_NAME is required for embeddings command"* ]]; then
+    print_success "Embeddings listing correctly fails with missing VDB_NAME"
+else
+    print_error "Embeddings listing should have failed with missing VDB_NAME"
+    echo "Output: $EMBEDDINGS_MISSING_NAME_OUTPUT"
+    exit 1
+fi
+
+# 13. Delete a vector database
 print_status "Testing delete functionality..."
 DELETE_OUTPUT=$(./maestro-k delete vector-db test_local_milvus --verbose)
 if [[ "$DELETE_OUTPUT" == *"✅ Vector database 'test_local_milvus' deleted successfully"* ]]; then
@@ -200,7 +255,7 @@ else
     exit 1
 fi
 
-# 9. List to verify the database was deleted
+# 14. List to verify the database was deleted
 print_status "Verifying database was removed from list..."
 LIST_AFTER_DELETE=$(./maestro-k list vector-db --verbose)
 if [[ "$WEAVIATE_CREATED" == "true" ]]; then
@@ -223,7 +278,7 @@ else
     fi
 fi
 
-# 10. Stop the MCP server
+# 15. Stop the MCP server
 print_status "Stopping MCP server..."
 cd "$PROJECT_ROOT"
 ./stop.sh

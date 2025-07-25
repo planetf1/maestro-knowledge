@@ -5,6 +5,7 @@ A command-line interface for interacting with the Maestro Knowledge MCP server.
 ## Features
 
 - **List vector databases**: List all available vector database instances
+- **List embeddings**: List supported embeddings for a specific vector database
 - **Environment variable support**: Configure MCP server URI via environment variables
 - **Command-line flag override**: Override MCP server URI via command-line flags
 - **Dry-run mode**: Test commands without making actual changes
@@ -41,6 +42,12 @@ go build -o maestro-k src/*.go
 
 # List vector databases with verbose output
 ./maestro-k list vector-db --verbose
+
+# List embeddings for a specific vector database
+./maestro-k list embeddings my-database
+
+# List embeddings with verbose output
+./maestro-k list embeddings my-database --verbose
 
 # Create vector database from YAML file
 ./maestro-k create vector-db config.yaml
@@ -152,7 +159,7 @@ This makes it easy to specify server addresses in any format:
 
 ### List Command
 
-The `list` command displays information about vector databases:
+The `list` command displays information about vector databases or embeddings:
 
 ```bash
 # List all vector databases
@@ -163,11 +170,20 @@ The `list` command displays information about vector databases:
 
 # Test the command without connecting to server
 ./maestro-k list vector-db --dry-run
+
+# List embeddings for a specific vector database
+./maestro-k list embeddings my-database
+
+# List embeddings with verbose output
+./maestro-k list embeddings my-database --verbose
+
+# Test embeddings command without connecting to server
+./maestro-k list embeddings my-database --dry-run
 ```
 
 #### Output Format
 
-When databases are found, the output shows:
+**Vector Databases**: When databases are found, the output shows:
 - Database name and type
 - Collection name
 - Document count
@@ -183,6 +199,23 @@ Found 2 vector database(s):
 2. project_b_db (milvus)
    Collection: ProjectBDocuments
    Documents: 8
+```
+
+**Embeddings**: When listing embeddings for a vector database, the output shows:
+- Supported embedding models for the specific database type
+
+Example:
+```
+Supported embeddings for weaviate vector database 'my-database': [
+  "default",
+  "text2vec-weaviate",
+  "text2vec-openai",
+  "text2vec-cohere",
+  "text2vec-huggingface",
+  "text-embedding-ada-002",
+  "text-embedding-3-small",
+  "text-embedding-3-large"
+]
 ```
 
 ## Examples
@@ -204,6 +237,11 @@ Found 2 vector database(s):
 3. **List with verbose output**:
    ```bash
    ./maestro-k list vector-db --mcp-server-uri="http://localhost:8030" --verbose
+   ```
+
+4. **List embeddings for a database**:
+   ```bash
+   ./maestro-k list embeddings my-database --mcp-server-uri="http://localhost:8030"
    ```
 
 ### Examples

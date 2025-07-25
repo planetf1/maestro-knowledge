@@ -34,12 +34,16 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.db.vector_db_milvus import MilvusVectorDatabase
 
-# Check if pymilvus is available
+# Check if pymilvus is available - defer import to avoid circular import issues
+PYMILVUS_AVAILABLE = False
 try:
-    import pymilvus  # noqa: F401
+    # Try to import pymilvus in a way that avoids the circular import
+    import sys
 
+    if "pymilvus" not in sys.modules:
+        import pymilvus  # noqa: F401
     PYMILVUS_AVAILABLE = True
-except ImportError:
+except (ImportError, AttributeError):
     PYMILVUS_AVAILABLE = False
 
 

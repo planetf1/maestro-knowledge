@@ -344,6 +344,36 @@ func (c *MCPClient) DeleteVectorDatabase(dbName string) error {
 	return nil
 }
 
+// GetSupportedEmbeddings calls the get_supported_embeddings tool on the MCP server
+func (c *MCPClient) GetSupportedEmbeddings(dbName string) (string, error) {
+	params := map[string]interface{}{
+		"input": map[string]interface{}{
+			"db_name": dbName,
+		},
+	}
+
+	response, err := c.callMCPServer("get_supported_embeddings", params)
+	if err != nil {
+		return "", err
+	}
+
+	// Check for error in response
+	if response.Error != nil {
+		return "", fmt.Errorf("MCP server error: %s", response.Error.Message)
+	}
+
+	// The response should be a string with the embeddings list
+	if response.Result == nil {
+		return "", fmt.Errorf("no response from MCP server")
+	}
+
+	if resultStr, ok := response.Result.(string); ok {
+		return resultStr, nil
+	}
+
+	return "", fmt.Errorf("unexpected response format from MCP server")
+}
+
 // Close closes the MCP client
 func (c *MCPClient) Close() error {
 	if c.client != nil {
