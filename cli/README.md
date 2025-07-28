@@ -357,6 +357,55 @@ The `delete` command deletes vector databases by name:
 ./maestro-k delete vector-db my-database --dry-run
 ```
 
+### Retrieve/Get Commands
+
+The `retrieve` and `get` commands retrieve information about collections and documents:
+
+```bash
+# Retrieve collection information (uses default collection if not specified)
+./maestro-k retrieve collection my-database
+
+# Retrieve specific collection information
+./maestro-k retrieve collection my-database my-collection
+
+# Retrieve using short aliases
+./maestro-k retrieve col my-database
+./maestro-k retrieve vdb-col my-database my-collection
+
+# Get collection information (alternative command)
+./maestro-k get collection my-database
+./maestro-k get col my-database my-collection
+
+# Retrieve with verbose output
+./maestro-k retrieve collection my-database --verbose
+
+# Retrieve with dry-run mode
+./maestro-k retrieve collection my-database --dry-run
+```
+
+**Collection Information Output**: When retrieving collection information, the output shows:
+- Collection name
+- Document count
+- Database type
+- Embedding information
+- Additional metadata
+
+Example:
+```json
+Collection information for 'my-collection' in vector database 'my-database': {
+  "name": "my-collection",
+  "document_count": 15,
+  "db_type": "weaviate",
+  "embedding": "text2vec-weaviate",
+  "metadata": {
+    "description": "My test collection",
+    "vectorizer": "text2vec-weaviate",
+    "properties_count": 4,
+    "module_config": null
+  }
+}
+```
+
 ### Validate Command
 
 The `validate` command validates YAML configuration files:
@@ -405,12 +454,17 @@ The `validate` command validates YAML configuration files:
    ./maestro-k list documents my-database my-collection --mcp-server-uri="http://localhost:8030"
    ```
 
-7. **Create a vector database from YAML**:
+7. **Retrieve collection information**:
+   ```bash
+   ./maestro-k retrieve collection my-database --mcp-server-uri="http://localhost:8030"
+   ```
+
+8. **Create a vector database from YAML**:
    ```bash
    ./maestro-k create vector-db config.yaml --mcp-server-uri="http://localhost:8030"
    ```
 
-8. **Delete a vector database**:
+9. **Delete a vector database**:
    ```bash
    ./maestro-k delete vector-db my-database --mcp-server-uri="http://localhost:8030"
    ```

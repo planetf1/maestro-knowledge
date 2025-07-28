@@ -54,7 +54,7 @@
 
 # `retrieve` or `get` command
 
-* add sub-command to (`retrieve` | `get`) a `collection` in a vdb. Usage like:
+* ✅ add sub-command to (`retrieve` | `get`) a `collection` in a vdb. Usage like:
     ```bash
     $ maestro-k retrieve (collection | vdb-col | col) VBD_NAME [options]
     $ maestro-k get (collection | vdb-col | col) VBD_NAME [options]
@@ -62,8 +62,8 @@
 
 * add sub-command to (`retrieve` | `get`) a `document` in a collection of a vdb. Usage like:
     ```bash
-    $ maestro-k retrieve (document | vdb-doc | doc) VBD_NAME COLLECTION_NAME [options]
-    $ maestro-k get (document | vdb-doc | doc) VBD_NAME COLLECTION_NAME [options]
+    $ maestro-k retrieve (document | vdb-doc | doc) VDB_NAME COLLECTION_NAME [options]
+    $ maestro-k get (document | vdb-doc | doc) VDB_NAME COLLECTION_NAME [options]
     ```
 
 # other

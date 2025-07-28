@@ -409,6 +409,41 @@ func (c *MCPClient) ListCollections(dbName string) (string, error) {
 	return "", fmt.Errorf("unexpected response format from MCP server")
 }
 
+// GetCollectionInfo calls the get_collection_info tool on the MCP server
+func (c *MCPClient) GetCollectionInfo(dbName, collectionName string) (string, error) {
+	params := map[string]interface{}{
+		"input": map[string]interface{}{
+			"db_name": dbName,
+		},
+	}
+
+	// Only add collection_name if it's provided
+	if collectionName != "" {
+		params["input"].(map[string]interface{})["collection_name"] = collectionName
+	}
+
+	response, err := c.callMCPServer("get_collection_info", params)
+	if err != nil {
+		return "", err
+	}
+
+	// Check for error in response
+	if response.Error != nil {
+		return "", fmt.Errorf("MCP server error: %s", response.Error.Message)
+	}
+
+	// The response should be a string with the collection info
+	if response.Result == nil {
+		return "", fmt.Errorf("no response from MCP server")
+	}
+
+	if resultStr, ok := response.Result.(string); ok {
+		return resultStr, nil
+	}
+
+	return "", fmt.Errorf("unexpected response format from MCP server")
+}
+
 // ListDocumentsInCollection calls the list_documents_in_collection tool on the MCP server
 func (c *MCPClient) ListDocumentsInCollection(dbName, collectionName string) (string, error) {
 	params := map[string]interface{}{

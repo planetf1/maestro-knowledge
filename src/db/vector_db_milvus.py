@@ -278,6 +278,79 @@ class MilvusVectorDatabase(VectorDatabase):
             warnings.warn(f"Could not list collections from Milvus: {e}")
             return []
 
+    def get_collection_info(self, collection_name: str = None) -> Dict[str, Any]:
+        """Get detailed information about a collection."""
+        self._ensure_client()
+        if self.client is None:
+            warnings.warn("Milvus client is not available. Returning empty info.")
+            return {
+                "name": collection_name or self.collection_name,
+                "document_count": 0,
+                "db_type": "milvus",
+                "embedding": "unknown",
+                "metadata": {},
+            }
+
+        target_collection = collection_name or self.collection_name
+
+        try:
+            # Check if collection exists
+            if not self.client.has_collection(target_collection):
+                return {
+                    "name": target_collection,
+                    "document_count": 0,
+                    "db_type": "milvus",
+                    "embedding": "unknown",
+                    "metadata": {"error": "Collection does not exist"},
+                }
+
+            # Get collection statistics
+            stats = self.client.get_collection_stats(target_collection)
+            document_count = stats.get("row_count", 0)
+
+            # Get collection schema information
+            collection_info = self.client.describe_collection(target_collection)
+
+            # Extract embedding information from schema if available
+            embedding_info = "unknown"
+            if hasattr(collection_info, "fields"):
+                for field in collection_info.fields:
+                    if field.name == "vector":
+                        embedding_info = (
+                            f"vector_dim_{field.params.get('dim', 'unknown')}"
+                        )
+                        break
+
+            return {
+                "name": target_collection,
+                "document_count": document_count,
+                "db_type": "milvus",
+                "embedding": embedding_info,
+                "metadata": {
+                    "collection_id": collection_info.id
+                    if hasattr(collection_info, "id")
+                    else None,
+                    "created_time": collection_info.created_time
+                    if hasattr(collection_info, "created_time")
+                    else None,
+                    "description": collection_info.description
+                    if hasattr(collection_info, "description")
+                    else None,
+                    "fields_count": len(collection_info.fields)
+                    if hasattr(collection_info, "fields")
+                    else 0,
+                },
+            }
+        except Exception as e:
+            warnings.warn(f"Could not get collection info from Milvus: {e}")
+            return {
+                "name": target_collection,
+                "document_count": 0,
+                "db_type": "milvus",
+                "embedding": "unknown",
+                "metadata": {"error": str(e)},
+            }
+
     def delete_documents(self, document_ids: List[str]):
         """Delete documents from Milvus by their IDs."""
         self._ensure_client()

@@ -9,7 +9,7 @@ import (
 // TestMain runs before all tests
 func TestMain(m *testing.M) {
 	// Check if CLI binary exists, if not build it
-	if _, err := os.Stat("../../maestro-k"); os.IsNotExist(err) {
+	if _, err := os.Stat("../maestro-k"); os.IsNotExist(err) {
 		buildCLI()
 	}
 
@@ -22,7 +22,7 @@ func TestMain(m *testing.M) {
 
 // buildCLI builds the CLI binary for testing
 func buildCLI() {
-	cmd := exec.Command("go", "build", "-o", "../../maestro-k", "./src")
+	cmd := exec.Command("go", "build", "-o", "maestro-k", "./src")
 	cmd.Dir = ".."
 
 	if err := cmd.Run(); err != nil {
@@ -32,7 +32,7 @@ func buildCLI() {
 
 // TestCLIVersion tests the --version flag
 func TestCLIVersion(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "--version")
+	cmd := exec.Command("../maestro-k", "--version")
 	output, err := cmd.Output()
 
 	if err != nil {
@@ -52,7 +52,7 @@ func TestCLIVersion(t *testing.T) {
 
 // TestCLIHelp tests the --help flag
 func TestCLIHelp(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "--help")
+	cmd := exec.Command("../maestro-k", "--help")
 	output, err := cmd.Output()
 
 	if err != nil {
@@ -79,7 +79,7 @@ func TestCLIHelp(t *testing.T) {
 
 // TestValidateHelp tests the validate command help
 func TestValidateHelp(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "validate", "--help")
+	cmd := exec.Command("../maestro-k", "validate", "--help")
 	output, err := cmd.Output()
 
 	if err != nil {
@@ -105,7 +105,7 @@ func TestValidateHelp(t *testing.T) {
 
 // TestValidateNoArgs tests validate command with no arguments
 func TestValidateNoArgs(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "validate")
+	cmd := exec.Command("../maestro-k", "validate")
 	err := cmd.Run()
 
 	// Should fail with no arguments
@@ -116,7 +116,7 @@ func TestValidateNoArgs(t *testing.T) {
 
 // TestValidateWithNonExistentFile tests validate with a non-existent file
 func TestValidateWithNonExistentFile(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "validate", "nonexistent.yaml")
+	cmd := exec.Command("../maestro-k", "validate", "nonexistent.yaml")
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with non-existent file
@@ -136,7 +136,7 @@ func TestValidateWithVerboseFlag(t *testing.T) {
 	tempFile := createTempYAMLFile(t)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../../maestro-k", "validate", "--verbose", tempFile)
+	cmd := exec.Command("../maestro-k", "validate", "--verbose", tempFile)
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -155,7 +155,7 @@ func TestValidateWithSilentFlag(t *testing.T) {
 	tempFile := createTempYAMLFile(t)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../../maestro-k", "validate", "--silent", tempFile)
+	cmd := exec.Command("../maestro-k", "validate", "--silent", tempFile)
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -174,7 +174,7 @@ func TestValidateWithDryRunFlag(t *testing.T) {
 	tempFile := createTempYAMLFile(t)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../../maestro-k", "validate", "--dry-run", tempFile)
+	cmd := exec.Command("../maestro-k", "validate", "--dry-run", tempFile)
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {

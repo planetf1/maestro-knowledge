@@ -55,22 +55,22 @@ go mod download
 
 # Build the binary
 print_status "Compiling binary..."
-go build -ldflags="-s -w" -o ../maestro-k ./src
+go build -ldflags="-s -w" -o maestro-k ./src
 
 # Check if build was successful
 if [ $? -eq 0 ]; then
-    print_status "Build successful! Binary created at: $(pwd)/../maestro-k"
+    print_status "Build successful! Binary created at: $(pwd)/maestro-k"
     
     # Make the binary executable
-    chmod +x ../maestro-k
+    chmod +x maestro-k
     
     # Show binary info
     print_status "Binary information:"
-    ls -lh ../maestro-k
+    ls -lh maestro-k
     
     # Test the binary
     print_status "Testing binary..."
-    if ../maestro-k --version &> /dev/null; then
+    if ./maestro-k --version &> /dev/null; then
         print_status "Binary test successful!"
         print_status "You can now use: ./maestro-k --help"
     else

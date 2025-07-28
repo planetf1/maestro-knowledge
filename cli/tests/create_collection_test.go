@@ -7,7 +7,7 @@ import (
 
 // TestCreateCollection tests the create collection command
 func TestCreateCollection(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "create", "collection", "test-db", "test-collection", "--dry-run")
+	cmd := exec.Command("../maestro-k", "create", "collection", "test-db", "test-collection", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -22,7 +22,7 @@ func TestCreateCollection(t *testing.T) {
 
 // TestCreateCollectionWithEmbedding tests the create collection command with custom embedding
 func TestCreateCollectionWithEmbedding(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "create", "collection", "test-db", "test-collection", "--embedding=text-embedding-3-small", "--dry-run")
+	cmd := exec.Command("../maestro-k", "create", "collection", "test-db", "test-collection", "--embedding=text-embedding-3-small", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -37,7 +37,7 @@ func TestCreateCollectionWithEmbedding(t *testing.T) {
 
 // TestCreateCollectionWithVerbose tests the create collection command with verbose output
 func TestCreateCollectionWithVerbose(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "create", "collection", "test-db", "test-collection", "--verbose", "--dry-run")
+	cmd := exec.Command("../maestro-k", "create", "collection", "test-db", "test-collection", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -55,7 +55,7 @@ func TestCreateCollectionWithVerbose(t *testing.T) {
 
 // TestCreateCollectionWithSilent tests the create collection command with silent output
 func TestCreateCollectionWithSilent(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "create", "collection", "test-db", "test-collection", "--silent", "--dry-run")
+	cmd := exec.Command("../maestro-k", "create", "collection", "test-db", "test-collection", "--silent", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -70,7 +70,7 @@ func TestCreateCollectionWithSilent(t *testing.T) {
 
 // TestCreateCollectionWithColAlias tests the create collection command using the 'col' alias
 func TestCreateCollectionWithColAlias(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "create", "col", "test-db", "test-collection", "--dry-run")
+	cmd := exec.Command("../maestro-k", "create", "col", "test-db", "test-collection", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -85,7 +85,7 @@ func TestCreateCollectionWithColAlias(t *testing.T) {
 
 // TestCreateCollectionWithVdbColAlias tests the create collection command using the 'vdb-col' alias
 func TestCreateCollectionWithVdbColAlias(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "create", "vdb-col", "test-db", "test-collection", "--dry-run")
+	cmd := exec.Command("../maestro-k", "create", "vdb-col", "test-db", "test-collection", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -101,7 +101,7 @@ func TestCreateCollectionWithVdbColAlias(t *testing.T) {
 // TestCreateCollectionWithInvalidArgs tests the create collection command with invalid arguments
 func TestCreateCollectionWithInvalidArgs(t *testing.T) {
 	// Test with missing arguments
-	cmd := exec.Command("../../maestro-k", "create", "collection", "test-db")
+	cmd := exec.Command("../maestro-k", "create", "collection", "test-db")
 	output, err := cmd.CombinedOutput()
 
 	if err == nil {
@@ -109,7 +109,7 @@ func TestCreateCollectionWithInvalidArgs(t *testing.T) {
 	}
 
 	// Test with too many arguments
-	cmd = exec.Command("../../maestro-k", "create", "collection", "test-db", "test-collection", "extra-arg")
+	cmd = exec.Command("../maestro-k", "create", "collection", "test-db", "test-collection", "extra-arg")
 	output, err = cmd.CombinedOutput()
 
 	if err == nil {
@@ -119,7 +119,7 @@ func TestCreateCollectionWithInvalidArgs(t *testing.T) {
 
 // TestCreateCollectionHelp tests the create collection help output
 func TestCreateCollectionHelp(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "create", "collection", "--help")
+	cmd := exec.Command("../maestro-k", "create", "collection", "--help")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {

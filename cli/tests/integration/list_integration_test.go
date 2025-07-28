@@ -91,7 +91,6 @@ func TestListVectorDatabaseURLNormalization(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
 			cmd = exec.CommandContext(ctx, cmd.Path, cmd.Args[1:]...)
-			cmd.Env = cmd.Env
 
 			output, _ := cmd.CombinedOutput()
 

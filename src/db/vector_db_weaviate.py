@@ -245,6 +245,81 @@ class WeaviateVectorDatabase(VectorDatabase):
             warnings.warn(f"Could not list collections from Weaviate: {e}")
             return []
 
+    def get_collection_info(self, collection_name: str = None) -> Dict[str, Any]:
+        """Get detailed information about a collection."""
+        target_collection = collection_name or self.collection_name
+
+        try:
+            # Check if collection exists
+            if not self.client.collections.exists(target_collection):
+                return {
+                    "name": target_collection,
+                    "document_count": 0,
+                    "db_type": "weaviate",
+                    "embedding": "unknown",
+                    "metadata": {"error": "Collection does not exist"},
+                }
+
+            # Get collection object
+            collection = self.client.collections.get(target_collection)
+
+            # Get document count
+            try:
+                result = collection.query.fetch_objects(limit=10000)
+                document_count = len(result.objects)
+            except Exception as e:
+                import warnings
+
+                warnings.warn(
+                    f"Could not get document count for Weaviate collection: {e}"
+                )
+                document_count = 0
+
+            # Get collection configuration
+            config = collection.config.get()
+
+            # Extract embedding information from vectorizer config
+            embedding_info = "unknown"
+            if hasattr(config, "vectorizer") and config.vectorizer:
+                embedding_info = config.vectorizer
+            elif hasattr(config, "vectorizer_config") and config.vectorizer_config:
+                embedding_info = str(config.vectorizer_config)
+
+            # Get additional metadata
+            metadata = {
+                "description": config.description
+                if hasattr(config, "description")
+                else None,
+                "vectorizer": config.vectorizer
+                if hasattr(config, "vectorizer")
+                else None,
+                "properties_count": len(config.properties)
+                if hasattr(config, "properties")
+                else 0,
+                "module_config": config.module_config
+                if hasattr(config, "module_config")
+                else None,
+            }
+
+            return {
+                "name": target_collection,
+                "document_count": document_count,
+                "db_type": "weaviate",
+                "embedding": embedding_info,
+                "metadata": metadata,
+            }
+        except Exception as e:
+            import warnings
+
+            warnings.warn(f"Could not get collection info from Weaviate: {e}")
+            return {
+                "name": target_collection,
+                "document_count": 0,
+                "db_type": "weaviate",
+                "embedding": "unknown",
+                "metadata": {"error": str(e)},
+            }
+
     def delete_documents(self, document_ids: List[str]):
         """Delete documents from Weaviate by their IDs."""
         collection = self.client.collections.get(self.collection_name)

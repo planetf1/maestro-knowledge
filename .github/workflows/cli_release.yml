@@ -41,9 +41,9 @@ jobs:
           BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S_UTC')
           
           go build -ldflags="-s -w -X main.version=$VERSION -X main.buildTime=$BUILD_TIME" \
-            -o "../$OUTPUT_NAME" ./src
+            -o "$OUTPUT_NAME" ./src
           
-          chmod +x "../$OUTPUT_NAME"
+          chmod +x "$OUTPUT_NAME"
           echo "Build successful: $OUTPUT_NAME"
           
       - name: Test CLI
@@ -56,11 +56,16 @@ jobs:
       - name: Test CLI functionality
         run: |
           echo "Testing CLI functionality..."
+          # Copy binary to root for testing
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp cli/maestro-k.exe ./maestro-k.exe
+            chmod +x ./maestro-k.exe
             ./maestro-k.exe --version
             ./maestro-k.exe --help
             ./maestro-k.exe validate --help
           else
+            cp cli/maestro-k ./maestro-k
+            chmod +x ./maestro-k
             ./maestro-k --version
             ./maestro-k --help
             ./maestro-k validate --help

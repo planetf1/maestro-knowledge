@@ -30,8 +30,8 @@ jobs:
         run: |
           echo "Building maestro-k CLI..."
           go mod download
-          go build -ldflags="-s -w" -o ../maestro-k ./src
-          chmod +x ../maestro-k
+          go build -ldflags="-s -w" -o maestro-k ./src
+          chmod +x maestro-k
           echo "Build successful!"
           
       - name: Test CLI
@@ -44,6 +44,9 @@ jobs:
       - name: Test CLI functionality
         run: |
           echo "Testing CLI functionality..."
+          # Copy binary to root for testing
+          cp cli/maestro-k ./maestro-k
+          chmod +x ./maestro-k
           ./maestro-k --version
           ./maestro-k --help
           ./maestro-k validate --help
@@ -51,6 +54,9 @@ jobs:
       - name: Test YAML validation
         run: |
           echo "Testing YAML validation..."
+          # Copy binary to root for testing
+          cp cli/maestro-k ./maestro-k
+          chmod +x ./maestro-k
           # Test with valid YAML
           ./maestro-k validate --verbose tests/yamls/test_local_milvus.yaml
           

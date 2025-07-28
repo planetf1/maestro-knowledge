@@ -8,7 +8,7 @@ import (
 
 func TestListVectorDatabase(t *testing.T) {
 	// Use dry-run mode since we don't have a real MCP server running
-	cmd := exec.Command("../../maestro-k", "list", "vector-dbs", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "vector-dbs", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -23,7 +23,7 @@ func TestListVectorDatabase(t *testing.T) {
 
 func TestListVectorDatabaseWithVerbose(t *testing.T) {
 	// Use dry-run mode since we don't have a real MCP server running
-	cmd := exec.Command("../../maestro-k", "list", "vector-dbs", "--verbose", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "vector-dbs", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -41,7 +41,7 @@ func TestListVectorDatabaseWithVerbose(t *testing.T) {
 }
 
 func TestListVectorDatabaseWithInvalidResourceType(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "list", "invalid-resource")
+	cmd := exec.Command("../maestro-k", "list", "invalid-resource")
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with invalid resource type
@@ -56,7 +56,7 @@ func TestListVectorDatabaseWithInvalidResourceType(t *testing.T) {
 }
 
 func TestListVectorDatabaseWithDryRun(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "list", "vector-dbs", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "vector-dbs", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -71,7 +71,7 @@ func TestListVectorDatabaseWithDryRun(t *testing.T) {
 
 func TestListVectorDatabaseWithSilent(t *testing.T) {
 	// Use dry-run mode since we don't have a real MCP server running
-	cmd := exec.Command("../../maestro-k", "list", "vector-dbs", "--silent", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "vector-dbs", "--silent", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -86,7 +86,7 @@ func TestListVectorDatabaseWithSilent(t *testing.T) {
 }
 
 func TestListVectorDatabaseHelp(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "list", "vector-dbs", "--help")
+	cmd := exec.Command("../maestro-k", "list", "vector-dbs", "--help")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -105,7 +105,7 @@ func TestListVectorDatabaseHelp(t *testing.T) {
 
 func TestListVectorDatabaseWithVectorDatabase(t *testing.T) {
 	// Use dry-run mode since we don't have a real MCP server running
-	cmd := exec.Command("../../maestro-k", "list", "vector-databases", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "vector-databases", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -120,7 +120,7 @@ func TestListVectorDatabaseWithVectorDatabase(t *testing.T) {
 
 func TestListVectorDatabaseWithVdbShortcut(t *testing.T) {
 	// Test with the "vdbs" shortcut
-	cmd := exec.Command("../../maestro-k", "list", "vdbs", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "vdbs", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -134,7 +134,7 @@ func TestListVectorDatabaseWithVdbShortcut(t *testing.T) {
 }
 
 func TestListVectorDatabaseWithMultipleFlags(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "list", "vector-dbs", "--verbose", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "vector-dbs", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -156,7 +156,7 @@ func TestListVectorDatabaseWithMultipleFlags(t *testing.T) {
 
 func TestListEmbeddings(t *testing.T) {
 	// Use dry-run mode since we don't have a real MCP server running
-	cmd := exec.Command("../../maestro-k", "list", "embeddings", "test-db", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "embeddings", "test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -171,7 +171,7 @@ func TestListEmbeddings(t *testing.T) {
 
 func TestListEmbeddingsWithVerbose(t *testing.T) {
 	// Use dry-run mode since we don't have a real MCP server running
-	cmd := exec.Command("../../maestro-k", "list", "embeddings", "test-db", "--verbose", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "embeddings", "test-db", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -190,7 +190,7 @@ func TestListEmbeddingsWithVerbose(t *testing.T) {
 
 func TestListEmbeddingsWithEmbedAlias(t *testing.T) {
 	// Test the 'embeds' alias
-	cmd := exec.Command("../../maestro-k", "list", "embeds", "test-db", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "embeds", "test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -205,7 +205,7 @@ func TestListEmbeddingsWithEmbedAlias(t *testing.T) {
 
 func TestListEmbeddingsWithVdbEmbedAlias(t *testing.T) {
 	// Test the 'vdb-embeds' alias
-	cmd := exec.Command("../../maestro-k", "list", "vdb-embeds", "test-db", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "vdb-embeds", "test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -219,7 +219,7 @@ func TestListEmbeddingsWithVdbEmbedAlias(t *testing.T) {
 }
 
 func TestListEmbeddingsMissingVdbName(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "list", "embeddings")
+	cmd := exec.Command("../maestro-k", "list", "embeddings")
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with missing VDB_NAME
@@ -234,7 +234,7 @@ func TestListEmbeddingsMissingVdbName(t *testing.T) {
 }
 
 func TestListEmbeddingsHelp(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "list", "embeddings", "--help")
+	cmd := exec.Command("../maestro-k", "list", "embeddings", "--help")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -249,7 +249,7 @@ func TestListEmbeddingsHelp(t *testing.T) {
 
 func TestListCollections(t *testing.T) {
 	// Use dry-run mode since we don't have a real MCP server running
-	cmd := exec.Command("../../maestro-k", "list", "collections", "test-db", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "collections", "test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -264,7 +264,7 @@ func TestListCollections(t *testing.T) {
 
 func TestListCollectionsWithVerbose(t *testing.T) {
 	// Use dry-run mode since we don't have a real MCP server running
-	cmd := exec.Command("../../maestro-k", "list", "collections", "test-db", "--verbose", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "collections", "test-db", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -283,7 +283,7 @@ func TestListCollectionsWithVerbose(t *testing.T) {
 
 func TestListCollectionsWithColsAlias(t *testing.T) {
 	// Test the 'cols' alias
-	cmd := exec.Command("../../maestro-k", "list", "cols", "test-db", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "cols", "test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -298,7 +298,7 @@ func TestListCollectionsWithColsAlias(t *testing.T) {
 
 func TestListCollectionsWithVdbColsAlias(t *testing.T) {
 	// Test the 'vdb-cols' alias
-	cmd := exec.Command("../../maestro-k", "list", "vdb-cols", "test-db", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "vdb-cols", "test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -312,7 +312,7 @@ func TestListCollectionsWithVdbColsAlias(t *testing.T) {
 }
 
 func TestListCollectionsMissingVdbName(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "list", "collections")
+	cmd := exec.Command("../maestro-k", "list", "collections")
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with missing VDB_NAME
@@ -327,7 +327,7 @@ func TestListCollectionsMissingVdbName(t *testing.T) {
 }
 
 func TestListCollectionsHelp(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "list", "collections", "--help")
+	cmd := exec.Command("../maestro-k", "list", "collections", "--help")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -342,7 +342,7 @@ func TestListCollectionsHelp(t *testing.T) {
 
 func TestListDocuments(t *testing.T) {
 	// Use dry-run mode since we don't have a real MCP server running
-	cmd := exec.Command("../../maestro-k", "list", "documents", "test-db", "test-collection", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "documents", "test-db", "test-collection", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -357,7 +357,7 @@ func TestListDocuments(t *testing.T) {
 
 func TestListDocumentsWithVerbose(t *testing.T) {
 	// Use dry-run mode since we don't have a real MCP server running
-	cmd := exec.Command("../../maestro-k", "list", "documents", "test-db", "test-collection", "--verbose", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "documents", "test-db", "test-collection", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -376,7 +376,7 @@ func TestListDocumentsWithVerbose(t *testing.T) {
 
 func TestListDocumentsWithDocsAlias(t *testing.T) {
 	// Use dry-run mode since we don't have a real MCP server running
-	cmd := exec.Command("../../maestro-k", "list", "docs", "test-db", "test-collection", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "docs", "test-db", "test-collection", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -391,7 +391,7 @@ func TestListDocumentsWithDocsAlias(t *testing.T) {
 
 func TestListDocumentsWithVdbDocsAlias(t *testing.T) {
 	// Use dry-run mode since we don't have a real MCP server running
-	cmd := exec.Command("../../maestro-k", "list", "vdb-docs", "test-db", "test-collection", "--dry-run")
+	cmd := exec.Command("../maestro-k", "list", "vdb-docs", "test-db", "test-collection", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -405,7 +405,7 @@ func TestListDocumentsWithVdbDocsAlias(t *testing.T) {
 }
 
 func TestListDocumentsMissingVdbName(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "list", "documents")
+	cmd := exec.Command("../maestro-k", "list", "documents")
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with missing VDB_NAME
@@ -420,7 +420,7 @@ func TestListDocumentsMissingVdbName(t *testing.T) {
 }
 
 func TestListDocumentsMissingCollectionName(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "list", "documents", "test-db")
+	cmd := exec.Command("../maestro-k", "list", "documents", "test-db")
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with missing COLLECTION_NAME
@@ -435,7 +435,7 @@ func TestListDocumentsMissingCollectionName(t *testing.T) {
 }
 
 func TestListDocumentsHelp(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "list", "documents", "--help")
+	cmd := exec.Command("../maestro-k", "list", "documents", "--help")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {

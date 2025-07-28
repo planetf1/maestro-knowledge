@@ -110,6 +110,24 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
+    def get_collection_info(self, collection_name: str = None) -> Dict[str, Any]:
+        """
+        Get detailed information about a collection.
+
+        Args:
+            collection_name: Name of the collection to get info for. If None, uses the current collection.
+
+        Returns:
+            Dictionary containing collection information including:
+            - name: Collection name
+            - document_count: Number of documents in the collection
+            - db_type: Type of vector database
+            - embedding: Default embedding used (if available)
+            - metadata: Additional collection metadata
+        """
+        pass
+
+    @abstractmethod
     def delete_documents(self, document_ids: List[str]):
         """
         Delete documents from the vector database by their IDs.

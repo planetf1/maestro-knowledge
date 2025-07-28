@@ -85,6 +85,17 @@ class ConcreteVectorDatabase(VectorDatabase):
             return [self.collection_name]
         return []
 
+    def get_collection_info(self, collection_name=None):
+        """Get detailed information about a collection."""
+        target_collection = collection_name or self.collection_name
+        return {
+            "name": target_collection,
+            "document_count": len(self.documents),
+            "db_type": "test",
+            "embedding": "default",
+            "metadata": {"test_collection": True, "documents": len(self.documents)},
+        }
+
     def create_query_agent(self):
         return self
 

@@ -25,7 +25,7 @@ spec:
 	tempFile := createTempFile(t, "valid-*.yaml", validYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../../maestro-k", "create", "vector-db", tempFile, "--dry-run")
+	cmd := exec.Command("../maestro-k", "create", "vector-db", tempFile, "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -57,7 +57,7 @@ spec:
 	tempFile := createTempFile(t, "valid-*.yaml", validYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../../maestro-k", "create", "vector-db", tempFile, "--uri=localhost:8000", "--mode=remote", "--verbose", "--dry-run")
+	cmd := exec.Command("../maestro-k", "create", "vector-db", tempFile, "--uri=localhost:8000", "--mode=remote", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -78,7 +78,7 @@ spec:
 
 // TestCreateVectorDatabaseWithInvalidResourceType tests invalid resource type
 func TestCreateVectorDatabaseWithInvalidResourceType(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "create", "invalid-resource", "test.yaml")
+	cmd := exec.Command("../maestro-k", "create", "invalid-resource", "test.yaml")
 	output, _ := cmd.CombinedOutput()
 
 	// Should show help message for invalid resource type
@@ -90,7 +90,7 @@ func TestCreateVectorDatabaseWithInvalidResourceType(t *testing.T) {
 
 // TestCreateVectorDatabaseWithNonExistentFile tests with non-existent file
 func TestCreateVectorDatabaseWithNonExistentFile(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "create", "vector-db", "nonexistent.yaml")
+	cmd := exec.Command("../maestro-k", "create", "vector-db", "nonexistent.yaml")
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with non-existent file
@@ -123,7 +123,7 @@ spec:
 	tempFile := createTempFile(t, "invalid-*.yaml", invalidYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../../maestro-k", "create", "vector-db", tempFile)
+	cmd := exec.Command("../maestro-k", "create", "vector-db", tempFile)
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with invalid YAML
@@ -156,7 +156,7 @@ spec:
 	tempFile := createTempFile(t, "invalid-*.yaml", invalidYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../../maestro-k", "create", "vector-db", tempFile)
+	cmd := exec.Command("../maestro-k", "create", "vector-db", tempFile)
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with invalid configuration
@@ -189,7 +189,7 @@ spec:
 	tempFile := createTempFile(t, "valid-*.yaml", validYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../../maestro-k", "create", "vector-db", tempFile, "--dry-run")
+	cmd := exec.Command("../maestro-k", "create", "vector-db", tempFile, "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -221,7 +221,7 @@ spec:
 	tempFile := createTempFile(t, "valid-*.yaml", validYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../../maestro-k", "create", "vector-db", tempFile, "--silent", "--dry-run")
+	cmd := exec.Command("../maestro-k", "create", "vector-db", tempFile, "--silent", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -256,7 +256,7 @@ spec:
 	tempFile := createTempFile(t, "valid-*.yaml", validYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../../maestro-k", "create", "vdb", tempFile, "--dry-run")
+	cmd := exec.Command("../maestro-k", "create", "vdb", tempFile, "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {

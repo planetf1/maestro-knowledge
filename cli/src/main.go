@@ -48,6 +48,8 @@ A command-line interface for working with Maestro Knowledge configurations.`,
 	rootCmd.AddCommand(deleteCmd)
 	rootCmd.AddCommand(delCmd)
 	rootCmd.AddCommand(listCmd)
+	rootCmd.AddCommand(retrieveCmd)
+	rootCmd.AddCommand(getCmd)
 
 	// Add sub-commands to create command
 	createCmd.AddCommand(createVdbCmd)

@@ -129,6 +129,14 @@ class ListCollectionsInput(BaseModel):
     db_name: str = Field(..., description="Name of the vector database instance")
 
 
+class GetCollectionInfoInput(BaseModel):
+    db_name: str = Field(..., description="Name of the vector database instance")
+    collection_name: str = Field(
+        default=None,
+        description="Name of the collection to get info for. If not provided, uses the default collection.",
+    )
+
+
 class CreateCollectionInput(BaseModel):
     db_name: str = Field(..., description="Name of the vector database instance")
     collection_name: str = Field(..., description="Name of the collection to create")
@@ -324,6 +332,16 @@ def create_mcp_server() -> FastMCP:
             return f"No collections found in vector database '{input.db_name}'"
 
         return f"Collections in vector database '{input.db_name}':\n{json.dumps(collections, indent=2)}"
+
+    @app.tool()
+    async def get_collection_info(input: GetCollectionInfoInput) -> str:
+        """Get information about a specific collection in a vector database."""
+        db = get_database_by_name(input.db_name)
+
+        # Get collection information using the new method
+        info = db.get_collection_info(input.collection_name)
+
+        return f"Collection information for '{info['name']}' in vector database '{input.db_name}':\n{json.dumps(info, indent=2)}"
 
     @app.tool()
     async def create_collection(input: CreateCollectionInput) -> str:

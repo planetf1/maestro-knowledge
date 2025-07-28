@@ -25,7 +25,7 @@ spec:
 	tempFile := createTempFile(t, "valid-*.yaml", validYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../../maestro-k", "validate", tempFile)
+	cmd := exec.Command("../maestro-k", "validate", tempFile)
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -58,7 +58,7 @@ spec:
 	tempFile := createTempFile(t, "invalid-*.yaml", invalidYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../../maestro-k", "validate", tempFile)
+	cmd := exec.Command("../maestro-k", "validate", tempFile)
 	output, err := cmd.CombinedOutput()
 
 	// The command should fail (exit code != 0)
@@ -110,7 +110,7 @@ database:
 	yamlFile := createTempFile(t, "config-*.yaml", validYAML)
 	defer os.Remove(yamlFile)
 
-	cmd := exec.Command("../../maestro-k", "validate", schemaFile, yamlFile)
+	cmd := exec.Command("../maestro-k", "validate", schemaFile, yamlFile)
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -134,7 +134,7 @@ version: 1.0
 	yamlFile := createTempFile(t, "config-*.yaml", validYAML)
 	defer os.Remove(yamlFile)
 
-	cmd := exec.Command("../../maestro-k", "validate", "nonexistent-schema.json", yamlFile)
+	cmd := exec.Command("../maestro-k", "validate", "nonexistent-schema.json", yamlFile)
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with non-existent schema file
@@ -159,7 +159,7 @@ version: 1.0
 	yamlFile := createTempFile(t, "config-*.yaml", validYAML)
 	defer os.Remove(yamlFile)
 
-	cmd := exec.Command("../../maestro-k", "validate", "--verbose", "--dry-run", yamlFile)
+	cmd := exec.Command("../maestro-k", "validate", "--verbose", "--dry-run", yamlFile)
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -212,7 +212,7 @@ name: test
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			cmd := exec.Command("../../maestro-k", append([]string{"validate"}, tc.args...)...)
+			cmd := exec.Command("../maestro-k", append([]string{"validate"}, tc.args...)...)
 			output, err := cmd.CombinedOutput()
 
 			outputStr := string(output)

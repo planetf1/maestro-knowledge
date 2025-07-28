@@ -161,6 +161,14 @@ go build -o maestro-k src/*.go
 # List documents in a collection
 ./maestro-k list docs my-database my-collection
 
+# Retrieve collection information
+./maestro-k retrieve collection my-database
+./maestro-k retrieve col my-database my-collection
+
+# Get collection information (alternative command)
+./maestro-k get collection my-database
+./maestro-k get col my-database my-collection
+
 # Create vector database from YAML
 ./maestro-k create vector-db config.yaml
 

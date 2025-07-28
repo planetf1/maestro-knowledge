@@ -136,6 +136,9 @@ if [ "$RUN_CLI_TESTS" = true ]; then
 
     # Step 4: Test CLI functionality
     print_status "Step 4: Testing CLI functionality..."
+    # Copy binary to root for testing
+    cp cli/maestro-k ./maestro-k
+    chmod +x ./maestro-k
     if ./maestro-k --version &> /dev/null; then
         print_status "✓ CLI version command works"
     else

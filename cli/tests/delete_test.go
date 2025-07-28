@@ -7,7 +7,7 @@ import (
 
 // TestDeleteVectorDatabase tests the delete vector-database command
 func TestDeleteVectorDatabase(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "delete", "vector-db", "test-db", "--dry-run")
+	cmd := exec.Command("../maestro-k", "delete", "vector-db", "test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -22,7 +22,7 @@ func TestDeleteVectorDatabase(t *testing.T) {
 
 // TestDeleteVectorDatabaseWithVerbose tests the delete command with verbose output
 func TestDeleteVectorDatabaseWithVerbose(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "delete", "vector-db", "test-db", "--verbose", "--dry-run")
+	cmd := exec.Command("../maestro-k", "delete", "vector-db", "test-db", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -40,7 +40,7 @@ func TestDeleteVectorDatabaseWithVerbose(t *testing.T) {
 
 // TestDeleteVectorDatabaseWithInvalidResourceType tests invalid resource type
 func TestDeleteVectorDatabaseWithInvalidResourceType(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "delete", "invalid-resource", "test-db")
+	cmd := exec.Command("../maestro-k", "delete", "invalid-resource", "test-db")
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with invalid resource type
@@ -56,7 +56,7 @@ func TestDeleteVectorDatabaseWithInvalidResourceType(t *testing.T) {
 
 // TestDeleteVectorDatabaseWithEmptyName tests with empty name
 func TestDeleteVectorDatabaseWithEmptyName(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "delete", "vector-db", "")
+	cmd := exec.Command("../maestro-k", "delete", "vector-db", "")
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with empty name
@@ -72,7 +72,7 @@ func TestDeleteVectorDatabaseWithEmptyName(t *testing.T) {
 
 // TestDeleteVectorDatabaseDryRun tests dry run functionality
 func TestDeleteVectorDatabaseDryRun(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "delete", "vector-db", "test-db", "--dry-run")
+	cmd := exec.Command("../maestro-k", "delete", "vector-db", "test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -87,7 +87,7 @@ func TestDeleteVectorDatabaseDryRun(t *testing.T) {
 
 // TestDeleteVectorDatabaseSilent tests silent mode
 func TestDeleteVectorDatabaseSilent(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "delete", "vector-db", "test-db", "--silent", "--dry-run")
+	cmd := exec.Command("../maestro-k", "delete", "vector-db", "test-db", "--silent", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -103,7 +103,7 @@ func TestDeleteVectorDatabaseSilent(t *testing.T) {
 // TestDeleteVectorDatabaseWithLongName tests with a long name
 func TestDeleteVectorDatabaseWithLongName(t *testing.T) {
 	longName := "very-long-vector-database-name-that-should-still-work"
-	cmd := exec.Command("../../maestro-k", "delete", "vector-db", longName, "--dry-run")
+	cmd := exec.Command("../maestro-k", "delete", "vector-db", longName, "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -119,7 +119,7 @@ func TestDeleteVectorDatabaseWithLongName(t *testing.T) {
 // TestDeleteVectorDatabaseWithSpecialCharacters tests with special characters in name
 func TestDeleteVectorDatabaseWithSpecialCharacters(t *testing.T) {
 	specialName := "test-db-with-special-chars_123"
-	cmd := exec.Command("../../maestro-k", "delete", "vector-db", specialName, "--dry-run")
+	cmd := exec.Command("../maestro-k", "delete", "vector-db", specialName, "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -134,7 +134,7 @@ func TestDeleteVectorDatabaseWithSpecialCharacters(t *testing.T) {
 
 // TestDeleteVectorDatabaseWithVdbShortcut tests the delete command with vdb shortcut
 func TestDeleteVectorDatabaseWithVdbShortcut(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "delete", "vdb", "test-db", "--dry-run")
+	cmd := exec.Command("../maestro-k", "delete", "vdb", "test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
