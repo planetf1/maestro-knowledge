@@ -8,11 +8,12 @@ A modular vector database interface supporting multiple backends (Weaviate, Milv
 - **Flexible embedding strategies**: Support for pre-computed vectors and multiple embedding models
 - **Unified API**: Consistent interface across different vector database implementations
 - **Factory pattern**: Easy creation and switching between database types
-- **MCP Server**: Model Context Protocol server for AI agent integration
-- **CLI Tool**: Command-line interface for vector database operations
+- **MCP Server**: Model Context Protocol server for AI agent integration with multi-database support
+- **CLI Tool**: Command-line interface for vector database operations with YAML configuration
 - **Document management**: Write, read, delete, and query documents
 - **Collection management**: List and manage collections across vector databases
 - **Metadata support**: Rich metadata handling for documents
+- **Environment variable substitution**: Dynamic configuration with `{{ENV_VAR_NAME}}` syntax
 
 ## Quick Start
 
@@ -132,7 +133,7 @@ export OPENAI_API_KEY="your-openai-api-key"
 
 ## CLI Tool
 
-The project includes a Go-based CLI tool for managing vector databases through the MCP server.
+The project includes a Go-based CLI tool for managing vector databases through the MCP server with support for YAML configuration and environment variable substitution.
 
 ### Installation
 
@@ -148,8 +149,17 @@ go build -o maestro-k src/*.go
 ### Basic Usage
 
 ```bash
-# List vector databases
-./maestro-k list vector-db
+# List vector databases (using plural form)
+./maestro-k list vector-dbs
+
+# List embeddings for a specific database
+./maestro-k list embeds my-database
+
+# List collections for a specific database
+./maestro-k list cols my-database
+
+# List documents in a collection
+./maestro-k list docs my-database my-collection
 
 # Create vector database from YAML
 ./maestro-k create vector-db config.yaml
@@ -170,17 +180,39 @@ The CLI supports multiple configuration methods:
 export MAESTRO_KNOWLEDGE_MCP_SERVER_URI="http://localhost:8030"
 
 # Command-line flag
-./maestro-k list vector-db --mcp-server-uri="http://localhost:8030"
+./maestro-k list vector-dbs --mcp-server-uri="http://localhost:8030"
 
 # .env file
 echo "MAESTRO_KNOWLEDGE_MCP_SERVER_URI=http://localhost:8030" > .env
 ```
 
+### Environment Variable Substitution
+
+The CLI supports environment variable substitution in YAML files using the `{{ENV_VAR_NAME}}` syntax:
+
+```yaml
+apiVersion: maestro/v1alpha1
+kind: VectorDatabase
+metadata:
+  name: my-weaviate-db
+spec:
+  type: weaviate
+  uri: {{WEAVIATE_URL}}
+  collection_name: my_collection
+  embedding: text-embedding-3-small
+  mode: remote
+```
+
+When you run `./maestro-k create vector-db config.yaml`, the CLI will:
+1. Load environment variables from `.env` file (if present)
+2. Replace `{{WEAVIATE_URL}}` with the actual value from the environment
+3. Process the YAML file with the substituted values
+
 For more details, see [cli/README.md](cli/README.md).
 
 ## MCP Server
 
-The project includes a Model Context Protocol (MCP) server that exposes vector database functionality to AI agents through a standardized interface.
+The project includes a Model Context Protocol (MCP) server that exposes vector database functionality to AI agents through a standardized interface with support for multiple simultaneous databases.
 
 ### Running the MCP Server
 
@@ -218,10 +250,11 @@ Add the following to your MCP client configuration:
 
 ### Available MCP Tools
 
-- **create_vector_database**: Create a new vector database instance
-- **setup_database**: Set up the current vector database with specified embedding
+- **create_vector_database_tool**: Create a new vector database instance
+- **setup_database**: Set up a vector database with specified embedding
 - **get_supported_embeddings**: Get list of supported embedding models
 - **list_collections**: List all collections in a vector database
+- **list_documents_in_collection**: List documents from a specific collection
 - **write_document**: Write a single document with specified embedding strategy
 - **write_documents**: Write multiple documents with specified embedding strategy
 - **list_documents**: List documents from the database
@@ -229,8 +262,18 @@ Add the following to your MCP client configuration:
 - **delete_document**: Delete a single document
 - **delete_documents**: Delete multiple documents
 - **delete_collection**: Delete an entire collection
-- **cleanup**: Clean up resources
+- **cleanup**: Clean up resources for a specific database
 - **get_database_info**: Get database information including supported embeddings
+- **list_databases**: List all available vector database instances
+
+### Multi-Database Support
+
+The MCP server supports managing multiple vector databases simultaneously. Each database is identified by a unique name, allowing you to:
+
+- Create and manage multiple databases of different types (Weaviate, Milvus)
+- Use different databases for different purposes or projects
+- Operate on specific databases by providing the database name in tool calls
+- List all available databases and their status
 
 For more details, see [src/maestro_mcp/README.md](src/maestro_mcp/README.md).
 
@@ -340,6 +383,7 @@ maestro-knowledge/
 
 - `VECTOR_DB_TYPE`: Default vector database type (defaults to "weaviate")
 - `OPENAI_API_KEY`: Required for OpenAI embedding models
+- `MAESTRO_KNOWLEDGE_MCP_SERVER_URI`: MCP server URI for CLI tool
 - Database-specific environment variables for Weaviate and Milvus connections
 
 ## Contributing
@@ -358,4 +402,4 @@ This ensures code quality, functionality, and integration with the CLI tool.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+Apache 2.0 License - see [LICENSE](LICENSE) file for details.

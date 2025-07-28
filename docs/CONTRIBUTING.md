@@ -99,10 +99,22 @@ maestro-knowledge/
 │   │   └── vector_db_factory.py # Factory function
 │   ├── maestro_mcp/         # MCP server implementation
 │   │   ├── __init__.py      # Package exports
-│   │   ├── server.py        # Main MCP server
+│   │   ├── server.py        # Main MCP server (FastMCP)
 │   │   ├── mcp_config.json  # MCP client configuration
 │   │   └── README.md        # MCP server documentation
 │   └── vector_db.py         # Vector database compatibility layer
+├── cli/                     # Go CLI tool
+│   ├── src/                 # Go source code
+│   │   ├── main.go          # Main CLI entry point
+│   │   ├── list.go          # List command (plural forms)
+│   │   ├── create.go        # Create command
+│   │   ├── delete.go        # Delete command
+│   │   ├── validate.go      # Validate command
+│   │   └── mcp_client.go    # MCP server client
+│   ├── tests/               # CLI tests
+│   ├── examples/            # CLI usage examples
+│   ├── build.sh             # Build script
+│   └── README.md            # CLI documentation
 ├── start.sh                 # MCP server start script
 ├── stop.sh                  # MCP server stop script
 ├── tests/                   # 🧪 Test suite
@@ -117,6 +129,7 @@ maestro-knowledge/
 │   └── workflows/           # GitHub Actions workflows
 │       └── ci.yml           # Continuous Integration workflow
 ├── test.sh                  # Test runner script (CLI, MCP, Integration)
+├── test-integration.sh      # CLI integration tests
 ├── lint.sh                  # Linting and formatting script
 ├── pyproject.toml           # Project configuration
 └── README.md                # Main project documentation
@@ -233,12 +246,11 @@ def test_embedding_model_generation(self):
 
 ### MCP Server Development
 
-The MCP (Model Context Protocol) server provides AI agents with access to vector database functionality through a standardized interface.
+The MCP (Model Context Protocol) server provides AI agents with access to vector database functionality through a standardized interface with multi-database support.
 
 #### MCP Server Structure
 
-- **`src/maestro_mcp/server.py`**: Main server implementation with tool definitions
-- **`src/maestro_mcp/run_server.py`**: CLI script to run the server
+- **`src/maestro_mcp/server.py`**: Main server implementation with FastMCP tool definitions
 - **`src/maestro_mcp/mcp_config.json`**: Configuration for MCP clients
 - **`src/maestro_mcp/README.md`**: Detailed MCP server documentation
 
@@ -246,34 +258,25 @@ The MCP (Model Context Protocol) server provides AI agents with access to vector
 
 To add new tools to the MCP server:
 
-1. **Define the tool**: Add a new `Tool` object to the `handle_list_tools()` function
-2. **Implement the handler**: Add a new elif branch in `handle_call_tool()` function
+1. **Define the tool**: Add a new Pydantic model for input validation
+2. **Implement the tool**: Add a new async function with the `@app.tool()` decorator
 3. **Add tests**: Update `tests/test_mcp_server.py` to test the new tool
 4. **Update documentation**: Document the new tool in `src/maestro_mcp/README.md`
 
 Example of adding a new tool:
 
 ```python
-# In handle_list_tools()
-Tool(
-    name="new_tool",
-    description="Description of the new tool",
-    inputSchema={
-        "type": "object",
-        "properties": {
-            "param1": {"type": "string", "description": "Parameter description"}
-        },
-        "required": ["param1"]
-    }
-)
+# Define input model
+class NewToolInput(BaseModel):
+    db_name: str = Field(..., description="Name of the vector database instance")
+    param1: str = Field(..., description="Parameter description")
 
-# In handle_call_tool()
-elif name == "new_tool":
-    param1 = arguments.get("param1")
+# Implement the tool
+@app.tool()
+async def new_tool(input: NewToolInput) -> str:
+    db = get_database_by_name(input.db_name)
     # Implement tool logic here
-    return CallToolResult(
-        content=[TextContent(type="text", text="Tool executed successfully")]
-    )
+    return "Tool executed successfully"
 ```
 
 #### MCP Server Testing
@@ -283,6 +286,54 @@ The MCP server tests in `tests/test_mcp_server.py` validate:
 - Tool definitions and structure
 - Import dependencies
 - Error handling
+- Multi-database functionality
+
+### CLI Development
+
+The CLI tool is written in Go and provides command-line access to the MCP server functionality.
+
+#### CLI Command Structure
+
+The CLI uses plural forms for list subcommands:
+- `list vector-dbs` (not `list vector-db`)
+- `list embeds` (not `list embed`)
+- `list cols` (not `list col`)
+- `list docs` (not `list doc`)
+
+#### Adding New CLI Commands
+
+1. **Create command file**: Add new command file (e.g., `cli/src/new_command.go`)
+2. **Define the command**: Use Cobra framework for command definition
+3. **Add to main**: Register the command in `cli/src/main.go`
+4. **Add tests**: Create tests in `cli/tests/`
+5. **Update documentation**: Update `cli/README.md`
+
+Example command structure:
+
+```go
+var newCmd = &cobra.Command{
+    Use:   "new [RESOURCE_TYPE] [NAME]",
+    Short: "Create new resources",
+    Long:  `Create new resources with detailed description.`,
+    Args:  cobra.ExactArgs(2),
+    RunE: func(cmd *cobra.Command, args []string) error {
+        // Command implementation
+        return nil
+    },
+}
+```
+
+#### CLI Testing
+
+The CLI tests validate:
+- Command help functionality
+- Dry-run mode
+- Verbose mode
+- Environment variable support
+- Command-line flag override
+- .env file support
+- YAML validation
+- Environment variable substitution
 
 ### Adding New Vector Database Support
 
@@ -418,6 +469,15 @@ if __name__ == "__main__":
 * Follow PEP 8 guidelines
 * Include warning filters for clean output in test files
 
+### Go Style Guide
+
+* Use 4 spaces for indentation
+* Follow Go naming conventions
+* Use meaningful variable names
+* Include proper error handling
+* Add comments for exported functions
+* Follow Go module conventions
+
 ### JavaScript Style Guide
 
 * Use 2 spaces for indentation rather than tabs
@@ -453,6 +513,7 @@ This section lists the labels we use to help us track and manage issues and pull
 * `vector-db` - Issues related to vector database implementations
 * `mcp` - Issues related to MCP server functionality
 * `embeddings` - Issues related to embedding functionality
+* `cli` - Issues related to CLI tool functionality
 
 ## Development Process
 
@@ -491,6 +552,8 @@ In addition to the automated checks above, please ensure that:
 6. Warning filters are included for clean test output
 7. Examples are tested and working (if adding new database support)
 8. Embedding functionality is properly tested
+9. CLI commands use plural forms for list subcommands
+10. Multi-database functionality is properly tested (if applicable)
 
 ## Code Quality and Linting
 
@@ -544,6 +607,7 @@ We have comprehensive integration tests that validate our examples:
 # - Mocked database tests
 # - Environment validation tests
 # - Embedding functionality tests
+# - CLI integration tests
 ```
 
 ### Test Organization
@@ -556,6 +620,7 @@ The test suite follows the modular structure:
 - **Compatibility tests**: `test_vector_db.py` - Tests for compatibility layer
 - **MCP server tests**: `test_mcp_server.py` - Tests for MCP server functionality
 - **Integration tests**: `test_integration_examples.py` - Tests that validate example files work correctly
+- **CLI tests**: `cli/tests/` - Tests for CLI functionality
 
 Each test file should:
 - Include appropriate warning filters

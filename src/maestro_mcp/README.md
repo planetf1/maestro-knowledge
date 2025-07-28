@@ -1,6 +1,6 @@
 # Maestro Vector Database MCP Server
 
-This MCP (Model Context Protocol) server exposes the Maestro Vector Database functionality to AI agents through a standardized interface with flexible embedding strategies. The server is built using **FastMCP**, a modern and efficient implementation of the Model Context Protocol.
+This MCP (Model Context Protocol) server exposes the Maestro Vector Database functionality to AI agents through a standardized interface with flexible embedding strategies and multi-database support. The server is built using **FastMCP**, a modern and efficient implementation of the Model Context Protocol.
 
 ## FastMCP Implementation
 
@@ -18,7 +18,7 @@ This MCP server has been migrated from the standard MCP library to **FastMCP** f
 The MCP server provides the following tools for vector database operations with support for multiple simultaneous databases:
 
 ### Database Management
-- **create_vector_database**: Create a new vector database instance (Weaviate or Milvus) with a unique name
+- **create_vector_database_tool**: Create a new vector database instance (Weaviate or Milvus) with a unique name
 - **setup_database**: Set up a vector database and create collections with specified embedding
 - **get_supported_embeddings**: Get list of supported embedding models for a specific database
 - **list_collections**: List all collections in a specific vector database
@@ -30,6 +30,7 @@ The MCP server provides the following tools for vector database operations with 
 - **write_document**: Write a single document to a specific vector database with specified embedding strategy
 - **write_documents**: Write multiple documents to a specific vector database with specified embedding strategy
 - **list_documents**: List documents from a specific vector database
+- **list_documents_in_collection**: List documents from a specific collection in a vector database
 - **count_documents**: Get the current count of documents in a specific collection
 
 ### Document Management
@@ -118,21 +119,25 @@ Here's how an AI agent might interact with multiple vector databases:
 1. **Create multiple vector databases**:
    ```json
    {
-     "name": "create_vector_database",
+     "name": "create_vector_database_tool",
      "arguments": {
-       "db_name": "project_a_db",
-       "db_type": "weaviate",
-       "collection_name": "ProjectADocuments"
+       "input": {
+         "db_name": "project_a_db",
+         "db_type": "weaviate",
+         "collection_name": "ProjectADocuments"
+       }
      }
    }
    ```
    ```json
    {
-     "name": "create_vector_database",
+     "name": "create_vector_database_tool",
      "arguments": {
-       "db_name": "project_b_db",
-       "db_type": "milvus",
-       "collection_name": "ProjectBDocuments"
+       "input": {
+         "db_name": "project_b_db",
+         "db_type": "milvus",
+         "collection_name": "ProjectBDocuments"
+       }
      }
    }
    ```
@@ -150,7 +155,9 @@ Here's how an AI agent might interact with multiple vector databases:
    {
      "name": "get_supported_embeddings",
      "arguments": {
-       "db_name": "project_a_db"
+       "input": {
+         "db_name": "project_a_db"
+       }
      }
    }
    ```
@@ -160,8 +167,10 @@ Here's how an AI agent might interact with multiple vector databases:
    {
      "name": "setup_database",
      "arguments": {
-       "db_name": "project_a_db",
-       "embedding": "text-embedding-ada-002"
+       "input": {
+         "db_name": "project_a_db",
+         "embedding": "text-embedding-ada-002"
+       }
      }
    }
    ```
@@ -171,14 +180,16 @@ Here's how an AI agent might interact with multiple vector databases:
    {
      "name": "write_document",
      "arguments": {
-       "db_name": "project_a_db",
-       "url": "https://example.com/doc1",
-       "text": "This is the content of the document",
-       "metadata": {
-         "author": "John Doe",
-         "date": "2024-01-01"
-       },
-       "embedding": "default"
+       "input": {
+         "db_name": "project_a_db",
+         "url": "https://example.com/doc1",
+         "text": "This is the content of the document",
+         "metadata": {
+           "author": "John Doe",
+           "date": "2024-01-01"
+         },
+         "embedding": "default"
+       }
      }
    }
    ```
@@ -186,15 +197,17 @@ Here's how an AI agent might interact with multiple vector databases:
    {
      "name": "write_document",
      "arguments": {
-       "db_name": "project_b_db",
-       "url": "https://example.com/doc2",
-       "text": "This document has a pre-computed vector",
-       "metadata": {
-         "author": "Jane Smith",
-         "date": "2024-01-02"
-       },
-       "vector": [0.1, 0.2, 0.3, ...],
-       "embedding": "default"
+       "input": {
+         "db_name": "project_b_db",
+         "url": "https://example.com/doc2",
+         "text": "This document has a pre-computed vector",
+         "metadata": {
+           "author": "Jane Smith",
+           "date": "2024-01-02"
+         },
+         "vector": [0.1, 0.2, 0.3, ...],
+         "embedding": "default"
+       }
      }
    }
    ```
@@ -204,20 +217,22 @@ Here's how an AI agent might interact with multiple vector databases:
    {
      "name": "write_documents",
      "arguments": {
-       "db_name": "project_a_db",
-       "documents": [
-         {
-           "url": "https://example.com/doc3",
-           "text": "First document",
-           "metadata": {"category": "tech"}
-         },
-         {
-           "url": "https://example.com/doc4",
-           "text": "Second document",
-           "metadata": {"category": "science"}
-         }
-       ],
-       "embedding": "text-embedding-3-small"
+       "input": {
+         "db_name": "project_a_db",
+         "documents": [
+           {
+             "url": "https://example.com/doc3",
+             "text": "First document",
+             "metadata": {"category": "tech"}
+           },
+           {
+             "url": "https://example.com/doc4",
+             "text": "Second document",
+             "metadata": {"category": "science"}
+           }
+         ],
+         "embedding": "text-embedding-3-small"
+       }
      }
    }
    ```
@@ -227,32 +242,53 @@ Here's how an AI agent might interact with multiple vector databases:
    {
      "name": "list_documents",
      "arguments": {
-       "db_name": "project_a_db",
-       "limit": 10,
-       "offset": 0
+       "input": {
+         "db_name": "project_a_db",
+         "limit": 10,
+         "offset": 0
+       }
      }
    }
    ```
 
-8. **Get information about a specific database**:
+8. **List documents from a specific collection**:
+   ```json
+   {
+     "name": "list_documents_in_collection",
+     "arguments": {
+       "input": {
+         "db_name": "project_a_db",
+         "collection_name": "ProjectADocuments",
+         "limit": 10,
+         "offset": 0
+       }
+     }
+   }
+   ```
+
+9. **Get information about a specific database**:
    ```json
    {
      "name": "get_database_info",
      "arguments": {
-       "db_name": "project_a_db"
+       "input": {
+         "db_name": "project_a_db"
+       }
      }
    }
    ```
 
-9. **Clean up a specific database**:
-   ```json
-   {
-     "name": "cleanup",
-     "arguments": {
-       "db_name": "project_a_db"
-     }
-   }
-   ```
+10. **Clean up a specific database**:
+    ```json
+    {
+      "name": "cleanup",
+      "arguments": {
+        "input": {
+          "db_name": "project_a_db"
+        }
+      }
+    }
+    ```
 
 ## Environment Variables
 
@@ -271,9 +307,11 @@ The server provides detailed error messages for common issues:
 - Missing API keys for embedding services
 - Connection errors
 - Document operation failures
+- Database not found errors
+- Collection not found errors
 
 ## Dependencies
 
-- `mcp`: Model Context Protocol library
+- `fastmcp`: FastMCP library for Model Context Protocol
 - All existing Maestro Vector Database dependencies (Weaviate, Milvus, etc.)
 - `openai`: Required for OpenAI embedding models 

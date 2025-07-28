@@ -1,6 +1,6 @@
 # Maestro Knowledge CLI
 
-A command-line interface for interacting with the Maestro Knowledge MCP server.
+A command-line interface for interacting with the Maestro Knowledge MCP server with support for YAML configuration and environment variable substitution.
 
 ## Features
 
@@ -8,6 +8,10 @@ A command-line interface for interacting with the Maestro Knowledge MCP server.
 - **List embeddings**: List supported embeddings for a specific vector database
 - **List collections**: List all collections in a specific vector database
 - **List documents**: List documents in a specific collection of a vector database
+- **Create vector databases**: Create vector databases from YAML configuration files
+- **Delete vector databases**: Delete vector databases by name
+- **Validate configurations**: Validate YAML configuration files
+- **Environment variable substitution**: Replace `{{ENV_VAR_NAME}}` placeholders in YAML files
 - **Environment variable support**: Configure MCP server URI via environment variables
 - **Command-line flag override**: Override MCP server URI via command-line flags
 - **Dry-run mode**: Test commands without making actual changes
@@ -39,7 +43,7 @@ go build -o maestro-k src/*.go
 # Show version
 ./maestro-k --version
 
-# List vector databases
+# List vector databases (using plural form)
 ./maestro-k list vector-dbs
 
 # List vector databases with verbose output
@@ -60,6 +64,9 @@ go build -o maestro-k src/*.go
 # List collections with verbose output
 ./maestro-k list collections my-database --verbose
 
+# List collections using short alias
+./maestro-k list cols my-database
+
 # List documents in a specific collection
 ./maestro-k list documents my-database my-collection
 
@@ -74,6 +81,12 @@ go build -o maestro-k src/*.go
 
 # Create vector database with environment variable substitution
 ./maestro-k create vector-db config.yaml --verbose
+
+# Delete vector database
+./maestro-k delete vector-db my-database
+
+# Validate YAML configuration
+./maestro-k validate config.yaml
 ```
 
 ### MCP Server Configuration
@@ -179,7 +192,7 @@ This makes it easy to specify server addresses in any format:
 
 ### List Command
 
-The `list` command displays information about vector databases or embeddings:
+The `list` command displays information about vector databases, embeddings, collections, or documents:
 
 ```bash
 # List all vector databases
@@ -208,6 +221,9 @@ The `list` command displays information about vector databases or embeddings:
 
 # List collections with verbose output
 ./maestro-k list collections my-database --verbose
+
+# List collections using short alias
+./maestro-k list cols my-database
 
 # Test collections command without connecting to server
 ./maestro-k list collections my-database --dry-run
@@ -301,6 +317,58 @@ Found 3 documents in collection 'my-collection' of vector database 'my-database'
 ]
 ```
 
+### Create Command
+
+The `create` command creates vector databases from YAML configuration files:
+
+```bash
+# Create vector database from YAML file
+./maestro-k create vector-db config.yaml
+
+# Create with verbose output
+./maestro-k create vector-db config.yaml --verbose
+
+# Create with dry-run mode
+./maestro-k create vector-db config.yaml --dry-run
+
+# Override configuration values
+./maestro-k create vector-db config.yaml --type=weaviate --uri=localhost:8080
+```
+
+**Supported Override Flags**:
+- `--type`: Override database type (milvus, weaviate)
+- `--uri`: Override connection URI
+- `--collection-name`: Override collection name
+- `--embedding`: Override embedding model
+- `--mode`: Override deployment mode (local, remote)
+
+### Delete Command
+
+The `delete` command deletes vector databases by name:
+
+```bash
+# Delete vector database
+./maestro-k delete vector-db my-database
+
+# Delete with verbose output
+./maestro-k delete vector-db my-database --verbose
+
+# Delete with dry-run mode
+./maestro-k delete vector-db my-database --dry-run
+```
+
+### Validate Command
+
+The `validate` command validates YAML configuration files:
+
+```bash
+# Validate YAML configuration
+./maestro-k validate config.yaml
+
+# Validate with verbose output
+./maestro-k validate config.yaml --verbose
+```
+
 ## Examples
 
 ### Complete Workflow
@@ -337,6 +405,16 @@ Found 3 documents in collection 'my-collection' of vector database 'my-database'
    ./maestro-k list documents my-database my-collection --mcp-server-uri="http://localhost:8030"
    ```
 
+7. **Create a vector database from YAML**:
+   ```bash
+   ./maestro-k create vector-db config.yaml --mcp-server-uri="http://localhost:8030"
+   ```
+
+8. **Delete a vector database**:
+   ```bash
+   ./maestro-k delete vector-db my-database --mcp-server-uri="http://localhost:8030"
+   ```
+
 ### Examples
 
 See the [examples/](examples/) directory for usage examples:
@@ -358,6 +436,8 @@ This will test:
 - Environment variable support
 - Command-line flag override
 - .env file support
+- YAML validation
+- Environment variable substitution
 
 ## Troubleshooting
 
@@ -386,6 +466,9 @@ If you get connection errors:
 - **"connection refused"**: MCP server is not running or wrong port
 - **"HTTP error 404"**: Wrong endpoint or server not configured correctly
 - **"failed to parse database list"**: Server response format issue
+- **"missing required environment variables"**: Environment variable substitution failed
+- **"vector database already exists"**: Database with that name already exists
+- **"vector database does not exist"**: Database with that name doesn't exist
 
 ## Development
 
@@ -396,9 +479,9 @@ cli/
 ├── src/
 │   ├── main.go          # Main CLI entry point
 │   ├── list.go          # List command implementation
-│   ├── create.go        # Create command (placeholder)
-│   ├── delete.go        # Delete command (placeholder)
-│   ├── validate.go      # Validate command (placeholder)
+│   ├── create.go        # Create command implementation
+│   ├── delete.go        # Delete command implementation
+│   ├── validate.go      # Validate command implementation
 │   └── mcp_client.go    # MCP server client
 ├── examples/
 │   ├── example_usage.sh # Comprehensive CLI usage examples

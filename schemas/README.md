@@ -1,6 +1,6 @@
 # Vector Database Configuration Schema
 
-This directory contains JSON schemas for validating Maestro vector database configurations.
+This directory contains JSON schemas for validating Maestro vector database configurations with support for environment variable substitution.
 
 ## Files
 
@@ -41,6 +41,30 @@ spec:
 - `metadata.labels`: Key-value pairs for labeling
 - `metadata.labels.app`: Application label (common pattern)
 
+## Environment Variable Substitution
+
+The CLI tool supports environment variable substitution in YAML files using the `{{ENV_VAR_NAME}}` syntax. This allows you to use environment variables directly in your configuration files:
+
+```yaml
+apiVersion: maestro/v1alpha1
+kind: VectorDatabase
+metadata:
+  name: my-weaviate-db
+spec:
+  type: weaviate
+  uri: {{WEAVIATE_URL}}
+  collection_name: my_collection
+  embedding: text-embedding-3-small
+  mode: remote
+```
+
+### Features
+
+- **Automatic substitution**: All `{{ENV_VAR_NAME}}` placeholders are replaced before YAML parsing
+- **Error handling**: Clear error messages if required environment variables are missing
+- **Verbose logging**: Shows which environment variables are being substituted (when using `--verbose`)
+- **Validation**: Ensures all required environment variables are set before processing
+
 ## Usage
 
 ### Using the Schema with Tests
@@ -50,6 +74,18 @@ The schema is validated against the example YAML files in the test suite:
 ```bash
 # Run the YAML validation tests
 pytest tests/test_vector_database_yamls.py -v
+```
+
+### Using the Schema with CLI
+
+The CLI tool automatically validates YAML files when creating vector databases:
+
+```bash
+# Validate YAML configuration
+./maestro-k validate config.yaml
+
+# Create vector database with validation
+./maestro-k create vector-db config.yaml
 ```
 
 ### Using the Schema Directly
@@ -88,6 +124,22 @@ spec:
   collection_name: test_collection
   embedding: text-embedding-3-small
   mode: remote
+```
+
+### With Environment Variables
+```yaml
+apiVersion: maestro/v1alpha1
+kind: VectorDatabase
+metadata:
+  name: dynamic_weaviate
+  labels:
+    app: production
+spec:
+  type: weaviate
+  uri: {{WEAVIATE_URL}}
+  collection_name: {{COLLECTION_NAME}}
+  embedding: {{EMBEDDING_MODEL}}
+  mode: {{DEPLOYMENT_MODE}}
 ```
 
 ## Dependencies

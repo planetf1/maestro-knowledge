@@ -9,7 +9,7 @@ backgroundImage: url('https://marp.app/assets/hero-background.svg')
 # Maestro Knowledge
 ## Modular Vector Database Interface
 
-**A unified API for multiple vector database backends**
+**A unified API for multiple vector database backends with multi-database support**
 
 ---
 
@@ -18,9 +18,10 @@ backgroundImage: url('https://marp.app/assets/hero-background.svg')
 - **Multi-backend vector database interface**
 - **Unified API** for Weaviate and Milvus
 - **Flexible embedding strategies** 
-- **MCP Server** for AI agent integration
-- **CLI tool** for easy management
+- **MCP Server** for AI agent integration with multi-database support
+- **CLI tool** for easy management with YAML configuration
 - **Document management** with rich metadata
+- **Environment variable substitution** for dynamic configuration
 
 ---
 
@@ -37,9 +38,10 @@ backgroundImage: url('https://marp.app/assets/hero-background.svg')
 - **Automatic vectorization** when needed
 
 ## 🤖 AI Agent Ready
-- **MCP Server** integration
+- **MCP Server** integration with FastMCP
 - **Model Context Protocol** support
 - **CLI tool** for easy management
+- **Multi-database** support for complex workflows
 
 ---
 
@@ -49,6 +51,7 @@ backgroundImage: url('https://marp.app/assets/hero-background.svg')
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   CLI Tool      │    │   MCP Server    │    │   Python API    │
 │   (Go)          │    │   (FastMCP)     │    │   (Factory)     │
+│   Plural cmds   │    │   Multi-DB      │    │   Multi-DB      │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          └───────────────────────┼───────────────────────┘
@@ -56,6 +59,7 @@ backgroundImage: url('https://marp.app/assets/hero-background.svg')
                     ┌─────────────────┐
                     │  Vector DB      │
                     │  Interface      │
+                    │  (Multi-DB)     │
                     └─────────────────┘
                                  │
          ┌───────────────────────┼───────────────────────┐
@@ -112,10 +116,19 @@ print(f"Found {len(docs)} documents")
 
 # CLI Tool - Go Implementation
 
-## Commands
+## Commands (Plural Forms)
 ```bash
 # List databases
-maestro-k list vector-db
+maestro-k list vector-dbs
+
+# List embeddings
+maestro-k list embeds my-database
+
+# List collections
+maestro-k list cols my-database
+
+# List documents
+maestro-k list docs my-database my-collection
 
 # Create database from YAML
 maestro-k create vector-db config.yaml
@@ -129,6 +142,7 @@ maestro-k validate config.yaml
 
 ## Features
 - **YAML configuration** support
+- **Environment variable substitution** with `{{ENV_VAR_NAME}}`
 - **Dry-run mode** for testing
 - **Verbose/silent** output modes
 - **Environment variable** support
@@ -147,10 +161,20 @@ metadata:
     app: knowledge-base
 spec:
   type: milvus
-  uri: localhost:19530
+  uri: {{MILVUS_URI}}
   collection_name: documents
   embedding: text-embedding-3-small
   mode: local
+```
+
+## Environment Variable Substitution
+```bash
+# .env file
+MILVUS_URI=localhost:19530
+WEAVIATE_URL=https://your-cluster.weaviate.network
+
+# CLI automatically substitutes {{ENV_VAR_NAME}}
+./maestro-k create vector-db config.yaml
 ```
 
 ---
@@ -158,16 +182,46 @@ spec:
 # MCP Server Integration
 
 ## Model Context Protocol
-- **FastMCP** implementation
+- **FastMCP** implementation for better performance
 - **HTTP server** mode (port 8030)
 - **Tool-based** interface
 - **AI agent** ready
+- **Multi-database** support
 
 ## Available Tools
 - `create_vector_database_tool`
-- `setup_database_tool` 
-- `list_databases_tool`
-- `delete_vector_database_tool`
+- `setup_database`
+- `list_databases`
+- `get_supported_embeddings`
+- `list_collections`
+- `list_documents_in_collection`
+- `write_document` / `write_documents`
+- `delete_document` / `delete_documents`
+- `cleanup`
+
+---
+
+# Multi-Database Support
+
+## Key Benefits
+- **Isolation**: Each database operates independently
+- **Flexibility**: Mix different database types
+- **Organization**: Use descriptive names for projects
+- **Resource Management**: Clean up specific databases
+
+## Example Workflow
+```python
+# Create multiple databases
+create_vector_database_tool(db_name="project_a", db_type="weaviate")
+create_vector_database_tool(db_name="project_b", db_type="milvus")
+
+# List all databases
+list_databases()
+
+# Operate on specific databases
+write_document(db_name="project_a", ...)
+write_document(db_name="project_b", ...)
+```
 
 ---
 
@@ -195,6 +249,7 @@ This comprehensive sequence ensures:
 - All unit tests pass (CLI + MCP)
 - Integration tests pass
 - CLI tool integration works
+- Multi-database functionality
 
 ---
 
@@ -204,10 +259,10 @@ This comprehensive sequence ensures:
 maestro-knowledge/
 ├── src/                    # Python source
 │   ├── db/                # Database backends
-│   ├── maestro_mcp/       # MCP server
+│   ├── maestro_mcp/       # MCP server (FastMCP)
 │   └── vector_db.py       # Factory interface
 ├── cli/                   # Go CLI tool
-│   ├── src/              # Go source
+│   ├── src/              # Go source (plural commands)
 │   ├── tests/            # CLI tests
 │   └── examples/         # CLI examples
 ├── tests/                # Python tests
@@ -229,16 +284,19 @@ maestro-knowledge/
 - **RAG systems** with multiple backends
 - **Document processing** pipelines
 - **Knowledge bases** for AI assistants
+- **Multi-database** workflows
 
 ## 📚 Document Management
 - **Content indexing** and search
 - **Metadata-rich** document storage
 - **Multi-modal** content support
+- **Environment-based** configuration
 
 ## 🔄 Backend Flexibility
 - **Cloud-native** (Weaviate)
 - **Self-hosted** (Milvus)
 - **Easy migration** between backends
+- **Dynamic configuration** with environment variables
 
 ---
 
@@ -260,7 +318,14 @@ uv sync
 ```bash
 cd cli
 go build -o maestro-k src/*.go
-./maestro-k --help
+./maestro-k list vector-dbs --help
+```
+
+## Environment Setup
+```bash
+# Create .env file
+echo "MAESTRO_KNOWLEDGE_MCP_SERVER_URI=http://localhost:8030" > .env
+echo "WEAVIATE_URL=https://your-cluster.weaviate.network" >> .env
 ```
 
 ---
@@ -272,12 +337,14 @@ go build -o maestro-k src/*.go
 - **Advanced querying** capabilities
 - **Performance optimizations**
 - **Enhanced CLI** features
+- **Distributed** multi-database deployments
 
 ## 🔧 Improvements
 - **Better error handling**
 - **More embedding models**
 - **Advanced metadata** support
-- **Distributed** deployments
+- **Enhanced environment variable** substitution
+- **Multi-region** database support
 
 ---
 
@@ -304,6 +371,8 @@ go test ./...
 - **Documentation** updates
 - **Pre-PR test suite** must pass
 - **Integration testing** with CLI tool
+- **Plural commands** for CLI list operations
+- **Multi-database** testing
 
 ---
 
@@ -320,9 +389,10 @@ go test ./...
 # Demo Time!
 
 ## Live Examples
-- **Python API** usage
-- **CLI tool** commands
-- **MCP server** integration
-- **YAML configuration**
+- **Python API** usage with multi-database support
+- **CLI tool** commands with plural forms
+- **MCP server** integration with FastMCP
+- **YAML configuration** with environment variable substitution
+- **Multi-database** workflows
 
 *Let's see it in action!* 
