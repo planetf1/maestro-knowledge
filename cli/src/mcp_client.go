@@ -18,6 +18,7 @@ type MCPClient struct {
 	client  *client.Client
 	baseURL string
 	ctx     context.Context
+	cancel  context.CancelFunc
 }
 
 // MCPResponse represents the response from the MCP server
@@ -89,12 +90,15 @@ func NewMCPClient(serverURI string) (*MCPClient, error) {
 	if os.Getenv("MAESTRO_K_TEST_MODE") == "true" {
 		timeout = 5 * time.Second // Shorter timeout for tests
 	}
-	ctx, _ := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
 	// Create MCP client using HTTP transport
 	// The mark3labs/mcp-go library supports HTTP transport for connecting to existing servers
 	mcpClient, err := client.NewStreamableHttpClient(serverURI)
 	if err != nil {
+		// Cancel context on error to prevent context leak
+		cancel()
+
 		// Provide user-friendly error messages for common connection issues
 		errStr := err.Error()
 		if strings.Contains(errStr, "connection refused") ||
@@ -111,6 +115,7 @@ func NewMCPClient(serverURI string) (*MCPClient, error) {
 		client:  mcpClient,
 		baseURL: serverURI,
 		ctx:     ctx,
+		cancel:  cancel,
 	}, nil
 }
 
@@ -404,8 +409,44 @@ func (c *MCPClient) ListCollections(dbName string) (string, error) {
 	return "", fmt.Errorf("unexpected response format from MCP server")
 }
 
+// ListDocumentsInCollection calls the list_documents_in_collection tool on the MCP server
+func (c *MCPClient) ListDocumentsInCollection(dbName, collectionName string) (string, error) {
+	params := map[string]interface{}{
+		"input": map[string]interface{}{
+			"db_name":         dbName,
+			"collection_name": collectionName,
+		},
+	}
+
+	response, err := c.callMCPServer("list_documents_in_collection", params)
+	if err != nil {
+		return "", err
+	}
+
+	// Check for error in response
+	if response.Error != nil {
+		return "", fmt.Errorf("MCP server error: %s", response.Error.Message)
+	}
+
+	// The response should be a string with the documents list
+	if response.Result == nil {
+		return "", fmt.Errorf("no response from MCP server")
+	}
+
+	if resultStr, ok := response.Result.(string); ok {
+		return resultStr, nil
+	}
+
+	return "", fmt.Errorf("unexpected response format from MCP server")
+}
+
 // Close closes the MCP client
 func (c *MCPClient) Close() error {
+	// Cancel the context to prevent context leaks
+	if c.cancel != nil {
+		c.cancel()
+	}
+
 	if c.client != nil {
 		return c.client.Close()
 	}

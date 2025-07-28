@@ -7,9 +7,9 @@ import (
 )
 
 var listCmd = &cobra.Command{
-	Use:   "list (vector-databases | vector-dbs | vdbs | embeddings | embeds | vdb-embeds | collections | cols | vdb-cols) [VDB_NAME]",
-	Short: "List vector database resources, embeddings, or collections",
-	Long: `List vector database resources, embeddings, or collections.
+	Use:   "list (vector-databases | vector-dbs | vdbs | embeddings | embeds | vdb-embeds | collections | cols | vdb-cols | documents | docs | vdb-docs) [VDB_NAME] [COLLECTION_NAME]",
+	Short: "List vector database resources, embeddings, collections, or documents",
+	Long: `List vector database resources, embeddings, collections, or documents.
 
 Usage:
   maestro-k list vector-databases [options]
@@ -21,6 +21,9 @@ Usage:
   maestro-k list collections VDB_NAME [options]
   maestro-k list cols VDB_NAME [options]
   maestro-k list vdb-cols VDB_NAME [options]
+  maestro-k list documents VDB_NAME COLLECTION_NAME [options]
+  maestro-k list docs VDB_NAME COLLECTION_NAME [options]
+  maestro-k list vdb-docs VDB_NAME COLLECTION_NAME [options]
 
 Examples:
   maestro-k list vector-dbs
@@ -29,7 +32,9 @@ Examples:
   maestro-k list embeddings my-database
   maestro-k list embeds my-database --verbose
   maestro-k list collections my-database
-  maestro-k list cols my-database --verbose`,
+  maestro-k list cols my-database --verbose
+  maestro-k list documents my-database my-collection
+  maestro-k list docs my-database my-collection --verbose`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		resourceType := args[0]
@@ -52,9 +57,22 @@ Examples:
 			return listCollections(vdbName)
 		}
 
+		// Handle documents subcommand
+		if resourceType == "documents" || resourceType == "docs" || resourceType == "vdb-docs" {
+			if len(args) < 2 {
+				return fmt.Errorf("VDB_NAME is required for documents command")
+			}
+			if len(args) < 3 {
+				return fmt.Errorf("COLLECTION_NAME is required for documents command")
+			}
+			vdbName := args[1]
+			collectionName := args[2]
+			return listDocuments(vdbName, collectionName)
+		}
+
 		// Validate resource type for vector databases
 		if resourceType != "vector-databases" && resourceType != "vector-dbs" && resourceType != "vdbs" {
-			return fmt.Errorf("unsupported resource type: %s. Use 'vector-databases', 'vector-dbs', 'vdbs', 'embeddings', 'embeds', 'vdb-embeds', 'collections', 'cols', or 'vdb-cols'", resourceType)
+			return fmt.Errorf("unsupported resource type: %s. Use 'vector-databases', 'vector-dbs', 'vdbs', 'embeddings', 'embeds', 'vdb-embeds', 'collections', 'cols', 'vdb-cols', 'documents', 'docs', or 'vdb-docs'", resourceType)
 		}
 
 		return listVectorDatabases()
@@ -263,6 +281,73 @@ func listCollections(vdbName string) error {
 
 	if verbose {
 		fmt.Printf("Collections listing completed successfully for vector database '%s'\n", vdbName)
+	}
+
+	return nil
+}
+
+func listDocuments(vdbName, collectionName string) error {
+	if verbose {
+		fmt.Printf("Listing documents in collection '%s' for vector database '%s'...\n", collectionName, vdbName)
+	}
+
+	if dryRun {
+		fmt.Printf("[DRY RUN] Would list documents in collection '%s' for vector database '%s'\n", collectionName, vdbName)
+		return nil
+	}
+
+	// Get MCP server URI
+	serverURI, err := getMCPServerURI(mcpServerURI)
+	if err != nil {
+		return fmt.Errorf("failed to get MCP server URI: %w", err)
+	}
+
+	if verbose {
+		fmt.Printf("Connecting to MCP server at: %s\n", serverURI)
+	}
+
+	// Create MCP client
+	client, err := NewMCPClient(serverURI)
+	if err != nil {
+		return fmt.Errorf("failed to create MCP client: %w", err)
+	}
+	defer client.Close()
+
+	// Check if the database exists first
+	exists, err := client.DatabaseExists(vdbName)
+	if err != nil {
+		return fmt.Errorf("failed to check if database exists: %w", err)
+	}
+
+	if !exists {
+		return fmt.Errorf("vector database '%s' does not exist. Please create it first", vdbName)
+	}
+
+	// Call the MCP server to get documents with panic recovery
+	var documentsResult string
+	var documentsErr error
+
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// Convert panic to a user-friendly error
+				documentsErr = fmt.Errorf("MCP server could not be reached at %s. Please ensure the server is running and accessible", serverURI)
+			}
+		}()
+		documentsResult, documentsErr = client.ListDocumentsInCollection(vdbName, collectionName)
+	}()
+
+	if documentsErr != nil {
+		return fmt.Errorf("failed to get documents for collection '%s' in vector database '%s': %w", collectionName, vdbName, documentsErr)
+	}
+
+	// Display results
+	if !silent {
+		fmt.Println(documentsResult)
+	}
+
+	if verbose {
+		fmt.Printf("Documents listing completed successfully for collection '%s' in vector database '%s'\n", collectionName, vdbName)
 	}
 
 	return nil

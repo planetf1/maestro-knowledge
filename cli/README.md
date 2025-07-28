@@ -7,6 +7,7 @@ A command-line interface for interacting with the Maestro Knowledge MCP server.
 - **List vector databases**: List all available vector database instances
 - **List embeddings**: List supported embeddings for a specific vector database
 - **List collections**: List all collections in a specific vector database
+- **List documents**: List documents in a specific collection of a vector database
 - **Environment variable support**: Configure MCP server URI via environment variables
 - **Command-line flag override**: Override MCP server URI via command-line flags
 - **Dry-run mode**: Test commands without making actual changes
@@ -58,6 +59,15 @@ go build -o maestro-k src/*.go
 
 # List collections with verbose output
 ./maestro-k list collections my-database --verbose
+
+# List documents in a specific collection
+./maestro-k list documents my-database my-collection
+
+# List documents with verbose output
+./maestro-k list documents my-database my-collection --verbose
+
+# List documents using short alias
+./maestro-k list docs my-database my-collection
 
 # Create vector database from YAML file
 ./maestro-k create vector-db config.yaml
@@ -201,6 +211,18 @@ The `list` command displays information about vector databases or embeddings:
 
 # Test collections command without connecting to server
 ./maestro-k list collections my-database --dry-run
+
+# List documents in a specific collection
+./maestro-k list documents my-database my-collection
+
+# List documents with verbose output
+./maestro-k list documents my-database my-collection --verbose
+
+# List documents using short alias
+./maestro-k list docs my-database my-collection
+
+# Test documents command without connecting to server
+./maestro-k list documents my-database my-collection --dry-run
 ```
 
 #### Output Format
@@ -252,6 +274,33 @@ Collections in vector database 'my-database': [
 ]
 ```
 
+**Documents**: When listing documents in a collection, the output shows:
+- All documents in the specified collection with their properties
+
+Example:
+```
+Found 3 documents in collection 'my-collection' of vector database 'my-database': [
+  {
+    "id": "doc1",
+    "url": "https://example.com/doc1",
+    "text": "Document content...",
+    "metadata": {
+      "source": "web",
+      "timestamp": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "id": "doc2",
+    "url": "https://example.com/doc2",
+    "text": "Another document...",
+    "metadata": {
+      "source": "file",
+      "timestamp": "2024-01-02T00:00:00Z"
+    }
+  }
+]
+```
+
 ## Examples
 
 ### Complete Workflow
@@ -281,6 +330,11 @@ Collections in vector database 'my-database': [
 5. **List collections for a database**:
    ```bash
    ./maestro-k list collections my-database --mcp-server-uri="http://localhost:8030"
+   ```
+
+6. **List documents in a collection**:
+   ```bash
+   ./maestro-k list documents my-database my-collection --mcp-server-uri="http://localhost:8030"
    ```
 
 ### Examples
@@ -381,4 +435,4 @@ go build -o maestro-k src/*.go
 
 ## License
 
-MIT License - see the main project LICENSE file for details. 
+Apache 2.0 License - see the main project LICENSE file for details. 

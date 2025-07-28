@@ -85,6 +85,15 @@ class ListDocumentsInput(BaseModel):
     offset: int = Field(default=0, description="Number of documents to skip")
 
 
+class ListDocumentsInCollectionInput(BaseModel):
+    db_name: str = Field(..., description="Name of the vector database instance")
+    collection_name: str = Field(
+        ..., description="Name of the collection to list documents from"
+    )
+    limit: int = Field(default=10, description="Maximum number of documents to return")
+    offset: int = Field(default=0, description="Number of documents to skip")
+
+
 class CountDocumentsInput(BaseModel):
     db_name: str = Field(..., description="Name of the vector database instance")
 
@@ -217,6 +226,29 @@ def create_mcp_server() -> FastMCP:
         documents = db.list_documents(input.limit, input.offset)
 
         return f"Found {len(documents)} documents in vector database '{input.db_name}':\n{json.dumps(documents, indent=2, default=str)}"
+
+    @app.tool()
+    async def list_documents_in_collection(
+        input: ListDocumentsInCollectionInput,
+    ) -> str:
+        """List documents from a specific collection in a vector database."""
+        db = get_database_by_name(input.db_name)
+
+        # Check if the collection exists
+        collections = db.list_collections()
+        if input.collection_name not in collections:
+            return f"Error: Collection '{input.collection_name}' not found in vector database '{input.db_name}'. Available collections: {collections}"
+
+        # Temporarily switch to the target collection
+        original_collection = db.collection_name
+        db.collection_name = input.collection_name
+
+        try:
+            documents = db.list_documents(input.limit, input.offset)
+            return f"Found {len(documents)} documents in collection '{input.collection_name}' of vector database '{input.db_name}':\n{json.dumps(documents, indent=2, default=str)}"
+        finally:
+            # Restore the original collection
+            db.collection_name = original_collection
 
     @app.tool()
     async def count_documents(input: CountDocumentsInput) -> str:

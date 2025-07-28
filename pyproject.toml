@@ -17,7 +17,7 @@ dependencies = [
     "uvicorn>=0.27.0",
     "watchdog>=3.0.0",
     "weaviate-client>=4.0.0",
-    "pymilvus>=2.4.4",
+    "pymilvus>=2.5.14",
     "pyyaml>=6.0.2",
     "jsonschema>=4.25.0",
     "fastmcp>=2.10.6",
@@ -33,14 +33,6 @@ ignore = ["E402"]
 filterwarnings = [
     # Suppress protobuf version warnings from Weaviate dependencies
     "ignore::UserWarning:google.protobuf.runtime_version",
-    # Suppress deprecation warnings from pymilvus
-    "ignore::DeprecationWarning:pkg_resources.*",
-    # Suppress deprecation warnings from environs
-    "ignore::DeprecationWarning:environs.*",
     # Suppress our own warning in test_list_collections_exception test
     "ignore::UserWarning:src.db.vector_db_weaviate",
-    # Suppress all deprecation warnings from external packages
-    "ignore::DeprecationWarning",
 ]
-# Suppress all warnings during test execution
-addopts = "-W ignore::DeprecationWarning -W ignore::UserWarning"

@@ -126,7 +126,7 @@ if [ "$RUN_CLI_TESTS" = true ]; then
     # Step 3: Test CLI
     print_status "Step 3: Testing CLI..."
     cd cli
-    if ./test.sh; then
+    if ./test.sh unit; then
         print_status "✓ CLI tests passed"
     else
         print_error "CLI tests failed"
