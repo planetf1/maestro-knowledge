@@ -217,6 +217,65 @@ class WeaviateVectorDatabase(VectorDatabase):
 
         return documents
 
+    def list_documents_in_collection(
+        self, collection_name: str, limit: int = 10, offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """List documents from a specific collection in Weaviate."""
+        try:
+            # Get the specific collection
+            collection = self.client.collections.get(collection_name)
+
+            # Query documents from the collection
+            result = collection.query.fetch_objects(
+                limit=limit,
+                offset=offset,
+                include_vector=False,
+            )
+
+            # Process the results
+            documents = []
+            for obj in result.objects:
+                doc = {
+                    "id": obj.uuid,
+                    "url": obj.properties.get("url", ""),
+                    "text": obj.properties.get("text", ""),
+                    "metadata": obj.properties.get("metadata", "{}"),
+                }
+
+                # Try to parse metadata if it's a JSON string
+                try:
+                    doc["metadata"] = json.loads(doc["metadata"])
+                except json.JSONDecodeError:
+                    pass
+
+                documents.append(doc)
+
+            return documents
+        except Exception as e:
+            import warnings
+
+            warnings.warn(
+                f"Could not list documents from Weaviate collection '{collection_name}': {e}"
+            )
+            return []
+
+    def count_documents_in_collection(self, collection_name: str) -> int:
+        """Get the current count of documents in a specific collection in Weaviate."""
+        try:
+            # Get the specific collection
+            collection = self.client.collections.get(collection_name)
+
+            # Query to get the count - use a simple approach
+            result = collection.query.fetch_objects(limit=10000)
+            return len(result.objects)
+        except Exception as e:
+            import warnings
+
+            warnings.warn(
+                f"Could not get document count for Weaviate collection '{collection_name}': {e}"
+            )
+            return 0
+
     def count_documents(self) -> int:
         """Get the current count of documents in the collection."""
         collection = self.client.collections.get(self.collection_name)

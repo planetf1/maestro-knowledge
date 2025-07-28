@@ -413,7 +413,136 @@ else
     exit 1
 fi
 
-# 28. Test delete collection functionality
+# 28. Test collection info and document listing consistency
+print_status "Testing collection info and document listing consistency..."
+
+# Test get collection info for a specific collection
+print_status "Testing 'get col' command..."
+GET_COL_OUTPUT=$(./maestro-k get col test_local_milvus "${COLLECTION_BASE}_basic" --verbose)
+if [[ "$GET_COL_OUTPUT" == *"Collection information for '${COLLECTION_BASE}_basic' in vector database 'test_local_milvus'"* ]]; then
+    print_success "Collection info retrieved successfully"
+    
+    # Extract document count from the output
+    DOC_COUNT_FROM_INFO=$(echo "$GET_COL_OUTPUT" | grep -o '"document_count":[[:space:]]*[0-9]*' | tail -1 | sed 's/"document_count":[[:space:]]*//')
+    echo "Document count from collection info: $DOC_COUNT_FROM_INFO"
+else
+    print_error "Failed to get collection info"
+    echo "Output: $GET_COL_OUTPUT"
+    exit 1
+fi
+
+# Test list documents for the same collection
+print_status "Testing 'list docs' command..."
+LIST_DOCS_OUTPUT=$(./maestro-k list docs test_local_milvus "${COLLECTION_BASE}_basic" --verbose)
+if [[ "$LIST_DOCS_OUTPUT" == *"Found"*"documents in collection '${COLLECTION_BASE}_basic' of vector database 'test_local_milvus'"* ]]; then
+    print_success "Documents listed successfully"
+    
+    # Extract document count from the output
+    DOC_COUNT_FROM_LIST=$(echo "$LIST_DOCS_OUTPUT" | grep -o "Found [0-9]* documents" | cut -d' ' -f2)
+    echo "Document count from list docs: $DOC_COUNT_FROM_LIST"
+    
+    # Compare the counts - they should be consistent
+    if [[ "$DOC_COUNT_FROM_INFO" == "$DOC_COUNT_FROM_LIST" ]]; then
+        print_success "Document counts are consistent between 'get col' and 'list docs'"
+    else
+        print_error "Document counts are inconsistent: info=$DOC_COUNT_FROM_INFO, list=$DOC_COUNT_FROM_LIST"
+        echo "Collection info output: $GET_COL_OUTPUT"
+        echo "List docs output: $LIST_DOCS_OUTPUT"
+        exit 1
+    fi
+else
+    print_error "Failed to list documents"
+    echo "Output: $LIST_DOCS_OUTPUT"
+    exit 1
+fi
+
+# Test get collection info with 'retrieve' command
+print_status "Testing 'retrieve col' command..."
+RETRIEVE_COL_OUTPUT=$(./maestro-k retrieve col test_local_milvus "${COLLECTION_BASE}_basic" --verbose)
+if [[ "$RETRIEVE_COL_OUTPUT" == *"Collection information for '${COLLECTION_BASE}_basic' in vector database 'test_local_milvus'"* ]]; then
+    print_success "Collection info retrieved successfully with 'retrieve' command"
+    
+    # Extract document count from the output
+    DOC_COUNT_FROM_RETRIEVE=$(echo "$RETRIEVE_COL_OUTPUT" | grep -o '"document_count":[[:space:]]*[0-9]*' | tail -1 | sed 's/"document_count":[[:space:]]*//')
+    echo "Document count from retrieve col: $DOC_COUNT_FROM_RETRIEVE"
+    
+    # Compare with the previous count
+    if [[ "$DOC_COUNT_FROM_RETRIEVE" == "$DOC_COUNT_FROM_INFO" ]]; then
+        print_success "Document counts are consistent between 'get col' and 'retrieve col'"
+    else
+        print_error "Document counts are inconsistent: get=$DOC_COUNT_FROM_INFO, retrieve=$DOC_COUNT_FROM_RETRIEVE"
+        exit 1
+    fi
+else
+    print_error "Failed to retrieve collection info"
+    echo "Output: $RETRIEVE_COL_OUTPUT"
+    exit 1
+fi
+
+# Test list documents with different aliases
+print_status "Testing 'list docs' with different aliases..."
+LIST_DOCS_DOCS_ALIAS_OUTPUT=$(./maestro-k list docs test_local_milvus "${COLLECTION_BASE}_basic" --verbose)
+if [[ "$LIST_DOCS_DOCS_ALIAS_OUTPUT" == *"Found"*"documents in collection '${COLLECTION_BASE}_basic' of vector database 'test_local_milvus'"* ]]; then
+    print_success "Documents listed successfully with 'docs' alias"
+else
+    print_error "Failed to list documents with 'docs' alias"
+    echo "Output: $LIST_DOCS_DOCS_ALIAS_OUTPUT"
+    exit 1
+fi
+
+print_status "Testing 'list vdb-docs' with different aliases..."
+LIST_DOCS_VDB_DOCS_ALIAS_OUTPUT=$(./maestro-k list vdb-docs test_local_milvus "${COLLECTION_BASE}_basic" --verbose)
+if [[ "$LIST_DOCS_VDB_DOCS_ALIAS_OUTPUT" == *"Found"*"documents in collection '${COLLECTION_BASE}_basic' of vector database 'test_local_milvus'"* ]]; then
+    print_success "Documents listed successfully with 'vdb-docs' alias"
+else
+    print_error "Failed to list documents with 'vdb-docs' alias"
+    echo "Output: $LIST_DOCS_VDB_DOCS_ALIAS_OUTPUT"
+    exit 1
+fi
+
+# Test collection info and document listing for a different collection
+print_status "Testing consistency for a different collection..."
+GET_COL_2_OUTPUT=$(./maestro-k get col test_local_milvus "${COLLECTION_BASE}_embedding" --verbose)
+LIST_DOCS_2_OUTPUT=$(./maestro-k list docs test_local_milvus "${COLLECTION_BASE}_embedding" --verbose)
+
+if [[ "$GET_COL_2_OUTPUT" == *"Collection information for '${COLLECTION_BASE}_embedding' in vector database 'test_local_milvus'"* ]] && [[ "$LIST_DOCS_2_OUTPUT" == *"Found"*"documents in collection '${COLLECTION_BASE}_embedding' of vector database 'test_local_milvus'"* ]]; then
+    DOC_COUNT_INFO_2=$(echo "$GET_COL_2_OUTPUT" | grep -o '"document_count":[[:space:]]*[0-9]*' | tail -1 | sed 's/"document_count":[[:space:]]*//')
+    DOC_COUNT_LIST_2=$(echo "$LIST_DOCS_2_OUTPUT" | grep -o "Found [0-9]* documents" | cut -d' ' -f2)
+    
+    if [[ "$DOC_COUNT_INFO_2" == "$DOC_COUNT_LIST_2" ]]; then
+        print_success "Document counts are consistent for second collection"
+    else
+        print_error "Document counts are inconsistent for second collection: info=$DOC_COUNT_INFO_2, list=$DOC_COUNT_LIST_2"
+        exit 1
+    fi
+else
+    print_error "Failed to test consistency for second collection"
+    echo "Get col output: $GET_COL_2_OUTPUT"
+    echo "List docs output: $LIST_DOCS_2_OUTPUT"
+    exit 1
+fi
+
+# Test error handling for non-existent collection
+print_status "Testing error handling for non-existent collection..."
+GET_COL_NONEXISTENT_OUTPUT=$(./maestro-k get col test_local_milvus non_existent_collection 2>&1 || true)
+if [[ "$GET_COL_NONEXISTENT_OUTPUT" == *"Collection does not exist"* ]]; then
+    print_success "Get col correctly handles non-existent collection"
+else
+    print_error "Get col should have handled non-existent collection"
+    echo "Output: $GET_COL_NONEXISTENT_OUTPUT"
+    exit 1
+fi
+
+LIST_DOCS_NONEXISTENT_OUTPUT=$(./maestro-k list docs test_local_milvus non_existent_collection 2>&1 || true)
+if [[ "$LIST_DOCS_NONEXISTENT_OUTPUT" == *"Collection 'non_existent_collection' not found"* ]]; then
+    print_success "List docs correctly fails for non-existent collection"
+else
+    print_error "List docs should have failed for non-existent collection"
+    echo "Output: $LIST_DOCS_NONEXISTENT_OUTPUT"
+    exit 1
+fi
+
+# 29. Test delete collection functionality
 print_status "Testing delete collection functionality..."
 DELETE_COLLECTION_OUTPUT=$(./maestro-k delete collection test_local_milvus "${COLLECTION_BASE}_basic" --verbose)
 if [[ "$DELETE_COLLECTION_OUTPUT" == *"✅ Collection '${COLLECTION_BASE}_basic' deleted successfully from vector database 'test_local_milvus'"* ]]; then
@@ -424,7 +553,7 @@ else
     exit 1
 fi
 
-# 29. Test delete collection with 'col' alias
+# 30. Test delete collection with 'col' alias
 print_status "Testing delete collection with 'col' alias..."
 DELETE_COLLECTION_COL_ALIAS_OUTPUT=$(./maestro-k delete col test_local_milvus "${COLLECTION_BASE}_col" --verbose)
 if [[ "$DELETE_COLLECTION_COL_ALIAS_OUTPUT" == *"✅ Collection '${COLLECTION_BASE}_col' deleted successfully from vector database 'test_local_milvus'"* ]]; then
@@ -435,7 +564,7 @@ else
     exit 1
 fi
 
-# 30. Test delete collection with 'vdb-col' alias
+# 31. Test delete collection with 'vdb-col' alias
 print_status "Testing delete collection with 'vdb-col' alias..."
 DELETE_COLLECTION_VDB_COL_ALIAS_OUTPUT=$(./maestro-k delete vdb-col test_local_milvus "${COLLECTION_BASE}_vdb_col" --verbose)
 if [[ "$DELETE_COLLECTION_VDB_COL_ALIAS_OUTPUT" == *"✅ Collection '${COLLECTION_BASE}_vdb_col' deleted successfully from vector database 'test_local_milvus'"* ]]; then
@@ -446,7 +575,7 @@ else
     exit 1
 fi
 
-# 31. Test delete collection with 'del' alias
+# 32. Test delete collection with 'del' alias
 print_status "Testing delete collection with 'del' alias..."
 DELETE_COLLECTION_DEL_ALIAS_OUTPUT=$(./maestro-k del collection test_local_milvus "${COLLECTION_BASE}_embedding" --verbose)
 if [[ "$DELETE_COLLECTION_DEL_ALIAS_OUTPUT" == *"✅ Collection '${COLLECTION_BASE}_embedding' deleted successfully from vector database 'test_local_milvus'"* ]]; then
@@ -457,7 +586,7 @@ else
     exit 1
 fi
 
-# 32. Test delete collection with dry-run mode
+# 33. Test delete collection with dry-run mode
 print_status "Testing delete collection with dry-run mode..."
 DELETE_COLLECTION_DRY_RUN_OUTPUT=$(./maestro-k delete collection test_local_milvus "${COLLECTION_BASE}_dry_run" --dry-run)
 if [[ "$DELETE_COLLECTION_DRY_RUN_OUTPUT" == *"[DRY RUN] Would delete collection '${COLLECTION_BASE}_dry_run' from vector database 'test_local_milvus'"* ]]; then
@@ -468,7 +597,7 @@ else
     exit 1
 fi
 
-# 33. Test delete collection with silent mode
+# 34. Test delete collection with silent mode
 print_status "Testing delete collection with silent mode..."
 DELETE_COLLECTION_SILENT_OUTPUT=$(./maestro-k delete collection test_local_milvus "${COLLECTION_BASE}_silent" --silent)
 if [[ "$DELETE_COLLECTION_SILENT_OUTPUT" != *"✅ Collection '${COLLECTION_BASE}_silent' deleted successfully"* ]]; then
@@ -479,7 +608,7 @@ else
     exit 1
 fi
 
-# 34. Test delete collection on non-existing database (should fail)
+# 35. Test delete collection on non-existing database (should fail)
 print_status "Testing delete collection on non-existing database (should fail)..."
 DELETE_COLLECTION_NONEXISTENT_DB_OUTPUT=$(./maestro-k delete collection non_existent_database test_collection 2>&1 || true)
 if [[ "$DELETE_COLLECTION_NONEXISTENT_DB_OUTPUT" == *"vector database 'non_existent_database' does not exist"* ]]; then
@@ -490,7 +619,7 @@ else
     exit 1
 fi
 
-# 35. Test delete collection with missing collection name (should fail)
+# 36. Test delete collection with missing collection name (should fail)
 print_status "Testing delete collection with missing collection name (should fail)..."
 DELETE_COLLECTION_MISSING_NAME_OUTPUT=$(./maestro-k delete collection test_local_milvus 2>&1 || true)
 if [[ "$DELETE_COLLECTION_MISSING_NAME_OUTPUT" == *"collection deletion requires both VDB_NAME and COLLECTION_NAME"* ]]; then
@@ -501,7 +630,7 @@ else
     exit 1
 fi
 
-# 36. Test delete collection with 'del' alias and missing collection name (should fail)
+# 37. Test delete collection with 'del' alias and missing collection name (should fail)
 print_status "Testing delete collection with 'del' alias and missing collection name (should fail)..."
 DELETE_COLLECTION_DEL_MISSING_NAME_OUTPUT=$(./maestro-k del collection test_local_milvus 2>&1 || true)
 if [[ "$DELETE_COLLECTION_DEL_MISSING_NAME_OUTPUT" == *"collection deletion requires both VDB_NAME and COLLECTION_NAME"* ]]; then
@@ -512,7 +641,7 @@ else
     exit 1
 fi
 
-# 37. Verify collections were removed from list after deletion
+# 38. Verify collections were removed from list after deletion
 print_status "Verifying collections were removed from list after deletion..."
 COLLECTIONS_AFTER_DELETE=$(./maestro-k list collections test_local_milvus --verbose)
 if [[ "$COLLECTIONS_AFTER_DELETE" != *"${COLLECTION_BASE}_basic"* ]] && [[ "$COLLECTIONS_AFTER_DELETE" != *"${COLLECTION_BASE}_col"* ]] && [[ "$COLLECTIONS_AFTER_DELETE" != *"${COLLECTION_BASE}_vdb_col"* ]] && [[ "$COLLECTIONS_AFTER_DELETE" != *"${COLLECTION_BASE}_embedding"* ]]; then
@@ -523,7 +652,7 @@ else
     exit 1
 fi
 
-# 38. Delete a vector database
+# 39. Delete a vector database
 print_status "Testing delete functionality..."
 DELETE_OUTPUT=$(./maestro-k delete vector-db test_local_milvus --verbose)
 if [[ "$DELETE_OUTPUT" == *"✅ Vector database 'test_local_milvus' deleted successfully"* ]]; then
@@ -534,7 +663,7 @@ else
     exit 1
 fi
 
-# 39. List to verify the database was deleted
+# 40. List to verify the database was deleted
 print_status "Verifying database was removed from list..."
 LIST_AFTER_DELETE=$(./maestro-k list vector-dbs --verbose)
 if [[ "$WEAVIATE_CREATED" == "true" ]]; then
@@ -557,7 +686,7 @@ else
     fi
 fi
 
-# 40. Stop the MCP server
+# 41. Stop the MCP server
 print_status "Stopping MCP server..."
 cd "$PROJECT_ROOT"
 ./stop.sh

@@ -255,16 +255,11 @@ def create_mcp_server() -> FastMCP:
         if input.collection_name not in collections:
             return f"Error: Collection '{input.collection_name}' not found in vector database '{input.db_name}'. Available collections: {collections}"
 
-        # Temporarily switch to the target collection
-        original_collection = db.collection_name
-        db.collection_name = input.collection_name
-
-        try:
-            documents = db.list_documents(input.limit, input.offset)
-            return f"Found {len(documents)} documents in collection '{input.collection_name}' of vector database '{input.db_name}':\n{json.dumps(documents, indent=2, default=str)}"
-        finally:
-            # Restore the original collection
-            db.collection_name = original_collection
+        # Use the new list_documents_in_collection method
+        documents = db.list_documents_in_collection(
+            input.collection_name, input.limit, input.offset
+        )
+        return f"Found {len(documents)} documents in collection '{input.collection_name}' of vector database '{input.db_name}':\n{json.dumps(documents, indent=2, default=str)}"
 
     @app.tool()
     async def count_documents(input: CountDocumentsInput) -> str:

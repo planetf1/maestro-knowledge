@@ -278,6 +278,50 @@ class MilvusVectorDatabase(VectorDatabase):
             warnings.warn(f"Could not list collections from Milvus: {e}")
             return []
 
+    def list_documents_in_collection(
+        self, collection_name: str, limit: int = 10, offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """List documents from a specific collection in Milvus."""
+        self._ensure_client()
+        if self.client is None:
+            warnings.warn("Milvus client is not available. Returning empty list.")
+            return []
+
+        # Query documents from the specific collection
+        results = self.client.query(
+            collection_name,
+            output_fields=["id", "url", "text", "metadata"],
+            limit=limit,
+            offset=offset,
+        )
+
+        docs = []
+        for doc in results:
+            try:
+                metadata = json.loads(doc.get("metadata", "{}"))
+            except Exception:
+                metadata = {}
+            docs.append(
+                {
+                    "id": doc.get("id"),
+                    "url": doc.get("url", ""),
+                    "text": doc.get("text", ""),
+                    "metadata": metadata,
+                }
+            )
+        return docs
+
+    def count_documents_in_collection(self, collection_name: str) -> int:
+        """Get the current count of documents in a specific collection in Milvus."""
+        self._ensure_client()
+        if self.client is None:
+            warnings.warn("Milvus client is not available. Returning 0.")
+            return 0
+
+        # Get collection statistics for the specific collection
+        stats = self.client.get_collection_stats(collection_name)
+        return stats.get("row_count", 0)
+
     def get_collection_info(self, collection_name: str = None) -> Dict[str, Any]:
         """Get detailed information about a collection."""
         self._ensure_client()

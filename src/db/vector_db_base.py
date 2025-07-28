@@ -89,6 +89,28 @@ class VectorDatabase(ABC):
         """
         pass
 
+    def list_documents_in_collection(
+        self, collection_name: str, limit: int = 10, offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """
+        List documents from a specific collection in the vector database.
+
+        Args:
+            collection_name: Name of the collection to list documents from
+            limit: Maximum number of documents to return
+            offset: Number of documents to skip
+
+        Returns:
+            List of documents with their properties
+        """
+        # Default implementation: temporarily switch collection and call list_documents
+        original_collection = self.collection_name
+        self.collection_name = collection_name
+        try:
+            return self.list_documents(limit, offset)
+        finally:
+            self.collection_name = original_collection
+
     @abstractmethod
     def count_documents(self) -> int:
         """
@@ -98,6 +120,24 @@ class VectorDatabase(ABC):
             Number of documents in the collection
         """
         pass
+
+    def count_documents_in_collection(self, collection_name: str) -> int:
+        """
+        Get the current count of documents in a specific collection.
+
+        Args:
+            collection_name: Name of the collection to count documents in
+
+        Returns:
+            Number of documents in the collection
+        """
+        # Default implementation: temporarily switch collection and call count_documents
+        original_collection = self.collection_name
+        self.collection_name = collection_name
+        try:
+            return self.count_documents()
+        finally:
+            self.collection_name = original_collection
 
     @abstractmethod
     def list_collections(self) -> List[str]:
