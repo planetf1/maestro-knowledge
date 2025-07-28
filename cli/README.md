@@ -6,6 +6,7 @@ A command-line interface for interacting with the Maestro Knowledge MCP server.
 
 - **List vector databases**: List all available vector database instances
 - **List embeddings**: List supported embeddings for a specific vector database
+- **List collections**: List all collections in a specific vector database
 - **Environment variable support**: Configure MCP server URI via environment variables
 - **Command-line flag override**: Override MCP server URI via command-line flags
 - **Dry-run mode**: Test commands without making actual changes
@@ -38,16 +39,25 @@ go build -o maestro-k src/*.go
 ./maestro-k --version
 
 # List vector databases
-./maestro-k list vector-db
+./maestro-k list vector-dbs
 
 # List vector databases with verbose output
-./maestro-k list vector-db --verbose
+./maestro-k list vector-dbs --verbose
 
 # List embeddings for a specific vector database
 ./maestro-k list embeddings my-database
 
 # List embeddings with verbose output
 ./maestro-k list embeddings my-database --verbose
+
+# List embeddings using short alias
+./maestro-k list embeds my-database
+
+# List collections for a specific vector database
+./maestro-k list collections my-database
+
+# List collections with verbose output
+./maestro-k list collections my-database --verbose
 
 # Create vector database from YAML file
 ./maestro-k create vector-db config.yaml
@@ -66,7 +76,7 @@ Set the `MAESTRO_KNOWLEDGE_MCP_SERVER_URI` environment variable:
 
 ```bash
 export MAESTRO_KNOWLEDGE_MCP_SERVER_URI="http://localhost:8030"
-./maestro-k list vector-db
+./maestro-k list vector-dbs
 ```
 
 #### 2. .env File
@@ -92,7 +102,7 @@ The CLI will automatically load the `.env` file if it exists in the current dire
 Override the MCP server URI via command-line flag:
 
 ```bash
-./maestro-k list vector-db --mcp-server-uri="http://localhost:8030"
+./maestro-k list vector-dbs --mcp-server-uri="http://localhost:8030"
 ```
 
 **Priority order**: Command-line flag > Environment variable > .env file > Default (http://localhost:8030)
@@ -143,9 +153,9 @@ The CLI automatically normalizes URLs to ensure they have the correct protocol p
 This makes it easy to specify server addresses in any format:
 ```bash
 # All of these work the same way:
-./maestro-k list vector-db --mcp-server-uri="localhost:8030"
-./maestro-k list vector-db --mcp-server-uri="http://localhost:8030"
-./maestro-k list vector-db --mcp-server-uri="https://example.com:9000"
+./maestro-k list vector-dbs --mcp-server-uri="localhost:8030"
+./maestro-k list vector-dbs --mcp-server-uri="http://localhost:8030"
+./maestro-k list vector-dbs --mcp-server-uri="https://example.com:9000"
 ```
 
 ### Global Flags
@@ -163,13 +173,13 @@ The `list` command displays information about vector databases or embeddings:
 
 ```bash
 # List all vector databases
-./maestro-k list vector-db
+./maestro-k list vector-dbs
 
 # List with verbose output
-./maestro-k list vector-db --verbose
+./maestro-k list vector-dbs --verbose
 
 # Test the command without connecting to server
-./maestro-k list vector-db --dry-run
+./maestro-k list vector-dbs --dry-run
 
 # List embeddings for a specific vector database
 ./maestro-k list embeddings my-database
@@ -177,8 +187,20 @@ The `list` command displays information about vector databases or embeddings:
 # List embeddings with verbose output
 ./maestro-k list embeddings my-database --verbose
 
+# List embeddings using short alias
+./maestro-k list embeds my-database
+
 # Test embeddings command without connecting to server
 ./maestro-k list embeddings my-database --dry-run
+
+# List collections for a specific vector database
+./maestro-k list collections my-database
+
+# List collections with verbose output
+./maestro-k list collections my-database --verbose
+
+# Test collections command without connecting to server
+./maestro-k list collections my-database --dry-run
 ```
 
 #### Output Format
@@ -218,6 +240,18 @@ Supported embeddings for weaviate vector database 'my-database': [
 ]
 ```
 
+**Collections**: When listing collections for a vector database, the output shows:
+- All collections available in the vector database
+
+Example:
+```
+Collections in vector database 'my-database': [
+  "Collection1",
+  "Collection2",
+  "MaestroDocs"
+]
+```
+
 ## Examples
 
 ### Complete Workflow
@@ -231,17 +265,22 @@ Supported embeddings for weaviate vector database 'my-database': [
 2. **List databases**:
    ```bash
    cd cli
-   ./maestro-k list vector-db --mcp-server-uri="http://localhost:8030"
+   ./maestro-k list vector-dbs --mcp-server-uri="http://localhost:8030"
    ```
 
 3. **List with verbose output**:
    ```bash
-   ./maestro-k list vector-db --mcp-server-uri="http://localhost:8030" --verbose
+   ./maestro-k list vector-dbs --mcp-server-uri="http://localhost:8030" --verbose
    ```
 
 4. **List embeddings for a database**:
    ```bash
    ./maestro-k list embeddings my-database --mcp-server-uri="http://localhost:8030"
+   ```
+
+5. **List collections for a database**:
+   ```bash
+   ./maestro-k list collections my-database --mcp-server-uri="http://localhost:8030"
    ```
 
 ### Examples
@@ -280,7 +319,7 @@ If you get connection errors:
 
 2. **Verify the server URI**:
 ```bash
-   ./maestro-k list vector-db --mcp-server-uri="http://localhost:8030" --verbose
+   ./maestro-k list vector-dbs --mcp-server-uri="http://localhost:8030" --verbose
    ```
 
 3. **Check server logs**:

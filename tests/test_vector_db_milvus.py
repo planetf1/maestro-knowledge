@@ -3,6 +3,9 @@
 
 import warnings
 
+# Suppress all deprecation warnings from external packages immediately
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 # Suppress Pydantic deprecation warnings from dependencies
 warnings.filterwarnings(
     "ignore", category=DeprecationWarning, message=".*class-based `config`.*"
@@ -23,6 +26,8 @@ warnings.filterwarnings(
 warnings.filterwarnings(
     "ignore", category=UserWarning, message=".*Milvus client is not available.*"
 )
+# Suppress external package deprecation warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 import sys
 import os
@@ -250,6 +255,40 @@ class TestMilvusVectorDatabase:
         db = MilvusVectorDatabase()
         count = db.count_documents()
         assert count == 5
+
+    @patch("pymilvus.MilvusClient")
+    def test_list_collections(self, mock_milvus_client):
+        mock_client = MagicMock()
+        mock_client.list_collections.return_value = [
+            "Collection1",
+            "Collection2",
+            "MaestroDocs",
+        ]
+        mock_milvus_client.return_value = mock_client
+        db = MilvusVectorDatabase()
+        collections = db.list_collections()
+        assert collections == ["Collection1", "Collection2", "MaestroDocs"]
+        mock_client.list_collections.assert_called_once()
+
+    @patch("pymilvus.MilvusClient")
+    def test_list_collections_exception(self, mock_milvus_client):
+        mock_client = MagicMock()
+        mock_client.list_collections.side_effect = Exception("Connection error")
+        mock_milvus_client.return_value = mock_client
+        db = MilvusVectorDatabase()
+        # Suppress the expected warning for this test
+        with pytest.warns(UserWarning, match="Could not list collections from Milvus"):
+            collections = db.list_collections()
+        assert collections == []
+
+    @patch("pymilvus.MilvusClient")
+    def test_list_collections_no_client(self, mock_milvus_client):
+        mock_milvus_client.return_value = None
+        db = MilvusVectorDatabase()
+        # Suppress the expected warning for this test
+        with pytest.warns(UserWarning, match="Milvus client is not available"):
+            collections = db.list_collections()
+        assert collections == []
 
     @patch("pymilvus.MilvusClient")
     def test_delete_documents(self, mock_milvus_client):

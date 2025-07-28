@@ -116,7 +116,7 @@ maestro-knowledge/
 ├── .github/                 # GitHub configuration
 │   └── workflows/           # GitHub Actions workflows
 │       └── ci.yml           # Continuous Integration workflow
-├── tests.sh                 # Test runner script
+├── test.sh                  # Test runner script (CLI, MCP, Integration)
 ├── lint.sh                  # Linting and formatting script
 ├── pyproject.toml           # Project configuration
 └── README.md                # Main project documentation
@@ -467,13 +467,13 @@ This section lists the labels we use to help us track and manage issues and pull
 Before submitting a pull request, you **MUST** run the following sequence of commands to ensure code quality and functionality:
 
 ```bash
-./lint.sh && ./start.sh && ./tests.sh all && ./test-integration.sh && ./stop.sh
+./lint.sh && ./test.sh all && ./test-integration.sh
 ```
 
 This comprehensive test sequence will:
 1. **Lint and format code** (`./lint.sh`) - Ensures code follows style guidelines
 2. **Start the MCP server** (`./start.sh`) - Prepares the environment for testing
-3. **Run all tests** (`./tests.sh all`) - Validates unit tests and functionality
+3. **Run all tests** (`./test.sh all`) - Validates unit tests and functionality
 4. **Run integration tests** (`./test-integration.sh`) - Tests end-to-end functionality
 5. **Stop the MCP server** (`./stop.sh`) - Cleans up the environment
 
@@ -483,7 +483,7 @@ This comprehensive test sequence will:
 
 In addition to the automated checks above, please ensure that:
 
-1. All tests pass (`./tests.sh`)
+1. All tests pass (`./test.sh all`)
 2. All linting checks pass (`./lint.sh`)
 3. The code is properly formatted
 4. Documentation is updated
@@ -536,7 +536,7 @@ We have comprehensive integration tests that validate our examples:
 
 ```bash
 # Run all tests including integration tests
-./tests.sh
+./test.sh all
 
 # The test suite now includes:
 # - Unit tests for core functionality

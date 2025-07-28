@@ -3,6 +3,9 @@
 
 import warnings
 
+# Suppress all deprecation warnings from external packages immediately
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 # Suppress Pydantic deprecation warnings from dependencies
 warnings.filterwarnings(
     "ignore", category=DeprecationWarning, message=".*class-based `config`.*"
@@ -15,6 +18,8 @@ warnings.filterwarnings(
     category=DeprecationWarning,
     message=".*Support for class-based `config`.*",
 )
+# Suppress external package deprecation warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 import sys
 import os
@@ -339,6 +344,66 @@ class TestWeaviateVectorDatabase:
             count = db.count_documents()
 
             assert count == 5
+
+    def test_list_collections(self):
+        """Test listing collections in Weaviate."""
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
+            mock_client = MagicMock()
+
+            # Create mock collections
+            mock_collection1 = MagicMock()
+            mock_collection1.name = "Collection1"
+            mock_collection2 = MagicMock()
+            mock_collection2.name = "Collection2"
+            mock_collection3 = MagicMock()
+            mock_collection3.name = "MaestroDocs"
+
+            mock_client.collections.list_all.return_value = [
+                mock_collection1,
+                mock_collection2,
+                mock_collection3,
+            ]
+            mock_connect.return_value = mock_client
+
+            db = WeaviateVectorDatabase()
+            collections = db.list_collections()
+
+            assert collections == ["Collection1", "Collection2", "MaestroDocs"]
+            mock_client.collections.list_all.assert_called_once()
+
+    def test_list_collections_exception(self):
+        """Test listing collections when an exception occurs."""
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
+            mock_client = MagicMock()
+            mock_client.collections.list_all.side_effect = Exception("Connection error")
+            mock_connect.return_value = mock_client
+
+            db = WeaviateVectorDatabase()
+            # Suppress the expected warning for this test
+            with pytest.warns(
+                UserWarning, match="Could not list collections from Weaviate"
+            ):
+                collections = db.list_collections()
+
+            assert collections == []
 
     def test_delete_documents(self):
         """Test deleting documents from Weaviate."""

@@ -78,6 +78,13 @@ class ConcreteVectorDatabase(VectorDatabase):
             self.documents = []
             self.collection_name = None
 
+    def list_collections(self):
+        """List all collections in the vector database."""
+        # For testing purposes, return a list with the current collection if it exists
+        if self.collection_name:
+            return [self.collection_name]
+        return []
+
     def create_query_agent(self):
         return self
 

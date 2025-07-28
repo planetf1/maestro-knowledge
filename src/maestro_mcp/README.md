@@ -21,6 +21,7 @@ The MCP server provides the following tools for vector database operations with 
 - **create_vector_database**: Create a new vector database instance (Weaviate or Milvus) with a unique name
 - **setup_database**: Set up a vector database and create collections with specified embedding
 - **get_supported_embeddings**: Get list of supported embedding models for a specific database
+- **list_collections**: List all collections in a specific vector database
 - **cleanup**: Clean up resources and close database connections for a specific database
 - **get_database_info**: Get information about a specific vector database including supported embeddings
 - **list_databases**: List all available vector database instances

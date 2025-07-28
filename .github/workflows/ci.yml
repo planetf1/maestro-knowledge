@@ -46,7 +46,7 @@ jobs:
 
     - name: Run tests
       run: |
-        ./tests.sh
+        ./test.sh mcp
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
@@ -97,7 +97,7 @@ jobs:
 
     - name: Run tests with all dependencies
       run: |
-        ./tests.sh
+        ./test.sh mcp
 
     - name: Upload test results with deps
       uses: actions/upload-artifact@v4

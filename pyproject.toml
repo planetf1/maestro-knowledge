@@ -27,3 +27,20 @@ dependencies = [
 # Disable E402 (module level import not at top) globally
 # This is needed due to our test structure with sys.path.append and warnings.filterwarnings
 ignore = ["E402"]
+
+[tool.pytest.ini_options]
+# Suppress expected warnings during testing
+filterwarnings = [
+    # Suppress protobuf version warnings from Weaviate dependencies
+    "ignore::UserWarning:google.protobuf.runtime_version",
+    # Suppress deprecation warnings from pymilvus
+    "ignore::DeprecationWarning:pkg_resources.*",
+    # Suppress deprecation warnings from environs
+    "ignore::DeprecationWarning:environs.*",
+    # Suppress our own warning in test_list_collections_exception test
+    "ignore::UserWarning:src.db.vector_db_weaviate",
+    # Suppress all deprecation warnings from external packages
+    "ignore::DeprecationWarning",
+]
+# Suppress all warnings during test execution
+addopts = "-W ignore::DeprecationWarning -W ignore::UserWarning"

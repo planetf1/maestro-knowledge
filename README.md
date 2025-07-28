@@ -9,7 +9,9 @@ A modular vector database interface supporting multiple backends (Weaviate, Milv
 - **Unified API**: Consistent interface across different vector database implementations
 - **Factory pattern**: Easy creation and switching between database types
 - **MCP Server**: Model Context Protocol server for AI agent integration
+- **CLI Tool**: Command-line interface for vector database operations
 - **Document management**: Write, read, delete, and query documents
+- **Collection management**: List and manage collections across vector databases
 - **Metadata support**: Rich metadata handling for documents
 
 ## Quick Start
@@ -219,6 +221,7 @@ Add the following to your MCP client configuration:
 - **create_vector_database**: Create a new vector database instance
 - **setup_database**: Set up the current vector database with specified embedding
 - **get_supported_embeddings**: Get list of supported embedding models
+- **list_collections**: List all collections in a vector database
 - **write_document**: Write a single document with specified embedding strategy
 - **write_documents**: Write multiple documents with specified embedding strategy
 - **list_documents**: List documents from the database
@@ -252,7 +255,11 @@ The project includes several utility scripts for development and testing:
 ./stop.sh                    # Stop the MCP server
 
 # Testing
-./tests.sh                   # Run all Python tests
+./test.sh [COMMAND]          # Run tests with options: cli, mcp, all, help
+./test.sh cli                # Run only CLI tests (Go-based)
+./test.sh mcp                # Run only MCP server tests (Python-based)
+./test.sh all                # Run all tests (CLI + MCP + Integration)
+./test.sh help               # Show test command help
 ./test-integration.sh        # Run CLI integration tests
 
 # CLI tool
@@ -262,11 +269,16 @@ cd cli && ./build.sh         # Build the CLI tool
 ## Testing
 
 ```bash
-# Run all tests
-./tests.sh
+# Run all tests (CLI + MCP + Integration)
+./test.sh all
+
+# Run specific test suites
+./test.sh cli                # Run only CLI tests
+./test.sh mcp                # Run only MCP server tests
+./test.sh help               # Show test command help
 
 # Run comprehensive test suite (recommended before PR)
-./lint.sh && ./start.sh && ./tests.sh all && ./test-integration.sh && ./stop.sh
+./lint.sh && ./test.sh all && ./test-integration.sh
 
 # Or run individual test files
 python -m pytest tests/
@@ -302,7 +314,7 @@ maestro-knowledge/
 ├── start.sh                 # MCP server start script
 ├── stop.sh                  # MCP server stop script
 ├── lint.sh                  # Code linting and formatting
-├── tests.sh                 # Test runner script
+├── test.sh                  # Test runner script (CLI, MCP, Integration)
 ├── test-integration.sh      # Integration tests
 ├── tests/                   # Test suite
 │   ├── test_vector_db_*.py  # Vector database tests
@@ -339,7 +351,7 @@ See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for contribution guidelines.
 Before submitting a pull request, run the comprehensive test suite:
 
 ```bash
-./lint.sh && ./start.sh && ./tests.sh all && ./test-integration.sh && ./stop.sh
+./lint.sh && ./test.sh all && ./test-integration.sh
 ```
 
 This ensures code quality, functionality, and integration with the CLI tool.

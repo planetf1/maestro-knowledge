@@ -12,7 +12,7 @@ import (
 
 func TestListVectorDatabase(t *testing.T) {
 	// Use dry-run mode since we don't have a real MCP server running
-	cmd := exec.Command("../../maestro-k", "list", "vector-db", "--dry-run")
+	cmd := exec.Command("../../maestro-k", "list", "vector-dbs", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -27,7 +27,7 @@ func TestListVectorDatabase(t *testing.T) {
 
 func TestListVectorDatabaseWithVerbose(t *testing.T) {
 	// Use dry-run mode since we don't have a real MCP server running
-	cmd := exec.Command("../../maestro-k", "list", "vector-db", "--verbose", "--dry-run")
+	cmd := exec.Command("../../maestro-k", "list", "vector-dbs", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -60,7 +60,7 @@ func TestListVectorDatabaseWithInvalidResourceType(t *testing.T) {
 }
 
 func TestListVectorDatabaseWithDryRun(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "list", "vector-db", "--dry-run")
+	cmd := exec.Command("../../maestro-k", "list", "vector-dbs", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -75,7 +75,7 @@ func TestListVectorDatabaseWithDryRun(t *testing.T) {
 
 func TestListVectorDatabaseWithSilent(t *testing.T) {
 	// Use dry-run mode since we don't have a real MCP server running
-	cmd := exec.Command("../../maestro-k", "list", "vector-db", "--silent", "--dry-run")
+	cmd := exec.Command("../../maestro-k", "list", "vector-dbs", "--silent", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -90,7 +90,7 @@ func TestListVectorDatabaseWithSilent(t *testing.T) {
 }
 
 func TestListVectorDatabaseHelp(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "list", "vector-db", "--help")
+	cmd := exec.Command("../../maestro-k", "list", "vector-dbs", "--help")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -102,18 +102,18 @@ func TestListVectorDatabaseHelp(t *testing.T) {
 		t.Errorf("Expected help message about listing vector databases, got: %s", outputStr)
 	}
 
-	if !strings.Contains(outputStr, "maestro-k list vector-db") {
+	if !strings.Contains(outputStr, "maestro-k list vector-dbs") {
 		t.Errorf("Expected usage example, got: %s", outputStr)
 	}
 }
 
 func TestListVectorDatabaseWithVectorDatabase(t *testing.T) {
 	// Use dry-run mode since we don't have a real MCP server running
-	cmd := exec.Command("../../maestro-k", "list", "vector-database", "--dry-run")
+	cmd := exec.Command("../../maestro-k", "list", "vector-databases", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		t.Fatalf("List command with 'vector-database' failed: %v, output: %s", err, string(output))
+		t.Fatalf("List command with 'vector-databases' failed: %v, output: %s", err, string(output))
 	}
 
 	outputStr := string(output)
@@ -123,12 +123,12 @@ func TestListVectorDatabaseWithVectorDatabase(t *testing.T) {
 }
 
 func TestListVectorDatabaseWithVdbShortcut(t *testing.T) {
-	// Test with the "vdb" shortcut
-	cmd := exec.Command("../../maestro-k", "list", "vdb", "--dry-run")
+	// Test with the "vdbs" shortcut
+	cmd := exec.Command("../../maestro-k", "list", "vdbs", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		t.Fatalf("List command with vdb shortcut failed: %v, output: %s", err, string(output))
+		t.Fatalf("List command with vdbs shortcut failed: %v, output: %s", err, string(output))
 	}
 
 	outputStr := string(output)
@@ -138,7 +138,7 @@ func TestListVectorDatabaseWithVdbShortcut(t *testing.T) {
 }
 
 func TestListVectorDatabaseWithMultipleFlags(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "list", "vector-db", "--verbose", "--dry-run")
+	cmd := exec.Command("../../maestro-k", "list", "vector-dbs", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -158,7 +158,7 @@ func TestListVectorDatabaseWithMultipleFlags(t *testing.T) {
 // TestListVectorDatabaseWithRealServer tests the actual MCP server connection
 // This test is expected to fail if no MCP server is running, which is acceptable
 func TestListVectorDatabaseWithRealServer(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "list", "vector-db")
+	cmd := exec.Command("../../maestro-k", "list", "vector-dbs")
 	cmd.Env = append(os.Environ(), "MAESTRO_K_TEST_MODE=true")
 	output, err := cmd.CombinedOutput()
 
@@ -231,7 +231,7 @@ func TestListVectorDatabaseURLNormalization(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Test URL normalization by running the CLI and checking the verbose output
 			// Use a very short timeout to make it fast
-			cmd := exec.Command("../../maestro-k", "list", "vector-db", "--mcp-server-uri", tc.url, "--verbose")
+			cmd := exec.Command("../../maestro-k", "list", "vector-dbs", "--mcp-server-uri", tc.url, "--verbose")
 			cmd.Env = append(os.Environ(), "MAESTRO_KNOWLEDGE_MCP_SERVER_URI=", "MAESTRO_K_TEST_MODE=true")
 
 			// Set a very short timeout for the test
@@ -287,12 +287,12 @@ func TestListEmbeddingsWithVerbose(t *testing.T) {
 }
 
 func TestListEmbeddingsWithEmbedAlias(t *testing.T) {
-	// Test the 'embed' alias
-	cmd := exec.Command("../../maestro-k", "list", "embed", "test-db", "--dry-run")
+	// Test the 'embeds' alias
+	cmd := exec.Command("../../maestro-k", "list", "embeds", "test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		t.Fatalf("List embed command failed: %v, output: %s", err, string(output))
+		t.Fatalf("List embeds command failed: %v, output: %s", err, string(output))
 	}
 
 	outputStr := string(output)
@@ -302,12 +302,12 @@ func TestListEmbeddingsWithEmbedAlias(t *testing.T) {
 }
 
 func TestListEmbeddingsWithVdbEmbedAlias(t *testing.T) {
-	// Test the 'vdb-embed' alias
-	cmd := exec.Command("../../maestro-k", "list", "vdb-embed", "test-db", "--dry-run")
+	// Test the 'vdb-embeds' alias
+	cmd := exec.Command("../../maestro-k", "list", "vdb-embeds", "test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		t.Fatalf("List vdb-embed command failed: %v, output: %s", err, string(output))
+		t.Fatalf("List vdb-embeds command failed: %v, output: %s", err, string(output))
 	}
 
 	outputStr := string(output)
@@ -342,5 +342,98 @@ func TestListEmbeddingsHelp(t *testing.T) {
 	outputStr := string(output)
 	if !strings.Contains(outputStr, "embeddings VDB_NAME") {
 		t.Errorf("Expected help to mention embeddings VDB_NAME, got: %s", outputStr)
+	}
+}
+
+func TestListCollections(t *testing.T) {
+	// Use dry-run mode since we don't have a real MCP server running
+	cmd := exec.Command("../../maestro-k", "list", "collections", "test-db", "--dry-run")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("List collections command failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "[DRY RUN] Would list collections for vector database 'test-db'") {
+		t.Errorf("Expected dry-run message, got: %s", outputStr)
+	}
+}
+
+func TestListCollectionsWithVerbose(t *testing.T) {
+	// Use dry-run mode since we don't have a real MCP server running
+	cmd := exec.Command("../../maestro-k", "list", "collections", "test-db", "--verbose", "--dry-run")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("List collections command with verbose failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "Listing collections for vector database 'test-db'") {
+		t.Errorf("Expected verbose message 'Listing collections for vector database 'test-db'', got: %s", outputStr)
+	}
+
+	if !strings.Contains(outputStr, "[DRY RUN] Would list collections for vector database 'test-db'") {
+		t.Errorf("Expected dry-run message, got: %s", outputStr)
+	}
+}
+
+func TestListCollectionsWithColsAlias(t *testing.T) {
+	// Test the 'cols' alias
+	cmd := exec.Command("../../maestro-k", "list", "cols", "test-db", "--dry-run")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("List cols command failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "[DRY RUN] Would list collections for vector database 'test-db'") {
+		t.Errorf("Expected dry-run message, got: %s", outputStr)
+	}
+}
+
+func TestListCollectionsWithVdbColsAlias(t *testing.T) {
+	// Test the 'vdb-cols' alias
+	cmd := exec.Command("../../maestro-k", "list", "vdb-cols", "test-db", "--dry-run")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("List vdb-cols command failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "[DRY RUN] Would list collections for vector database 'test-db'") {
+		t.Errorf("Expected dry-run message, got: %s", outputStr)
+	}
+}
+
+func TestListCollectionsMissingVdbName(t *testing.T) {
+	cmd := exec.Command("../../maestro-k", "list", "collections")
+	output, err := cmd.CombinedOutput()
+
+	// Should fail with missing VDB_NAME
+	if err == nil {
+		t.Error("Expected command to fail with missing VDB_NAME, but it succeeded")
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "VDB_NAME is required for collections command") {
+		t.Errorf("Expected error about missing VDB_NAME, got: %s", outputStr)
+	}
+}
+
+func TestListCollectionsHelp(t *testing.T) {
+	cmd := exec.Command("../../maestro-k", "list", "collections", "--help")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("List collections help command failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "collections VDB_NAME") {
+		t.Errorf("Expected help to mention collections VDB_NAME, got: %s", outputStr)
 	}
 }

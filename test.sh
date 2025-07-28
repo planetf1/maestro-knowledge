@@ -27,10 +27,73 @@ print_header() {
     echo -e "${BLUE}[TEST]${NC} $1"
 }
 
-# Check if CLI testing is requested
-RUN_CLI_TESTS=${1:-false}
+print_help() {
+    echo -e "${BLUE}Maestro Knowledge Test Suite${NC}"
+    echo ""
+    echo "Usage: ./test.sh [COMMAND]"
+    echo ""
+    echo "Commands:"
+    echo "  cli     Run only CLI tests (Go-based command line interface)"
+    echo "  mcp     Run only MCP server tests (Python-based server)"
+    echo "  all     Run all tests (CLI + MCP + Integration)"
+    echo "  help    Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  ./test.sh cli     # Run only CLI tests"
+    echo "  ./test.sh mcp     # Run only MCP server tests"
+    echo "  ./test.sh all     # Run all tests"
+    echo "  ./test.sh         # Run MCP tests (default)"
+    echo ""
+    echo "Test Categories:"
+    echo "  CLI Tests:"
+    echo "    - Go unit tests for CLI commands"
+    echo "    - CLI functionality validation"
+    echo "    - YAML validation tests"
+    echo "    - Command line argument parsing"
+    echo ""
+    echo "  MCP Tests:"
+    echo "    - Python unit tests for MCP server"
+    echo "    - Vector database implementations"
+    echo "    - API endpoint testing"
+    echo "    - Integration with vector databases"
+    echo ""
+    echo "  Integration Tests:"
+    echo "    - End-to-end CLI + MCP testing"
+    echo "    - Real vector database operations"
+    echo "    - Complete workflow validation"
+}
 
-if [ "$RUN_CLI_TESTS" = "cli" ] || [ "$RUN_CLI_TESTS" = "all" ]; then
+# Check command line arguments
+case "${1:-mcp}" in
+    "cli")
+        RUN_CLI_TESTS=true
+        RUN_MCP_TESTS=false
+        RUN_INTEGRATION_TESTS=false
+        ;;
+    "mcp")
+        RUN_CLI_TESTS=false
+        RUN_MCP_TESTS=true
+        RUN_INTEGRATION_TESTS=false
+        ;;
+    "all")
+        RUN_CLI_TESTS=true
+        RUN_MCP_TESTS=true
+        RUN_INTEGRATION_TESTS=true
+        ;;
+    "help"|"-h"|"--help")
+        print_help
+        exit 0
+        ;;
+    *)
+        print_error "Unknown command: $1"
+        echo ""
+        print_help
+        exit 1
+        ;;
+esac
+
+# Run CLI tests if requested
+if [ "$RUN_CLI_TESTS" = true ]; then
     print_header "Running CLI Workflow Tests..."
     
     # Check if we're in the right directory
@@ -63,7 +126,7 @@ if [ "$RUN_CLI_TESTS" = "cli" ] || [ "$RUN_CLI_TESTS" = "all" ]; then
     # Step 3: Test CLI
     print_status "Step 3: Testing CLI..."
     cd cli
-    if ./tests.sh; then
+    if ./test.sh; then
         print_status "✓ CLI tests passed"
     else
         print_error "CLI tests failed"
@@ -156,9 +219,9 @@ spec:
     print_header "CLI Workflow Tests Completed Successfully! 🎉"
 fi
 
-# Run Python tests (default behavior)
-if [ "$RUN_CLI_TESTS" != "cli" ]; then
-    print_header "Running Python Tests..."
+# Run MCP tests if requested
+if [ "$RUN_MCP_TESTS" = true ]; then
+    print_header "Running MCP Server Tests..."
     
     # Add some test .env variables
     export OPENAI_API_KEY=fake-openai-key
@@ -168,7 +231,25 @@ if [ "$RUN_CLI_TESTS" != "cli" ]; then
     # Run all tests with the correct PYTHONPATH and robustly suppress Pydantic deprecation warnings
     PYTHONWARNINGS="ignore:PydanticDeprecatedSince20" PYTHONPATH=src uv run pytest -v
     
-    print_header "Python Tests Completed Successfully! 🎉"
+    print_header "MCP Server Tests Completed Successfully! 🎉"
 fi
 
-print_status "All tests completed!" 
+# Run integration tests if requested
+if [ "$RUN_INTEGRATION_TESTS" = true ]; then
+    print_header "Running Integration Tests..."
+    
+    if [ -f "./test-integration.sh" ]; then
+        if ./test-integration.sh; then
+            print_status "✓ Integration tests passed"
+        else
+            print_error "Integration tests failed"
+            exit 1
+        fi
+    else
+        print_warning "test-integration.sh not found, skipping integration tests"
+    fi
+    
+    print_header "Integration Tests Completed Successfully! 🎉"
+fi
+
+print_status "All requested tests completed!" 

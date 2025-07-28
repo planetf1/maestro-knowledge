@@ -56,6 +56,7 @@ def test_tool_definitions():
             "delete_collection",
             "cleanup",
             "get_database_info",
+            "list_collections",
             "list_databases",
         ]
 

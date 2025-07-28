@@ -7,30 +7,35 @@ import (
 )
 
 var listCmd = &cobra.Command{
-	Use:   "list (vector-database | vector-db | vdb | embeddings | embed | vdb-embed) [VDB_NAME]",
-	Short: "List vector database resources or embeddings",
-	Long: `List vector database resources or embeddings.
+	Use:   "list (vector-databases | vector-dbs | vdbs | embeddings | embeds | vdb-embeds | collections | cols | vdb-cols) [VDB_NAME]",
+	Short: "List vector database resources, embeddings, or collections",
+	Long: `List vector database resources, embeddings, or collections.
 
 Usage:
-  maestro-k list vector-database [options]
-  maestro-k list vector-db [options]
-  maestro-k list vdb [options]
+  maestro-k list vector-databases [options]
+  maestro-k list vector-dbs [options]
+  maestro-k list vdbs [options]
   maestro-k list embeddings VDB_NAME [options]
-  maestro-k list embed VDB_NAME [options]
-  maestro-k list vdb-embed VDB_NAME [options]
+  maestro-k list embeds VDB_NAME [options]
+  maestro-k list vdb-embeds VDB_NAME [options]
+  maestro-k list collections VDB_NAME [options]
+  maestro-k list cols VDB_NAME [options]
+  maestro-k list vdb-cols VDB_NAME [options]
 
 Examples:
-  maestro-k list vector-db
-  maestro-k list vector-database --verbose
-  maestro-k list vdb --mcp-server-uri=http://localhost:8000
+  maestro-k list vector-dbs
+  maestro-k list vector-databases --verbose
+  maestro-k list vdbs --mcp-server-uri=http://localhost:8000
   maestro-k list embeddings my-database
-  maestro-k list embed my-database --verbose`,
+  maestro-k list embeds my-database --verbose
+  maestro-k list collections my-database
+  maestro-k list cols my-database --verbose`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		resourceType := args[0]
 
 		// Handle embeddings subcommand
-		if resourceType == "embeddings" || resourceType == "embed" || resourceType == "vdb-embed" {
+		if resourceType == "embeddings" || resourceType == "embeds" || resourceType == "vdb-embeds" {
 			if len(args) < 2 {
 				return fmt.Errorf("VDB_NAME is required for embeddings command")
 			}
@@ -38,9 +43,18 @@ Examples:
 			return listEmbeddings(vdbName)
 		}
 
+		// Handle collections subcommand
+		if resourceType == "collections" || resourceType == "cols" || resourceType == "vdb-cols" {
+			if len(args) < 2 {
+				return fmt.Errorf("VDB_NAME is required for collections command")
+			}
+			vdbName := args[1]
+			return listCollections(vdbName)
+		}
+
 		// Validate resource type for vector databases
-		if resourceType != "vector-database" && resourceType != "vector-db" && resourceType != "vdb" {
-			return fmt.Errorf("unsupported resource type: %s. Use 'vector-database', 'vector-db', 'vdb', 'embeddings', 'embed', or 'vdb-embed'", resourceType)
+		if resourceType != "vector-databases" && resourceType != "vector-dbs" && resourceType != "vdbs" {
+			return fmt.Errorf("unsupported resource type: %s. Use 'vector-databases', 'vector-dbs', 'vdbs', 'embeddings', 'embeds', 'vdb-embeds', 'collections', 'cols', or 'vdb-cols'", resourceType)
 		}
 
 		return listVectorDatabases()
@@ -182,6 +196,73 @@ func listEmbeddings(vdbName string) error {
 
 	if verbose {
 		fmt.Printf("Embeddings listing completed successfully for vector database '%s'\n", vdbName)
+	}
+
+	return nil
+}
+
+func listCollections(vdbName string) error {
+	if verbose {
+		fmt.Printf("Listing collections for vector database '%s'...\n", vdbName)
+	}
+
+	if dryRun {
+		fmt.Printf("[DRY RUN] Would list collections for vector database '%s'\n", vdbName)
+		return nil
+	}
+
+	// Get MCP server URI
+	serverURI, err := getMCPServerURI(mcpServerURI)
+	if err != nil {
+		return fmt.Errorf("failed to get MCP server URI: %w", err)
+	}
+
+	if verbose {
+		fmt.Printf("Connecting to MCP server at: %s\n", serverURI)
+	}
+
+	// Create MCP client
+	client, err := NewMCPClient(serverURI)
+	if err != nil {
+		return fmt.Errorf("failed to create MCP client: %w", err)
+	}
+	defer client.Close()
+
+	// Check if the database exists first
+	exists, err := client.DatabaseExists(vdbName)
+	if err != nil {
+		return fmt.Errorf("failed to check if database exists: %w", err)
+	}
+
+	if !exists {
+		return fmt.Errorf("vector database '%s' does not exist. Please create it first", vdbName)
+	}
+
+	// Call the MCP server to get collections with panic recovery
+	var collectionsResult string
+	var collectionsErr error
+
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// Convert panic to a user-friendly error
+				collectionsErr = fmt.Errorf("MCP server could not be reached at %s. Please ensure the server is running and accessible", serverURI)
+			}
+		}()
+		collectionsResult, collectionsErr = client.ListCollections(vdbName)
+	}()
+
+	if collectionsErr != nil {
+		return fmt.Errorf("failed to get collections for vector database '%s': %w", vdbName, collectionsErr)
+	}
+
+	// Display results
+	if !silent {
+		fmt.Println(collectionsResult)
+	}
+
+	if verbose {
+		fmt.Printf("Collections listing completed successfully for vector database '%s'\n", vdbName)
 	}
 
 	return nil

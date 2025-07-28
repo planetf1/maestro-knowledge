@@ -263,6 +263,21 @@ class MilvusVectorDatabase(VectorDatabase):
         stats = self.client.get_collection_stats(self.collection_name)
         return stats.get("row_count", 0)
 
+    def list_collections(self) -> List[str]:
+        """List all collections in Milvus."""
+        self._ensure_client()
+        if self.client is None:
+            warnings.warn("Milvus client is not available. Returning empty list.")
+            return []
+
+        try:
+            # Get all collections from the client
+            collections = self.client.list_collections()
+            return collections
+        except Exception as e:
+            warnings.warn(f"Could not list collections from Milvus: {e}")
+            return []
+
     def delete_documents(self, document_ids: List[str]):
         """Delete documents from Milvus by their IDs."""
         self._ensure_client()

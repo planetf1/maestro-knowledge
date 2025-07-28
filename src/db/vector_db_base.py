@@ -100,6 +100,16 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
+    def list_collections(self) -> List[str]:
+        """
+        List all collections in the vector database.
+
+        Returns:
+            List of collection names
+        """
+        pass
+
+    @abstractmethod
     def delete_documents(self, document_ids: List[str]):
         """
         Delete documents from the vector database by their IDs.

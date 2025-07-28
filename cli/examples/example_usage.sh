@@ -68,35 +68,35 @@ cd "$SCRIPT_DIR"
 print_status ""
 print_status "Example 1: Basic list command"
 print_status "============================="
-./maestro-k list vector-db --mcp-server-uri="http://localhost:$SERVER_PORT"
+./maestro-k list vector-dbs --mcp-server-uri="http://localhost:$SERVER_PORT"
 
 print_status ""
 print_status "Example 2: List with verbose output"
 print_status "==================================="
-./maestro-k list vector-db --mcp-server-uri="http://localhost:$SERVER_PORT" --verbose
+./maestro-k list vector-dbs --mcp-server-uri="http://localhost:$SERVER_PORT" --verbose
 
 print_status ""
 print_status "Example 3: Using environment variable"
 print_status "====================================="
 export MAESTRO_KNOWLEDGE_MCP_SERVER_URI="http://localhost:$SERVER_PORT"
-./maestro-k list vector-db
+./maestro-k list vector-dbs
 
 print_status ""
 print_status "Example 4: Using .env file"
 print_status "=========================="
 echo "MAESTRO_KNOWLEDGE_MCP_SERVER_URI=http://localhost:$SERVER_PORT" > .env
-./maestro-k list vector-db
+./maestro-k list vector-dbs
 rm -f .env
 
 print_status ""
 print_status "Example 5: Dry-run mode"
 print_status "======================="
-./maestro-k list vector-db --dry-run
+./maestro-k list vector-dbs --dry-run
 
 print_status ""
 print_status "Example 6: Silent mode"
 print_status "======================"
-./maestro-k list vector-db --mcp-server-uri="http://localhost:$SERVER_PORT" --silent
+./maestro-k list vector-dbs --mcp-server-uri="http://localhost:$SERVER_PORT" --silent
 
 print_status ""
 print_success "All examples completed successfully!"

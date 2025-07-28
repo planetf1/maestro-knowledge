@@ -374,6 +374,36 @@ func (c *MCPClient) GetSupportedEmbeddings(dbName string) (string, error) {
 	return "", fmt.Errorf("unexpected response format from MCP server")
 }
 
+// ListCollections calls the list_collections tool on the MCP server
+func (c *MCPClient) ListCollections(dbName string) (string, error) {
+	params := map[string]interface{}{
+		"input": map[string]interface{}{
+			"db_name": dbName,
+		},
+	}
+
+	response, err := c.callMCPServer("list_collections", params)
+	if err != nil {
+		return "", err
+	}
+
+	// Check for error in response
+	if response.Error != nil {
+		return "", fmt.Errorf("MCP server error: %s", response.Error.Message)
+	}
+
+	// The response should be a string with the collections list
+	if response.Result == nil {
+		return "", fmt.Errorf("no response from MCP server")
+	}
+
+	if resultStr, ok := response.Result.(string); ok {
+		return resultStr, nil
+	}
+
+	return "", fmt.Errorf("unexpected response format from MCP server")
+}
+
 // Close closes the MCP client
 func (c *MCPClient) Close() error {
 	if c.client != nil {

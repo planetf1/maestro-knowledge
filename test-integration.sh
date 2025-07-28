@@ -53,7 +53,7 @@ print_success "List command help works"
 
 # Test dry-run mode
 print_status "Testing dry-run mode..."
-DRY_RUN_OUTPUT=$(./maestro-k list vector-db --dry-run)
+DRY_RUN_OUTPUT=$(./maestro-k list vector-dbs --dry-run)
 if [[ "$DRY_RUN_OUTPUT" == *"[DRY RUN] Would list vector databases"* ]]; then
     print_success "Dry-run mode works correctly"
 else
@@ -63,7 +63,7 @@ fi
 
 # Test with verbose mode
 print_status "Testing verbose mode..."
-VERBOSE_OUTPUT=$(./maestro-k list vector-db --dry-run --verbose)
+VERBOSE_OUTPUT=$(./maestro-k list vector-dbs --dry-run --verbose)
 if [[ "$VERBOSE_OUTPUT" == *"Listing vector databases"* ]]; then
     print_success "Verbose mode works correctly"
 else
@@ -74,7 +74,7 @@ fi
 # Test environment variable support
 print_status "Testing environment variable support..."
 export MAESTRO_KNOWLEDGE_MCP_SERVER_URI="http://localhost:9000"
-ENV_OUTPUT=$(./maestro-k list vector-db --verbose 2>&1 || true)
+ENV_OUTPUT=$(./maestro-k list vector-dbs --verbose 2>&1 || true)
 if [[ "$ENV_OUTPUT" == *"Connecting to MCP server at: http://localhost:9000"* ]]; then
     print_success "Environment variable support works"
 else
@@ -84,7 +84,7 @@ fi
 
 # Test command line flag override
 print_status "Testing command line flag override..."
-FLAG_OUTPUT=$(./maestro-k list vector-db --verbose --mcp-server-uri="http://localhost:9999" 2>&1 || true)
+FLAG_OUTPUT=$(./maestro-k list vector-dbs --verbose --mcp-server-uri="http://localhost:9999" 2>&1 || true)
 if [[ "$FLAG_OUTPUT" == *"Connecting to MCP server at: http://localhost:9999"* ]]; then
     print_success "Command line flag override works"
 else
@@ -120,7 +120,7 @@ print_success "MCP server started"
 # 3. List vector databases (should be empty initially)
 print_status "Testing initial list (should be empty)..."
 cd "$CLI_DIR"
-INITIAL_LIST=$(./maestro-k list vector-db --verbose)
+INITIAL_LIST=$(./maestro-k list vector-dbs --verbose)
 if [[ "$INITIAL_LIST" == *"No vector databases found"* ]]; then
     print_success "Initial list shows no databases (as expected)"
 else
@@ -141,7 +141,7 @@ fi
 
 # 5. List to verify the database was created
 print_status "Verifying database appears in list..."
-LIST_AFTER_CREATE=$(./maestro-k list vector-db --verbose)
+LIST_AFTER_CREATE=$(./maestro-k list vector-dbs --verbose)
 if [[ "$LIST_AFTER_CREATE" == *"test_local_milvus"* ]] && [[ "$LIST_AFTER_CREATE" == *"milvus"* ]]; then
     print_success "Database appears in list after creation"
 else
@@ -168,7 +168,7 @@ fi
 
 # 7. List to verify databases are present
 print_status "Verifying databases appear in list..."
-LIST_BOTH=$(./maestro-k list vector-db --verbose)
+LIST_BOTH=$(./maestro-k list vector-dbs --verbose)
 if [[ "$WEAVIATE_CREATED" == "true" ]]; then
     # Both databases should be present
     if [[ "$LIST_BOTH" == *"test_local_milvus"* ]] && [[ "$LIST_BOTH" == *"test_remote_weaviate"* ]] && [[ "$LIST_BOTH" == *"Found 2 vector database"* ]]; then
@@ -201,23 +201,23 @@ else
 fi
 
 # 9. Test embeddings functionality with different aliases
-print_status "Testing embeddings functionality with 'embed' alias..."
-EMBED_ALIAS_OUTPUT=$(./maestro-k list embed test_local_milvus --verbose)
+print_status "Testing embeddings functionality with 'embeds' alias..."
+EMBED_ALIAS_OUTPUT=$(./maestro-k list embeds test_local_milvus --verbose)
 if [[ "$EMBED_ALIAS_OUTPUT" == *"Supported embeddings for milvus vector database 'test_local_milvus'"* ]]; then
-    print_success "Embeddings listing works with 'embed' alias"
+    print_success "Embeddings listing works with 'embeds' alias"
 else
-    print_error "Failed to list embeddings with 'embed' alias"
+    print_error "Failed to list embeddings with 'embeds' alias"
     echo "Output: $EMBED_ALIAS_OUTPUT"
     exit 1
 fi
 
-# 10. Test embeddings functionality with 'vdb-embed' alias
-print_status "Testing embeddings functionality with 'vdb-embed' alias..."
-VDB_EMBED_ALIAS_OUTPUT=$(./maestro-k list vdb-embed test_local_milvus --verbose)
+# 10. Test embeddings functionality with 'vdb-embeds' alias
+print_status "Testing embeddings functionality with 'vdb-embeds' alias..."
+VDB_EMBED_ALIAS_OUTPUT=$(./maestro-k list vdb-embeds test_local_milvus --verbose)
 if [[ "$VDB_EMBED_ALIAS_OUTPUT" == *"Supported embeddings for milvus vector database 'test_local_milvus'"* ]]; then
-    print_success "Embeddings listing works with 'vdb-embed' alias"
+    print_success "Embeddings listing works with 'vdb-embeds' alias"
 else
-    print_error "Failed to list embeddings with 'vdb-embed' alias"
+    print_error "Failed to list embeddings with 'vdb-embeds' alias"
     echo "Output: $VDB_EMBED_ALIAS_OUTPUT"
     exit 1
 fi
@@ -244,7 +244,62 @@ else
     exit 1
 fi
 
-# 13. Delete a vector database
+# 13. Test collections functionality on existing database
+print_status "Testing collections functionality on existing database..."
+COLLECTIONS_OUTPUT=$(./maestro-k list collections test_local_milvus --verbose)
+if [[ "$COLLECTIONS_OUTPUT" == *"Collections in vector database 'test_local_milvus'"* ]]; then
+    print_success "Collections listing works for existing database"
+else
+    print_error "Failed to list collections for existing database"
+    echo "Output: $COLLECTIONS_OUTPUT"
+    exit 1
+fi
+
+# 14. Test collections functionality with 'cols' alias
+print_status "Testing collections functionality with 'cols' alias..."
+COLS_ALIAS_OUTPUT=$(./maestro-k list cols test_local_milvus --verbose)
+if [[ "$COLS_ALIAS_OUTPUT" == *"Collections in vector database 'test_local_milvus'"* ]]; then
+    print_success "Collections listing works with 'cols' alias"
+else
+    print_error "Failed to list collections with 'cols' alias"
+    echo "Output: $COLS_ALIAS_OUTPUT"
+    exit 1
+fi
+
+# 15. Test collections functionality with 'vdb-cols' alias
+print_status "Testing collections functionality with 'vdb-cols' alias..."
+VDB_COLS_ALIAS_OUTPUT=$(./maestro-k list vdb-cols test_local_milvus --verbose)
+if [[ "$VDB_COLS_ALIAS_OUTPUT" == *"Collections in vector database 'test_local_milvus'"* ]]; then
+    print_success "Collections listing works with 'vdb-cols' alias"
+else
+    print_error "Failed to list collections with 'vdb-cols' alias"
+    echo "Output: $VDB_COLS_ALIAS_OUTPUT"
+    exit 1
+fi
+
+# 16. Test collections functionality on non-existing database (should fail)
+print_status "Testing collections functionality on non-existing database (should fail)..."
+COLLECTIONS_NONEXISTENT_OUTPUT=$(./maestro-k list collections non_existent_database 2>&1 || true)
+if [[ "$COLLECTIONS_NONEXISTENT_OUTPUT" == *"vector database 'non_existent_database' does not exist"* ]]; then
+    print_success "Collections listing correctly fails for non-existing database"
+else
+    print_error "Collections listing should have failed for non-existing database"
+    echo "Output: $COLLECTIONS_NONEXISTENT_OUTPUT"
+    exit 1
+fi
+
+# 17. Test collections functionality with missing VDB_NAME (should fail)
+print_status "Testing collections functionality with missing VDB_NAME (should fail)..."
+COLLECTIONS_MISSING_NAME_OUTPUT=$(./maestro-k list collections 2>&1 || true)
+if [[ "$COLLECTIONS_MISSING_NAME_OUTPUT" == *"VDB_NAME is required for collections command"* ]]; then
+    print_success "Collections listing correctly fails with missing VDB_NAME"
+else
+    print_error "Collections listing should have failed with missing VDB_NAME"
+    echo "Output: $COLLECTIONS_MISSING_NAME_OUTPUT"
+    exit 1
+fi
+
+# 18. Delete a vector database
 print_status "Testing delete functionality..."
 DELETE_OUTPUT=$(./maestro-k delete vector-db test_local_milvus --verbose)
 if [[ "$DELETE_OUTPUT" == *"✅ Vector database 'test_local_milvus' deleted successfully"* ]]; then
@@ -255,9 +310,9 @@ else
     exit 1
 fi
 
-# 14. List to verify the database was deleted
+# 19. List to verify the database was deleted
 print_status "Verifying database was removed from list..."
-LIST_AFTER_DELETE=$(./maestro-k list vector-db --verbose)
+LIST_AFTER_DELETE=$(./maestro-k list vector-dbs --verbose)
 if [[ "$WEAVIATE_CREATED" == "true" ]]; then
     # Weaviate should still be there, Milvus should be gone
     if [[ "$LIST_AFTER_DELETE" == *"test_remote_weaviate"* ]] && [[ "$LIST_AFTER_DELETE" != *"test_local_milvus"* ]] && [[ "$LIST_AFTER_DELETE" == *"Found 1 vector database"* ]]; then
@@ -278,7 +333,7 @@ else
     fi
 fi
 
-# 15. Stop the MCP server
+# 20. Stop the MCP server
 print_status "Stopping MCP server..."
 cd "$PROJECT_ROOT"
 ./stop.sh

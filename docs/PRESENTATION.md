@@ -188,12 +188,11 @@ spec:
 
 ## Pre-PR Test Suite
 ```bash
-./lint.sh && ./start.sh && ./tests.sh all && ./test-integration.sh && ./stop.sh
+./lint.sh && ./test.sh all && ./test-integration.sh
 ```
 This comprehensive sequence ensures:
 - Code quality and formatting
-- MCP server functionality
-- All unit tests pass
+- All unit tests pass (CLI + MCP)
 - Integration tests pass
 - CLI tool integration works
 
@@ -218,7 +217,7 @@ maestro-knowledge/
 ├── start.sh              # MCP server start
 ├── stop.sh               # MCP server stop
 ├── lint.sh               # Code quality
-├── tests.sh              # Test runner
+├── test.sh               # Test runner (CLI, MCP, Integration)
 └── test-integration.sh   # Integration tests
 ```
 
@@ -295,7 +294,7 @@ cd cli
 go test ./...
 
 # Comprehensive testing (before PR)
-./lint.sh && ./start.sh && ./tests.sh all && ./test-integration.sh && ./stop.sh
+./lint.sh && ./test.sh all && ./test-integration.sh
 ```
 
 ## Guidelines

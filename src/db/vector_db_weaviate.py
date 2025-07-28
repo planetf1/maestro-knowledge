@@ -233,6 +233,18 @@ class WeaviateVectorDatabase(VectorDatabase):
             warnings.warn(f"Could not get document count for Weaviate collection: {e}")
             return 0
 
+    def list_collections(self) -> List[str]:
+        """List all collections in Weaviate."""
+        try:
+            # Get all collections from the client
+            collections = self.client.collections.list_all()
+            return [collection.name for collection in collections]
+        except Exception as e:
+            import warnings
+
+            warnings.warn(f"Could not list collections from Weaviate: {e}")
+            return []
+
     def delete_documents(self, document_ids: List[str]):
         """Delete documents from Weaviate by their IDs."""
         collection = self.client.collections.get(self.collection_name)

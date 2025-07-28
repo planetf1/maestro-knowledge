@@ -35,10 +35,10 @@ jobs:
           echo "Build successful!"
           
       - name: Test CLI
-        working-directory: ./cli
+        working-directory: ./
         run: |
           echo "Running CLI tests..."
-          ./tests.sh
+          ./test.sh cli
           echo "All tests passed!"
           
       - name: Test CLI functionality

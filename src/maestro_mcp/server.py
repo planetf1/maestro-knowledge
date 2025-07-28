@@ -116,6 +116,10 @@ class GetDatabaseInfoInput(BaseModel):
     db_name: str = Field(..., description="Name of the vector database instance")
 
 
+class ListCollectionsInput(BaseModel):
+    db_name: str = Field(..., description="Name of the vector database instance")
+
+
 def create_mcp_server() -> FastMCP:
     """Create and configure the FastMCP server with vector database tools."""
 
@@ -269,6 +273,17 @@ def create_mcp_server() -> FastMCP:
         return (
             f"Database information for '{input.db_name}':\n{json.dumps(info, indent=2)}"
         )
+
+    @app.tool()
+    async def list_collections(input: ListCollectionsInput) -> str:
+        """List all collections in a vector database."""
+        db = get_database_by_name(input.db_name)
+        collections = db.list_collections()
+
+        if not collections:
+            return f"No collections found in vector database '{input.db_name}'"
+
+        return f"Collections in vector database '{input.db_name}':\n{json.dumps(collections, indent=2)}"
 
     @app.tool()
     async def list_databases() -> str:

@@ -7,6 +7,7 @@ python-docx>=0.8.11
 python-magic>=0.4.27
 python-multipart>=0.0.5
 requests>=2.31.0
+six>=1.17.0
 uvicorn>=0.27.0
 watchdog>=3.0.0
 weaviate-client>=4.0.0
