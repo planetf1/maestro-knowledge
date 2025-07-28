@@ -40,10 +40,10 @@
 
 # `delete` command
 
-* add sub-command to (`delete` | `del`) a `collection` in a vdb. Usage like:
+* ✅ add sub-command to (`delete` | `del`) a `collection` in a vdb. Usage like:
     ```bash
-    $ maestro-k delete (collection | vdb-col | col) VBD_NAME [options]
-    $ maestro-k del (collection | vdb-col | col) VBD_NAME [options]
+    $ maestro-k delete (collection | vdb-col | col) VDB_NAME COLLECTION_NAME [options]
+    $ maestro-k del (collection | vdb-col | col) VDB_NAME COLLECTION_NAME [options]
     ```
 
 * add sub-command to (`delete` | `del`) a `document` in a collection of a vdb. Usage like:

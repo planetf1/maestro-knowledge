@@ -468,6 +468,33 @@ func (c *MCPClient) CreateCollection(dbName, collectionName, embedding string) e
 	return nil
 }
 
+// DeleteCollection calls the delete_collection tool on the MCP server
+func (c *MCPClient) DeleteCollection(dbName, collectionName string) error {
+	params := map[string]interface{}{
+		"input": map[string]interface{}{
+			"db_name":         dbName,
+			"collection_name": collectionName,
+		},
+	}
+
+	response, err := c.callMCPServer("delete_collection", params)
+	if err != nil {
+		return err
+	}
+
+	// Check for error in response
+	if response.Error != nil {
+		return fmt.Errorf("MCP server error: %s", response.Error.Message)
+	}
+
+	// The response should be a success message
+	if response.Result == nil {
+		return fmt.Errorf("no response from MCP server")
+	}
+
+	return nil
+}
+
 // Close closes the MCP client
 func (c *MCPClient) Close() error {
 	// Cancel the context to prevent context leaks

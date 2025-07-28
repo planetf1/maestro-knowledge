@@ -413,7 +413,117 @@ else
     exit 1
 fi
 
-# 28. Delete a vector database
+# 28. Test delete collection functionality
+print_status "Testing delete collection functionality..."
+DELETE_COLLECTION_OUTPUT=$(./maestro-k delete collection test_local_milvus "${COLLECTION_BASE}_basic" --verbose)
+if [[ "$DELETE_COLLECTION_OUTPUT" == *"✅ Collection '${COLLECTION_BASE}_basic' deleted successfully from vector database 'test_local_milvus'"* ]]; then
+    print_success "Collection deleted successfully"
+else
+    print_error "Failed to delete collection"
+    echo "Output: $DELETE_COLLECTION_OUTPUT"
+    exit 1
+fi
+
+# 29. Test delete collection with 'col' alias
+print_status "Testing delete collection with 'col' alias..."
+DELETE_COLLECTION_COL_ALIAS_OUTPUT=$(./maestro-k delete col test_local_milvus "${COLLECTION_BASE}_col" --verbose)
+if [[ "$DELETE_COLLECTION_COL_ALIAS_OUTPUT" == *"✅ Collection '${COLLECTION_BASE}_col' deleted successfully from vector database 'test_local_milvus'"* ]]; then
+    print_success "Collection deleted successfully with 'col' alias"
+else
+    print_error "Failed to delete collection with 'col' alias"
+    echo "Output: $DELETE_COLLECTION_COL_ALIAS_OUTPUT"
+    exit 1
+fi
+
+# 30. Test delete collection with 'vdb-col' alias
+print_status "Testing delete collection with 'vdb-col' alias..."
+DELETE_COLLECTION_VDB_COL_ALIAS_OUTPUT=$(./maestro-k delete vdb-col test_local_milvus "${COLLECTION_BASE}_vdb_col" --verbose)
+if [[ "$DELETE_COLLECTION_VDB_COL_ALIAS_OUTPUT" == *"✅ Collection '${COLLECTION_BASE}_vdb_col' deleted successfully from vector database 'test_local_milvus'"* ]]; then
+    print_success "Collection deleted successfully with 'vdb-col' alias"
+else
+    print_error "Failed to delete collection with 'vdb-col' alias"
+    echo "Output: $DELETE_COLLECTION_VDB_COL_ALIAS_OUTPUT"
+    exit 1
+fi
+
+# 31. Test delete collection with 'del' alias
+print_status "Testing delete collection with 'del' alias..."
+DELETE_COLLECTION_DEL_ALIAS_OUTPUT=$(./maestro-k del collection test_local_milvus "${COLLECTION_BASE}_embedding" --verbose)
+if [[ "$DELETE_COLLECTION_DEL_ALIAS_OUTPUT" == *"✅ Collection '${COLLECTION_BASE}_embedding' deleted successfully from vector database 'test_local_milvus'"* ]]; then
+    print_success "Collection deleted successfully with 'del' alias"
+else
+    print_error "Failed to delete collection with 'del' alias"
+    echo "Output: $DELETE_COLLECTION_DEL_ALIAS_OUTPUT"
+    exit 1
+fi
+
+# 32. Test delete collection with dry-run mode
+print_status "Testing delete collection with dry-run mode..."
+DELETE_COLLECTION_DRY_RUN_OUTPUT=$(./maestro-k delete collection test_local_milvus "${COLLECTION_BASE}_dry_run" --dry-run)
+if [[ "$DELETE_COLLECTION_DRY_RUN_OUTPUT" == *"[DRY RUN] Would delete collection '${COLLECTION_BASE}_dry_run' from vector database 'test_local_milvus'"* ]]; then
+    print_success "Delete collection dry-run mode works correctly"
+else
+    print_error "Delete collection dry-run mode failed"
+    echo "Output: $DELETE_COLLECTION_DRY_RUN_OUTPUT"
+    exit 1
+fi
+
+# 33. Test delete collection with silent mode
+print_status "Testing delete collection with silent mode..."
+DELETE_COLLECTION_SILENT_OUTPUT=$(./maestro-k delete collection test_local_milvus "${COLLECTION_BASE}_silent" --silent)
+if [[ "$DELETE_COLLECTION_SILENT_OUTPUT" != *"✅ Collection '${COLLECTION_BASE}_silent' deleted successfully"* ]]; then
+    print_success "Delete collection silent mode works correctly (no success message)"
+else
+    print_error "Delete collection silent mode failed (should not show success message)"
+    echo "Output: $DELETE_COLLECTION_SILENT_OUTPUT"
+    exit 1
+fi
+
+# 34. Test delete collection on non-existing database (should fail)
+print_status "Testing delete collection on non-existing database (should fail)..."
+DELETE_COLLECTION_NONEXISTENT_DB_OUTPUT=$(./maestro-k delete collection non_existent_database test_collection 2>&1 || true)
+if [[ "$DELETE_COLLECTION_NONEXISTENT_DB_OUTPUT" == *"vector database 'non_existent_database' does not exist"* ]]; then
+    print_success "Delete collection correctly fails for non-existing database"
+else
+    print_error "Delete collection should have failed for non-existing database"
+    echo "Output: $DELETE_COLLECTION_NONEXISTENT_DB_OUTPUT"
+    exit 1
+fi
+
+# 35. Test delete collection with missing collection name (should fail)
+print_status "Testing delete collection with missing collection name (should fail)..."
+DELETE_COLLECTION_MISSING_NAME_OUTPUT=$(./maestro-k delete collection test_local_milvus 2>&1 || true)
+if [[ "$DELETE_COLLECTION_MISSING_NAME_OUTPUT" == *"collection deletion requires both VDB_NAME and COLLECTION_NAME"* ]]; then
+    print_success "Delete collection correctly fails with missing collection name"
+else
+    print_error "Delete collection should have failed with missing collection name"
+    echo "Output: $DELETE_COLLECTION_MISSING_NAME_OUTPUT"
+    exit 1
+fi
+
+# 36. Test delete collection with 'del' alias and missing collection name (should fail)
+print_status "Testing delete collection with 'del' alias and missing collection name (should fail)..."
+DELETE_COLLECTION_DEL_MISSING_NAME_OUTPUT=$(./maestro-k del collection test_local_milvus 2>&1 || true)
+if [[ "$DELETE_COLLECTION_DEL_MISSING_NAME_OUTPUT" == *"collection deletion requires both VDB_NAME and COLLECTION_NAME"* ]]; then
+    print_success "Delete collection with 'del' alias correctly fails with missing collection name"
+else
+    print_error "Delete collection with 'del' alias should have failed with missing collection name"
+    echo "Output: $DELETE_COLLECTION_DEL_MISSING_NAME_OUTPUT"
+    exit 1
+fi
+
+# 37. Verify collections were removed from list after deletion
+print_status "Verifying collections were removed from list after deletion..."
+COLLECTIONS_AFTER_DELETE=$(./maestro-k list collections test_local_milvus --verbose)
+if [[ "$COLLECTIONS_AFTER_DELETE" != *"${COLLECTION_BASE}_basic"* ]] && [[ "$COLLECTIONS_AFTER_DELETE" != *"${COLLECTION_BASE}_col"* ]] && [[ "$COLLECTIONS_AFTER_DELETE" != *"${COLLECTION_BASE}_vdb_col"* ]] && [[ "$COLLECTIONS_AFTER_DELETE" != *"${COLLECTION_BASE}_embedding"* ]]; then
+    print_success "All deleted collections were removed from list"
+else
+    print_error "Some deleted collections still appear in list"
+    echo "Output: $COLLECTIONS_AFTER_DELETE"
+    exit 1
+fi
+
+# 38. Delete a vector database
 print_status "Testing delete functionality..."
 DELETE_OUTPUT=$(./maestro-k delete vector-db test_local_milvus --verbose)
 if [[ "$DELETE_OUTPUT" == *"✅ Vector database 'test_local_milvus' deleted successfully"* ]]; then
@@ -424,7 +534,7 @@ else
     exit 1
 fi
 
-# 29. List to verify the database was deleted
+# 39. List to verify the database was deleted
 print_status "Verifying database was removed from list..."
 LIST_AFTER_DELETE=$(./maestro-k list vector-dbs --verbose)
 if [[ "$WEAVIATE_CREATED" == "true" ]]; then
@@ -447,7 +557,7 @@ else
     fi
 fi
 
-# 30. Stop the MCP server
+# 40. Stop the MCP server
 print_status "Stopping MCP server..."
 cd "$PROJECT_ROOT"
 ./stop.sh

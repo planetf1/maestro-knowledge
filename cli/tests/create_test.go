@@ -6,23 +6,6 @@ import (
 	"testing"
 )
 
-// cleanupTestDatabases removes any test databases that might exist
-func cleanupTestDatabases(t *testing.T) {
-	testDatabases := []string{
-		"test-milvus-basic",
-		"test-milvus-overrides",
-		"test-milvus-silent",
-		"test-milvus-dryrun",
-		"test-milvus-vdb",
-		"test-milvus-invalid",
-	}
-
-	for _, dbName := range testDatabases {
-		cmd := exec.Command("../../maestro-k", "delete", "vector-db", dbName, "--silent")
-		cmd.CombinedOutput() // Ignore errors, database might not exist
-	}
-}
-
 // TestCreateVectorDatabase tests the create vector-database command
 func TestCreateVectorDatabase(t *testing.T) {
 	// Create a valid YAML file for testing
