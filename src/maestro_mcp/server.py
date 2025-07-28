@@ -129,6 +129,14 @@ class ListCollectionsInput(BaseModel):
     db_name: str = Field(..., description="Name of the vector database instance")
 
 
+class CreateCollectionInput(BaseModel):
+    db_name: str = Field(..., description="Name of the vector database instance")
+    collection_name: str = Field(..., description="Name of the collection to create")
+    embedding: str = Field(
+        default="default", description="Embedding model to use for the collection"
+    )
+
+
 def create_mcp_server() -> FastMCP:
     """Create and configure the FastMCP server with vector database tools."""
 
@@ -316,6 +324,38 @@ def create_mcp_server() -> FastMCP:
             return f"No collections found in vector database '{input.db_name}'"
 
         return f"Collections in vector database '{input.db_name}':\n{json.dumps(collections, indent=2)}"
+
+    @app.tool()
+    async def create_collection(input: CreateCollectionInput) -> str:
+        """Create a new collection in a vector database."""
+        try:
+            db = get_database_by_name(input.db_name)
+
+            # Check if collection already exists
+            existing_collections = db.list_collections()
+            if input.collection_name in existing_collections:
+                return f"Error: Collection '{input.collection_name}' already exists in vector database '{input.db_name}'"
+
+            # Temporarily switch to the new collection name
+            original_collection = db.collection_name
+            db.collection_name = input.collection_name
+
+            try:
+                # Create the collection using the setup method
+                if hasattr(db, "setup") and len(db.setup.__code__.co_varnames) > 1:
+                    db.setup(embedding=input.embedding)
+                else:
+                    db.setup()
+
+                return f"Successfully created collection '{input.collection_name}' in vector database '{input.db_name}' with embedding '{input.embedding}'"
+            finally:
+                # Restore the original collection name
+                db.collection_name = original_collection
+
+        except Exception as e:
+            error_msg = f"Failed to create collection '{input.collection_name}' in vector database '{input.db_name}': {str(e)}"
+            logger.error(error_msg)
+            return f"Error: {error_msg}"
 
     @app.tool()
     async def list_databases() -> str:

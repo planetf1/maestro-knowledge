@@ -1,0 +1,143 @@
+package main
+
+import (
+	"fmt"
+
+	"github.com/spf13/cobra"
+)
+
+var createCollectionCmd = &cobra.Command{
+	Use:   "collection VDB_NAME COLLECTION_NAME",
+	Short: "Create a collection in a vector database",
+	Long: `Create a collection in a vector database.
+	
+Usage:
+  maestro-k create collection VDB_NAME COLLECTION_NAME [options]
+
+Examples:
+  maestro-k create collection my-database my-collection
+  maestro-k create collection my-database my-collection --embedding=text-embedding-3-small`,
+	Args: cobra.ExactArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		vdbName := args[0]
+		collectionName := args[1]
+		return createCollection(vdbName, collectionName)
+	},
+}
+
+var createVdbColCmd = &cobra.Command{
+	Use:   "vdb-col VDB_NAME COLLECTION_NAME",
+	Short: "Create a collection in a vector database (alias for collection)",
+	Long: `Create a collection in a vector database.
+	
+Usage:
+  maestro-k create vdb-col VDB_NAME COLLECTION_NAME [options]
+
+Examples:
+  maestro-k create vdb-col my-database my-collection
+  maestro-k create vdb-col my-database my-collection --embedding=text-embedding-3-small`,
+	Args: cobra.ExactArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		vdbName := args[0]
+		collectionName := args[1]
+		return createCollection(vdbName, collectionName)
+	},
+}
+
+var createColCmd = &cobra.Command{
+	Use:   "col VDB_NAME COLLECTION_NAME",
+	Short: "Create a collection in a vector database (alias for collection)",
+	Long: `Create a collection in a vector database.
+	
+Usage:
+  maestro-k create col VDB_NAME COLLECTION_NAME [options]
+
+Examples:
+  maestro-k create col my-database my-collection
+  maestro-k create col my-database my-collection --embedding=text-embedding-3-small`,
+	Args: cobra.ExactArgs(2),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		vdbName := args[0]
+		collectionName := args[1]
+		return createCollection(vdbName, collectionName)
+	},
+}
+
+// Flags for collection creation
+var (
+	collectionEmbedding string
+)
+
+func init() {
+	// Add flags for collection creation to all collection creation commands
+	commands := []*cobra.Command{createCollectionCmd, createVdbColCmd, createColCmd}
+	for _, cmd := range commands {
+		cmd.Flags().StringVar(&collectionEmbedding, "embedding", "default", "Embedding model to use for the collection")
+	}
+}
+
+func createCollection(vdbName, collectionName string) error {
+	if verbose && !silent {
+		fmt.Printf("Creating collection '%s' in vector database '%s'...\n", collectionName, vdbName)
+	}
+
+	if dryRun {
+		if !silent {
+			fmt.Printf("[DRY RUN] Would create collection '%s' in vector database '%s' with embedding '%s'\n", collectionName, vdbName, collectionEmbedding)
+		}
+		return nil
+	}
+
+	// Get MCP server URI
+	serverURI, err := getMCPServerURI(mcpServerURI)
+	if err != nil {
+		return fmt.Errorf("failed to get MCP server URI: %w", err)
+	}
+
+	if verbose {
+		fmt.Printf("Connecting to MCP server at: %s\n", serverURI)
+	}
+
+	// Create MCP client
+	client, err := NewMCPClient(serverURI)
+	if err != nil {
+		return fmt.Errorf("failed to create MCP client: %w", err)
+	}
+	defer client.Close()
+
+	// Check if the database exists first
+	exists, err := client.DatabaseExists(vdbName)
+	if err != nil {
+		return fmt.Errorf("failed to check if database exists: %w", err)
+	}
+
+	if !exists {
+		return fmt.Errorf("vector database '%s' does not exist. Please create it first", vdbName)
+	}
+
+	// Call the MCP server to create the collection with panic recovery
+	var createErr error
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// Convert panic to a user-friendly error
+				createErr = fmt.Errorf("MCP server could not be reached at %s. Please ensure the server is running and accessible", serverURI)
+			}
+		}()
+		createErr = client.CreateCollection(vdbName, collectionName, collectionEmbedding)
+	}()
+
+	if createErr != nil {
+		return fmt.Errorf("failed to create collection '%s' in vector database '%s': %w", collectionName, vdbName, createErr)
+	}
+
+	if !silent {
+		fmt.Printf("✅ Collection '%s' created successfully in vector database '%s' with embedding '%s'\n", collectionName, vdbName, collectionEmbedding)
+	}
+
+	if verbose {
+		fmt.Printf("Collection creation completed successfully for vector database '%s'\n", vdbName)
+	}
+
+	return nil
+}

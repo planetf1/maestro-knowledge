@@ -70,30 +70,23 @@ func replaceEnvVars(content string) (string, error) {
 }
 
 var createCmd = &cobra.Command{
-	Use:   "create (vector-database | vector-db | vdb) YAML_FILE",
+	Use:   "create",
 	Short: "Create vector database resources",
-	Long: `Create vector database resources from YAML files.
+	Long: `Create vector database resources from YAML files or create collections.
 	
 Usage:
   maestro-k create vector-database YAML_FILE [options]
   maestro-k create vector-db YAML_FILE [options]
   maestro-k create vdb YAML_FILE [options]
+  maestro-k create collection VDB_NAME COLLECTION_NAME [options]
+  maestro-k create vdb-col VDB_NAME COLLECTION_NAME [options]
+  maestro-k create col VDB_NAME COLLECTION_NAME [options]
 
 Examples:
   maestro-k create vector-db config.yaml
-  maestro-k create vdb config.yaml --uri=localhost:8000 --mode=local`,
-	Args: cobra.ExactArgs(2),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		resourceType := args[0]
-		yamlFile := args[1]
-
-		// Validate resource type
-		if resourceType != "vector-database" && resourceType != "vector-db" && resourceType != "vdb" {
-			return fmt.Errorf("unsupported resource type: %s. Use 'vector-database', 'vector-db', or 'vdb'", resourceType)
-		}
-
-		return createVectorDatabase(yamlFile)
-	},
+  maestro-k create vdb config.yaml --uri=localhost:8000 --mode=local
+  maestro-k create collection my-database my-collection
+  maestro-k create col my-database my-collection --embedding=text-embedding-3-small`,
 }
 
 // Flags for overriding spec fields
@@ -104,15 +97,6 @@ var (
 	overrideEmbedding      string
 	overrideMode           string
 )
-
-func init() {
-	// Add flags for overriding spec fields
-	createCmd.Flags().StringVar(&overrideType, "type", "", "Override the database type (milvus, weaviate)")
-	createCmd.Flags().StringVar(&overrideURI, "uri", "", "Override the connection URI")
-	createCmd.Flags().StringVar(&overrideCollectionName, "collection-name", "", "Override the collection name")
-	createCmd.Flags().StringVar(&overrideEmbedding, "embedding", "", "Override the embedding model")
-	createCmd.Flags().StringVar(&overrideMode, "mode", "", "Override the deployment mode (local, remote)")
-}
 
 func createVectorDatabase(yamlFile string) error {
 	if verbose && !silent {

@@ -299,7 +299,121 @@ else
     exit 1
 fi
 
-# 18. Delete a vector database
+# Generate unique collection names to avoid conflicts from previous test runs
+TIMESTAMP=$(date +%s)
+COLLECTION_BASE="test_collection_${TIMESTAMP}"
+
+# 18. Test create collection functionality
+print_status "Testing create collection functionality..."
+CREATE_COLLECTION_OUTPUT=$(./maestro-k create collection test_local_milvus "${COLLECTION_BASE}_basic" --verbose)
+if [[ "$CREATE_COLLECTION_OUTPUT" == *"✅ Collection '${COLLECTION_BASE}_basic' created successfully in vector database 'test_local_milvus'"* ]]; then
+    print_success "Collection created successfully"
+else
+    print_error "Failed to create collection"
+    echo "Output: $CREATE_COLLECTION_OUTPUT"
+    exit 1
+fi
+
+# 19. Test create collection with custom embedding
+print_status "Testing create collection with custom embedding..."
+CREATE_COLLECTION_EMBEDDING_OUTPUT=$(./maestro-k create collection test_local_milvus "${COLLECTION_BASE}_embedding" --embedding=text-embedding-3-small --verbose)
+if [[ "$CREATE_COLLECTION_EMBEDDING_OUTPUT" == *"✅ Collection '${COLLECTION_BASE}_embedding' created successfully in vector database 'test_local_milvus' with embedding 'text-embedding-3-small'"* ]]; then
+    print_success "Collection created successfully with custom embedding"
+else
+    print_error "Failed to create collection with custom embedding"
+    echo "Output: $CREATE_COLLECTION_EMBEDDING_OUTPUT"
+    exit 1
+fi
+
+# 20. Test create collection with 'col' alias
+print_status "Testing create collection with 'col' alias..."
+CREATE_COLLECTION_COL_ALIAS_OUTPUT=$(./maestro-k create col test_local_milvus "${COLLECTION_BASE}_col" --verbose)
+if [[ "$CREATE_COLLECTION_COL_ALIAS_OUTPUT" == *"✅ Collection '${COLLECTION_BASE}_col' created successfully in vector database 'test_local_milvus'"* ]]; then
+    print_success "Collection created successfully with 'col' alias"
+else
+    print_error "Failed to create collection with 'col' alias"
+    echo "Output: $CREATE_COLLECTION_COL_ALIAS_OUTPUT"
+    exit 1
+fi
+
+# 21. Test create collection with 'vdb-col' alias
+print_status "Testing create collection with 'vdb-col' alias..."
+CREATE_COLLECTION_VDB_COL_ALIAS_OUTPUT=$(./maestro-k create vdb-col test_local_milvus "${COLLECTION_BASE}_vdb_col" --verbose)
+if [[ "$CREATE_COLLECTION_VDB_COL_ALIAS_OUTPUT" == *"✅ Collection '${COLLECTION_BASE}_vdb_col' created successfully in vector database 'test_local_milvus'"* ]]; then
+    print_success "Collection created successfully with 'vdb-col' alias"
+else
+    print_error "Failed to create collection with 'vdb-col' alias"
+    echo "Output: $CREATE_COLLECTION_VDB_COL_ALIAS_OUTPUT"
+    exit 1
+fi
+
+# 22. Test create collection on non-existing database (should fail)
+print_status "Testing create collection on non-existing database (should fail)..."
+CREATE_COLLECTION_NONEXISTENT_OUTPUT=$(./maestro-k create collection non_existent_database test_collection 2>&1 || true)
+if [[ "$CREATE_COLLECTION_NONEXISTENT_OUTPUT" == *"vector database 'non_existent_database' does not exist"* ]]; then
+    print_success "Create collection correctly fails for non-existing database"
+else
+    print_error "Create collection should have failed for non-existing database"
+    echo "Output: $CREATE_COLLECTION_NONEXISTENT_OUTPUT"
+    exit 1
+fi
+
+# 23. Test create collection with missing arguments (should fail)
+print_status "Testing create collection with missing arguments (should fail)..."
+CREATE_COLLECTION_MISSING_ARGS_OUTPUT=$(./maestro-k create collection test_local_milvus 2>&1 || true)
+if [[ "$CREATE_COLLECTION_MISSING_ARGS_OUTPUT" == *"accepts 2 arg(s), received 1"* ]]; then
+    print_success "Create collection correctly fails with missing arguments"
+else
+    print_error "Create collection should have failed with missing arguments"
+    echo "Output: $CREATE_COLLECTION_MISSING_ARGS_OUTPUT"
+    exit 1
+fi
+
+# 24. Test create collection with too many arguments (should fail)
+print_status "Testing create collection with too many arguments (should fail)..."
+CREATE_COLLECTION_TOO_MANY_ARGS_OUTPUT=$(./maestro-k create collection test_local_milvus test_collection extra_arg 2>&1 || true)
+if [[ "$CREATE_COLLECTION_TOO_MANY_ARGS_OUTPUT" == *"accepts 2 arg(s), received 3"* ]]; then
+    print_success "Create collection correctly fails with too many arguments"
+else
+    print_error "Create collection should have failed with too many arguments"
+    echo "Output: $CREATE_COLLECTION_TOO_MANY_ARGS_OUTPUT"
+    exit 1
+fi
+
+# 25. Test create collection with dry-run mode
+print_status "Testing create collection with dry-run mode..."
+CREATE_COLLECTION_DRY_RUN_OUTPUT=$(./maestro-k create collection test_local_milvus "${COLLECTION_BASE}_dry_run" --dry-run)
+if [[ "$CREATE_COLLECTION_DRY_RUN_OUTPUT" == *"[DRY RUN] Would create collection '${COLLECTION_BASE}_dry_run' in vector database 'test_local_milvus'"* ]]; then
+    print_success "Create collection dry-run mode works correctly"
+else
+    print_error "Create collection dry-run mode failed"
+    echo "Output: $CREATE_COLLECTION_DRY_RUN_OUTPUT"
+    exit 1
+fi
+
+# 26. Test create collection with silent mode
+print_status "Testing create collection with silent mode..."
+CREATE_COLLECTION_SILENT_OUTPUT=$(./maestro-k create collection test_local_milvus "${COLLECTION_BASE}_silent" --silent)
+if [[ "$CREATE_COLLECTION_SILENT_OUTPUT" != *"✅ Collection '${COLLECTION_BASE}_silent' created successfully"* ]]; then
+    print_success "Create collection silent mode works correctly (no success message)"
+else
+    print_error "Create collection silent mode failed (should not show success message)"
+    echo "Output: $CREATE_COLLECTION_SILENT_OUTPUT"
+    exit 1
+fi
+
+# 27. Verify collections appear in list after creation
+print_status "Verifying collections appear in list after creation..."
+COLLECTIONS_AFTER_CREATE=$(./maestro-k list collections test_local_milvus --verbose)
+if [[ "$COLLECTIONS_AFTER_CREATE" == *"${COLLECTION_BASE}_basic"* ]] && [[ "$COLLECTIONS_AFTER_CREATE" == *"${COLLECTION_BASE}_embedding"* ]] && [[ "$COLLECTIONS_AFTER_CREATE" == *"${COLLECTION_BASE}_col"* ]] && [[ "$COLLECTIONS_AFTER_CREATE" == *"${COLLECTION_BASE}_vdb_col"* ]]; then
+    print_success "All created collections appear in list"
+else
+    print_error "Not all created collections found in list"
+    echo "Output: $COLLECTIONS_AFTER_CREATE"
+    exit 1
+fi
+
+# 28. Delete a vector database
 print_status "Testing delete functionality..."
 DELETE_OUTPUT=$(./maestro-k delete vector-db test_local_milvus --verbose)
 if [[ "$DELETE_OUTPUT" == *"✅ Vector database 'test_local_milvus' deleted successfully"* ]]; then
@@ -310,7 +424,7 @@ else
     exit 1
 fi
 
-# 19. List to verify the database was deleted
+# 29. List to verify the database was deleted
 print_status "Verifying database was removed from list..."
 LIST_AFTER_DELETE=$(./maestro-k list vector-dbs --verbose)
 if [[ "$WEAVIATE_CREATED" == "true" ]]; then
@@ -333,7 +447,7 @@ else
     fi
 fi
 
-# 20. Stop the MCP server
+# 30. Stop the MCP server
 print_status "Stopping MCP server..."
 cd "$PROJECT_ROOT"
 ./stop.sh

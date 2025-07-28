@@ -1,60 +1,69 @@
 # ✅ `list` command
 
 * ✅ add sub-command to return `vector-databases` configured. Usage like:
-    ```yaml
+    ```bash
     $ maestro-k list (vector-database | vector-db | vdbs) [options]
     ```
 
 * ✅ add sub-command to return `embeddings` that a vdb supports. Usage like:
-    ```yaml
+    ```bash
     $ maestro-k list (embeddings | embed | vdb-embed) VDB_NAME [options]
     ```
 
 * ✅ add sub-command to return `documents` in a collection of a vdb. CLI usage examples:
-    ```yaml
+    ```bash
     $ maestro-k list (documents | docs | vdb-docs) VDB_NAME COLLECTION_NAME [options]
     ```
 
 * ✅ add sub-command to return `collections` in a vdb. Usage like:
-    ```yaml
+    ```bash
     $ maestro-k list (collections | cols | vdb-cols) VDB_NAME [options]
     ```
 
 # `create` command
 
-* add sub-command to `create` a `collection` in a vdb. Usage like:
-    ```yaml
+* ✅ add sub-command to `create` a `collection` in a vdb. Usage like:
+    ```bash
     $ maestro-k create (collection | vdb-col | col) VBD_NAME [options]
     ```
 
 * add sub-command to (`create` | `write`) a `document` in a collection of a vdb with a specified embedding or the default if none specified. Usage like:
-    ```yaml
-    $ maestro-k (create | write) (document | vdb-doc | doc) VBD_NAME COLLECTION_NAME (EMBEDDING_NAME) [options]
+    ```bash
+    $ maestro-k create (document | vdb-doc | doc) VBD_NAME COLLECTION_NAME --doc-file-name=DOC_FILE_NAME [options] # use default embedding for vdb
+    $ maestro-k create (document | vdb-doc | doc) VBD_NAME COLLECTION_NAME --doc-file-name=DOC_FILE_NAME --embedding=EMBEDDING_NAME [options]
+    $ maestro-k create (document | vdb-doc | doc) VBD_NAME COLLECTION_NAME --file-name=DOC_FILE_NAME --embedding=EMBEDDING_NAME [options]
+    
+    $ maestro-k write (document | vdb-doc | doc) VBD_NAME COLLECTION_NAME --doc-file-name=DOC_FILE_NAME [options] #use default embedding for vdb
+    $ maestro-k write (document | vdb-doc | doc) VBD_NAME COLLECTION_NAME --doc-file-name=DOC_FILE_NAME --embedding=EMBEDDING_NAME [options]
+    $ maestro-k write (document | vdb-doc | doc) VBD_NAME COLLECTION_NAME --file-name=DOC_FILE_NAME --embedding=EMBEDDING_NAME [options]
     ```
 
 # `delete` command
 
 * add sub-command to (`delete` | `del`) a `collection` in a vdb. Usage like:
-    ```yaml
-    $ maestro-k (delete | del) (collection | vdb-col | col) VBD_NAME [options]
+    ```bash
+    $ maestro-k delete (collection | vdb-col | col) VBD_NAME [options]
+    $ maestro-k del (collection | vdb-col | col) VBD_NAME [options]
     ```
 
 * add sub-command to (`delete` | `del`) a `document` in a collection of a vdb. Usage like:
-    ```yaml
-    $ maestro-k (delete | del) (document | vdb-doc | doc) VBD_NAME COLLECTION_NAME [options]
+    ```bash
+    $ maestro-k delete (document | vdb-doc | doc) VBD_NAME COLLECTION_NAME [options]
+    $ maestro-k del (document | vdb-doc | doc) VBD_NAME COLLECTION_NAME [options]
     ```
-
 
 # `retrieve` or `get` command
 
 * add sub-command to (`retrieve` | `get`) a `collection` in a vdb. Usage like:
-    ```yaml
-    $ maestro-k (retrieve | get) (collection | vdb-col | col) VBD_NAME [options]
+    ```bash
+    $ maestro-k retrieve (collection | vdb-col | col) VBD_NAME [options]
+    $ maestro-k get (collection | vdb-col | col) VBD_NAME [options]
     ```
 
 * add sub-command to (`retrieve` | `get`) a `document` in a collection of a vdb. Usage like:
-    ```yaml
-    $ maestro-k (retrieve | get) (document | vdb-doc | doc) VBD_NAME COLLECTION_NAME [options]
+    ```bash
+    $ maestro-k retrieve (document | vdb-doc | doc) VBD_NAME COLLECTION_NAME [options]
+    $ maestro-k get (document | vdb-doc | doc) VBD_NAME COLLECTION_NAME [options]
     ```
 
 # other

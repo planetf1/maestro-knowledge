@@ -440,6 +440,34 @@ func (c *MCPClient) ListDocumentsInCollection(dbName, collectionName string) (st
 	return "", fmt.Errorf("unexpected response format from MCP server")
 }
 
+// CreateCollection calls the create_collection tool on the MCP server
+func (c *MCPClient) CreateCollection(dbName, collectionName, embedding string) error {
+	params := map[string]interface{}{
+		"input": map[string]interface{}{
+			"db_name":         dbName,
+			"collection_name": collectionName,
+			"embedding":       embedding,
+		},
+	}
+
+	response, err := c.callMCPServer("create_collection", params)
+	if err != nil {
+		return err
+	}
+
+	// Check for error in response
+	if response.Error != nil {
+		return fmt.Errorf("MCP server error: %s", response.Error.Message)
+	}
+
+	// The response should be a success message
+	if response.Result == nil {
+		return fmt.Errorf("no response from MCP server")
+	}
+
+	return nil
+}
+
 // Close closes the MCP client
 func (c *MCPClient) Close() error {
 	// Cancel the context to prevent context leaks

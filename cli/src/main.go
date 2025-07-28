@@ -48,6 +48,14 @@ A command-line interface for working with Maestro Knowledge configurations.`,
 	rootCmd.AddCommand(deleteCmd)
 	rootCmd.AddCommand(listCmd)
 
+	// Add sub-commands to create command
+	createCmd.AddCommand(createVdbCmd)
+	createCmd.AddCommand(createVdbShortCmd)
+	createCmd.AddCommand(createVdbVdbCmd)
+	createCmd.AddCommand(createCollectionCmd)
+	createCmd.AddCommand(createVdbColCmd)
+	createCmd.AddCommand(createColCmd)
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)

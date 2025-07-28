@@ -96,16 +96,12 @@ spec:
 // TestCreateVectorDatabaseWithInvalidResourceType tests invalid resource type
 func TestCreateVectorDatabaseWithInvalidResourceType(t *testing.T) {
 	cmd := exec.Command("../../maestro-k", "create", "invalid-resource", "test.yaml")
-	output, err := cmd.CombinedOutput()
+	output, _ := cmd.CombinedOutput()
 
-	// Should fail with invalid resource type
-	if err == nil {
-		t.Error("Create command should fail with invalid resource type")
-	}
-
+	// Should show help message for invalid resource type
 	outputStr := string(output)
-	if !contains(outputStr, "unsupported resource type") {
-		t.Errorf("Error message should mention unsupported resource type, got: %s", outputStr)
+	if !contains(outputStr, "Available Commands:") {
+		t.Errorf("Should show available commands for invalid resource type, got: %s", outputStr)
 	}
 }
 
