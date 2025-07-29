@@ -33,16 +33,18 @@ print_help() {
     echo "Usage: ./test.sh [COMMAND]"
     echo ""
     echo "Commands:"
-    echo "  cli     Run only CLI tests (Go-based command line interface)"
-    echo "  mcp     Run only MCP server tests (Python-based server)"
-    echo "  all     Run all tests (CLI + MCP + Integration)"
-    echo "  help    Show this help message"
+    echo "  cli         Run only CLI tests (Go-based command line interface)"
+    echo "  mcp         Run only MCP server tests (Python-based server)"
+    echo "  integration Run only integration tests (CLI + MCP end-to-end)"
+    echo "  all         Run all tests (CLI + MCP + Integration)"
+    echo "  help        Show this help message"
     echo ""
     echo "Examples:"
-    echo "  ./test.sh cli     # Run only CLI tests"
-    echo "  ./test.sh mcp     # Run only MCP server tests"
-    echo "  ./test.sh all     # Run all tests"
-    echo "  ./test.sh         # Run MCP tests (default)"
+    echo "  ./test.sh cli         # Run only CLI tests"
+    echo "  ./test.sh mcp         # Run only MCP server tests"
+    echo "  ./test.sh integration # Run only integration tests"
+    echo "  ./test.sh all         # Run all tests"
+    echo "  ./test.sh             # Run MCP tests (default)"
     echo ""
     echo "Test Categories:"
     echo "  CLI Tests:"
@@ -74,6 +76,11 @@ case "${1:-mcp}" in
         RUN_CLI_TESTS=false
         RUN_MCP_TESTS=true
         RUN_INTEGRATION_TESTS=false
+        ;;
+    "integration")
+        RUN_CLI_TESTS=false
+        RUN_MCP_TESTS=false
+        RUN_INTEGRATION_TESTS=true
         ;;
     "all")
         RUN_CLI_TESTS=true
@@ -241,15 +248,15 @@ fi
 if [ "$RUN_INTEGRATION_TESTS" = true ]; then
     print_header "Running Integration Tests..."
     
-    if [ -f "./test-integration.sh" ]; then
-        if ./test-integration.sh; then
+    if [ -f "./tools/test-integration.sh" ]; then
+        if ./tools/test-integration.sh; then
             print_status "✓ Integration tests passed"
         else
             print_error "Integration tests failed"
             exit 1
         fi
     else
-        print_warning "test-integration.sh not found, skipping integration tests"
+        print_warning "tools/test-integration.sh not found, skipping integration tests"
     fi
     
     print_header "Integration Tests Completed Successfully! 🎉"

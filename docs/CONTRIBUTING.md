@@ -130,7 +130,10 @@ maestro-knowledge/
 │       └── ci.yml           # Continuous Integration workflow
 ├── test.sh                  # Test runner script (CLI, MCP, Integration)
 ├── test-integration.sh      # CLI integration tests
-├── lint.sh                  # Linting and formatting script
+├── tools/                   # Development tools
+│   ├── lint.sh              # Linting and formatting script
+│   ├── e2e.sh               # End-to-end testing script
+│   └── test-integration.sh  # Integration tests
 ├── pyproject.toml           # Project configuration
 └── README.md                # Main project documentation
 ```
@@ -528,15 +531,16 @@ This section lists the labels we use to help us track and manage issues and pull
 Before submitting a pull request, you **MUST** run the following sequence of commands to ensure code quality and functionality:
 
 ```bash
-./lint.sh && ./test.sh all && ./test-integration.sh
+./tools/lint.sh && ./test.sh all && ./test-integration.sh
 ```
 
 This comprehensive test sequence will:
-1. **Lint and format code** (`./lint.sh`) - Ensures code follows style guidelines
+1. **Lint and format code** (`./tools/lint.sh`) - Ensures code follows style guidelines
 2. **Start the MCP server** (`./start.sh`) - Prepares the environment for testing
 3. **Run all tests** (`./test.sh all`) - Validates unit tests and functionality
 4. **Run integration tests** (`./test-integration.sh`) - Tests end-to-end functionality
-5. **Stop the MCP server** (`./stop.sh`) - Cleans up the environment
+5. **Run e2e tests** (`./tools/e2e.sh all`) - Tests complete workflows with CLI tool
+6. **Stop the MCP server** (`./stop.sh`) - Cleans up the environment
 
 **⚠️ Important**: This sequence must pass completely before submitting a PR. If any step fails, fix the issues and run the sequence again.
 
@@ -545,7 +549,7 @@ This comprehensive test sequence will:
 In addition to the automated checks above, please ensure that:
 
 1. All tests pass (`./test.sh all`)
-2. All linting checks pass (`./lint.sh`)
+2. All linting checks pass (`./tools/lint.sh`)
 3. The code is properly formatted
 4. Documentation is updated
 5. New tests are added for new functionality
@@ -562,7 +566,7 @@ In addition to the automated checks above, please ensure that:
 We use Ruff for linting and formatting. Run the comprehensive check:
 
 ```bash
-./lint.sh
+./tools/lint.sh
 ```
 
 This script will:
@@ -608,6 +612,32 @@ We have comprehensive integration tests that validate our examples:
 # - Environment validation tests
 # - Embedding functionality tests
 # - CLI integration tests
+```
+
+### End-to-End Tests
+
+We have end-to-end tests that validate complete workflows with the CLI tool:
+
+```bash
+# Show e2e test options
+./tools/e2e.sh help
+
+# Run fast e2e workflow (basic functionality)
+./tools/e2e.sh fast
+
+# Run complete e2e workflow (with error testing)
+./tools/e2e.sh complete
+
+# Run both fast and complete workflows
+./tools/e2e.sh all
+
+# The e2e test suite includes:
+# - Vector database creation from YAML
+# - Collection management (create, list, delete)
+# - Embedding listing
+# - Document listing (when write command is implemented)
+# - Error handling validation
+# - Cleanup and resource management
 ```
 
 ### Test Organization

@@ -299,7 +299,7 @@ The project includes several utility scripts for development and testing:
 
 ```bash
 # Code quality and formatting
-./lint.sh                    # Run linting and formatting checks
+./tools/lint.sh              # Run linting and formatting checks
 
 # MCP server management
 ./start.sh                   # Start the MCP server
@@ -329,7 +329,7 @@ cd cli && ./build.sh         # Build the CLI tool
 ./test.sh help               # Show test command help
 
 # Run comprehensive test suite (recommended before PR)
-./lint.sh && ./test.sh all && ./test-integration.sh
+./tools/lint.sh && ./test.sh all
 
 # Or run individual test files
 python -m pytest tests/
@@ -339,6 +339,12 @@ pytest tests/test_vector_database_yamls.py -v
 
 # Run integration tests
 ./test-integration.sh
+
+# Run end-to-end tests
+./tools/e2e.sh help                    # Show e2e test options
+./tools/e2e.sh fast                    # Run fast e2e workflow
+./tools/e2e.sh complete                # Run complete e2e workflow with error testing
+./tools/e2e.sh all                     # Run both fast and complete workflows
 ```
 
 ## Project Structure
@@ -364,9 +370,11 @@ maestro-knowledge/
 │   └── README.md            # CLI documentation
 ├── start.sh                 # MCP server start script
 ├── stop.sh                  # MCP server stop script
-├── lint.sh                  # Code linting and formatting
+├── tools/                   # Development tools
+│   ├── lint.sh              # Code linting and formatting
+│   ├── e2e.sh               # End-to-end testing script
+│   └── test-integration.sh  # Integration tests
 ├── test.sh                  # Test runner script (CLI, MCP, Integration)
-├── test-integration.sh      # Integration tests
 ├── tests/                   # Test suite
 │   ├── test_vector_db_*.py  # Vector database tests
 │   ├── test_mcp_server.py   # MCP server tests
@@ -403,10 +411,25 @@ See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for contribution guidelines.
 Before submitting a pull request, run the comprehensive test suite:
 
 ```bash
-./lint.sh && ./test.sh all && ./test-integration.sh
+./tools/lint.sh && ./test.sh all
 ```
 
 This ensures code quality, functionality, and integration with the CLI tool.
+
+### Recommended Development Workflow
+
+For a complete development workflow that tests everything end-to-end:
+
+```bash
+./start.sh && ./tools/e2e.sh fast && ./stop.sh
+```
+
+This workflow:
+1. Starts the MCP server
+2. Runs the fast end-to-end test suite
+3. Stops the MCP server
+
+This is useful for quickly validating that your changes work correctly in a real environment.
 
 ## License
 

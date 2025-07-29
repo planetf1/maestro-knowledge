@@ -242,7 +242,7 @@ write_document(db_name="project_b", ...)
 
 ## Pre-PR Test Suite
 ```bash
-./lint.sh && ./test.sh all && ./test-integration.sh
+./tools/lint.sh && ./test.sh all && ./test-integration.sh
 ```
 This comprehensive sequence ensures:
 - Code quality and formatting
@@ -271,9 +271,11 @@ maestro-knowledge/
 ├── docs/                 # Documentation
 ├── start.sh              # MCP server start
 ├── stop.sh               # MCP server stop
-├── lint.sh               # Code quality
+├── tools/                # Development tools
+│   ├── lint.sh           # Code quality
+│   ├── e2e.sh            # End-to-end testing
+│   └── test-integration.sh # Integration tests
 ├── test.sh               # Test runner (CLI, MCP, Integration)
-└── test-integration.sh   # Integration tests
 ```
 
 ---
@@ -361,7 +363,7 @@ cd cli
 go test ./...
 
 # Comprehensive testing (before PR)
-./lint.sh && ./test.sh all && ./test-integration.sh
+./tools/lint.sh && ./test.sh all
 ```
 
 ## Guidelines

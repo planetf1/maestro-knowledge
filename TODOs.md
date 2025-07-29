@@ -68,6 +68,14 @@
 
 # other
 
+* ✅ clean up tools scripts into one directory
+
+* ✅ add ./tools/e2e.sh script
+
+* ✅ move CLI examples before Python examples in README
+
+* ✅ add recommended development workflow for contributions
+
 * support `collection_names` as a list of string in agent defintion and MCP server:
     ```yaml
     apiVersion: maestro/v1alpha1
@@ -87,6 +95,9 @@
     mode: local
     ```
     This implies changes to the schema, examlpes, and might also imply changes to MCP server functions and CLI to take the collection_name as a required parameter since there could be many collections in the VectorDatabase. One idea is to have a `get_collection_names_tool` for a VectorDatabase. 
+
+* a few bugs remain
+- test-integration.sh still pollutes tests db and should leave it empty
 
 * add a way to send a query to the vdb default query agent
 

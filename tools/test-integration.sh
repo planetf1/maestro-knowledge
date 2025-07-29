@@ -28,7 +28,7 @@ print_error() {
 
 # Get the project root directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$SCRIPT_DIR"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 CLI_DIR="$PROJECT_ROOT/cli"
 
 print_status "Testing CLI integration with MCP server"
