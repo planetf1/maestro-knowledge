@@ -189,7 +189,8 @@ func (c *MCPClient) callMCPServer(method string, params interface{}) (*MCPRespon
 			contentText := textContent.Text
 			if strings.Contains(contentText, "ValueError:") ||
 				strings.Contains(contentText, "Error:") ||
-				strings.Contains(contentText, "Exception:") {
+				strings.Contains(contentText, "Exception:") ||
+				strings.Contains(contentText, "Error calling tool") {
 				// This is an error response
 				result.Error = &MCPError{
 					Code:    -1,

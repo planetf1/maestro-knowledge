@@ -105,10 +105,18 @@ print_success "All CLI integration tests passed!"
 # Start comprehensive end-to-end testing
 print_status "Starting comprehensive end-to-end testing..."
 
-# Clean up any existing test databases
-print_status "Cleaning up existing test databases..."
+# Clean up any existing test databases and collections
+print_status "Cleaning up existing test databases and collections..."
 ./maestro-k delete vdb test_local_milvus --silent 2>/dev/null || true
 ./maestro-k delete vdb test_remote_weaviate --silent 2>/dev/null || true
+
+# Clean up any test collections that might exist in other databases
+print_status "Cleaning up any existing test collections..."
+for db_name in $(./maestro-k list vector-dbs --silent 2>/dev/null | grep -E "test_local_milvus|test_remote_weaviate" | awk '{print $1}' 2>/dev/null || true); do
+    for collection in $(./maestro-k list collections "$db_name" --silent 2>/dev/null | grep -E "test_collection_.*" | awk '{print $1}' 2>/dev/null || true); do
+        ./maestro-k delete collection "$db_name" "$collection" --silent 2>/dev/null || true
+    done
+done
 
 # 2. Start the MCP server
 print_status "Starting MCP server..."
@@ -525,7 +533,7 @@ fi
 # Test error handling for non-existent collection
 print_status "Testing error handling for non-existent collection..."
 GET_COL_NONEXISTENT_OUTPUT=$(./maestro-k get col test_local_milvus non_existent_collection 2>&1 || true)
-if [[ "$GET_COL_NONEXISTENT_OUTPUT" == *"Collection 'non_existent_collection' not found"* ]]; then
+if [[ "$GET_COL_NONEXISTENT_OUTPUT" == *"collection 'non_existent_collection' not found in vector database 'test_local_milvus'"* ]]; then
     print_success "Get col correctly fails for non-existent collection"
 else
     print_error "Get col should have failed for non-existent collection"
@@ -534,7 +542,7 @@ else
 fi
 
 LIST_DOCS_NONEXISTENT_OUTPUT=$(./maestro-k list docs test_local_milvus non_existent_collection 2>&1 || true)
-if [[ "$LIST_DOCS_NONEXISTENT_OUTPUT" == *"Collection 'non_existent_collection' not found"* ]]; then
+if [[ "$LIST_DOCS_NONEXISTENT_OUTPUT" == *"Collection 'non_existent_collection' not found in vector database 'test_local_milvus'"* ]] || [[ "$LIST_DOCS_NONEXISTENT_OUTPUT" == *"collection 'non_existent_collection' not found in vector database 'test_local_milvus'"* ]]; then
     print_success "List docs correctly fails for non-existent collection"
 else
     print_error "List docs should have failed for non-existent collection"
@@ -686,7 +694,25 @@ else
     fi
 fi
 
-# 41. Stop the MCP server
+# 41. Final cleanup - ensure no test artifacts remain
+print_status "Performing final cleanup..."
+cd "$CLI_DIR"
+
+# Clean up any remaining test collections
+for db_name in $(./maestro-k list vector-dbs --silent 2>/dev/null | grep -E "test_local_milvus|test_remote_weaviate" | awk '{print $1}' 2>/dev/null || true); do
+    for collection in $(./maestro-k list collections "$db_name" --silent 2>/dev/null | grep -E "test_collection_.*" | awk '{print $1}' 2>/dev/null || true); do
+        print_status "Cleaning up remaining test collection: $collection in $db_name"
+        ./maestro-k delete collection "$db_name" "$collection" --silent 2>/dev/null || true
+    done
+done
+
+# Clean up any remaining test databases
+./maestro-k delete vdb test_local_milvus --silent 2>/dev/null || true
+./maestro-k delete vdb test_remote_weaviate --silent 2>/dev/null || true
+
+print_success "Final cleanup completed"
+
+# 42. Stop the MCP server
 print_status "Stopping MCP server..."
 cd "$PROJECT_ROOT"
 ./stop.sh

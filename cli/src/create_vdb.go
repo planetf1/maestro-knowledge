@@ -17,6 +17,9 @@ Examples:
   maestro-k create vector-database config.yaml --uri=localhost:8000 --mode=local`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Suppress usage for all errors except usage errors
+		cmd.SilenceUsage = true
+
 		yamlFile := args[0]
 		return createVectorDatabase(yamlFile)
 	},
@@ -35,6 +38,9 @@ Examples:
   maestro-k create vector-db config.yaml --uri=localhost:8000 --mode=local`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Suppress usage for all errors except usage errors
+		cmd.SilenceUsage = true
+
 		yamlFile := args[0]
 		return createVectorDatabase(yamlFile)
 	},
@@ -53,6 +59,9 @@ Examples:
   maestro-k create vdb config.yaml --uri=localhost:8000 --mode=local`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Suppress usage for all errors except usage errors
+		cmd.SilenceUsage = true
+
 		yamlFile := args[0]
 		return createVectorDatabase(yamlFile)
 	},

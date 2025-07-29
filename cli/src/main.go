@@ -33,7 +33,8 @@ func main() {
 		Long: `Maestro Knowledge CLI tool for validating YAML files and schemas.
 		
 A command-line interface for working with Maestro Knowledge configurations.`,
-		Version: version + " (built " + buildTime + ")",
+		Version:       version + " (built " + buildTime + ")",
+		SilenceErrors: true, // Prevent Cobra from automatically printing errors
 	}
 
 	// Global flags

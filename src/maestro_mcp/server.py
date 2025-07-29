@@ -252,7 +252,18 @@ def create_mcp_server() -> FastMCP:
 
         # Check if the collection exists
         collections = db.list_collections()
-        if input.collection_name not in collections:
+        print(
+            f"[DEBUG] input.collection_name: {repr(input.collection_name)} (type: {type(input.collection_name)})"
+        )
+        for c in collections:
+            print(f"[DEBUG] collection in list: {repr(c)} (type: {type(c)})")
+        # Normalize both sides for comparison
+        normalized_input = input.collection_name.strip().lower()
+        normalized_collections = [str(c).strip().lower() for c in collections]
+        if normalized_input not in normalized_collections:
+            print(
+                f"[DEBUG] Raising ValueError: Collection '{input.collection_name}' not found in vector database '{input.db_name}' (normalized check)"
+            )
             raise ValueError(
                 f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
             )
@@ -291,6 +302,17 @@ def create_mcp_server() -> FastMCP:
     async def delete_collection(input: DeleteCollectionInput) -> str:
         """Delete an entire collection from a vector database."""
         db = get_database_by_name(input.db_name)
+
+        # Check if the collection exists
+        collections = db.list_collections()
+        # Normalize both sides for comparison
+        normalized_input = input.collection_name.strip().lower()
+        normalized_collections = [str(c).strip().lower() for c in collections]
+        if normalized_input not in normalized_collections:
+            raise ValueError(
+                f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
+            )
+
         db.delete_collection(input.collection_name)
 
         return f"Successfully deleted collection '{input.collection_name}' from vector database '{input.db_name}'"

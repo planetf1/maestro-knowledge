@@ -25,6 +25,9 @@ Examples:
   maestro-k validate custom-schema.json config.yaml         # Validates against custom schema`,
 	Args: cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Suppress usage for all errors except usage errors
+		cmd.SilenceUsage = true
+
 		var yamlFile, schemaFile string
 
 		if len(args) == 1 {

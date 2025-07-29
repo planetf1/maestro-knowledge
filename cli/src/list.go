@@ -37,6 +37,9 @@ Examples:
   maestro-k list docs my-database my-collection --verbose`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Suppress usage for all errors except usage errors
+		cmd.SilenceUsage = true
+
 		resourceType := args[0]
 
 		// Handle embeddings subcommand

@@ -7,6 +7,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// CollectionNotFoundError is a custom error type for collection not found errors
+type CollectionNotFoundError struct {
+	CollectionName string
+	VDBName        string
+}
+
+func (e *CollectionNotFoundError) Error() string {
+	return fmt.Sprintf("Collection '%s' not found in vector database '%s'", e.CollectionName, e.VDBName)
+}
+
 var deleteCmd = &cobra.Command{
 	Use:   "delete (vector-database | vector-db | vdb) NAME | delete (collection | vdb-col | col) VDB_NAME COLLECTION_NAME",
 	Short: "Delete vector database resources",
@@ -27,6 +37,9 @@ Examples:
   maestro-k delete col my-weaviate-db my-collection`,
 	Args: cobra.RangeArgs(2, 3),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Suppress usage for all errors except usage errors
+		cmd.SilenceUsage = true
+
 		resourceType := args[0]
 
 		// Handle vector database deletion (2 args)
@@ -47,7 +60,12 @@ Examples:
 			if resourceType == "collection" || resourceType == "vdb-col" || resourceType == "col" {
 				vdbName := args[1]
 				collectionName := args[2]
-				return deleteCollection(vdbName, collectionName)
+				err := deleteCollection(vdbName, collectionName)
+				// Suppress usage for collection not found errors
+				if _, ok := err.(*CollectionNotFoundError); ok {
+					cmd.SilenceUsage = true
+				}
+				return err
 			}
 			return fmt.Errorf("unsupported resource type: %s. Use 'collection', 'vdb-col', or 'col'", resourceType)
 		}
@@ -76,6 +94,9 @@ Examples:
   maestro-k del col my-weaviate-db my-collection`,
 	Args: cobra.RangeArgs(2, 3),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Suppress usage for all errors except usage errors
+		cmd.SilenceUsage = true
+
 		resourceType := args[0]
 
 		// Handle vector database deletion (2 args)
@@ -96,7 +117,12 @@ Examples:
 			if resourceType == "collection" || resourceType == "vdb-col" || resourceType == "col" {
 				vdbName := args[1]
 				collectionName := args[2]
-				return deleteCollection(vdbName, collectionName)
+				err := deleteCollection(vdbName, collectionName)
+				// Suppress usage for collection not found errors
+				if _, ok := err.(*CollectionNotFoundError); ok {
+					cmd.SilenceUsage = true
+				}
+				return err
 			}
 			return fmt.Errorf("unsupported resource type: %s. Use 'collection', 'vdb-col', or 'col'", resourceType)
 		}
@@ -197,17 +223,7 @@ func performCollectionDeletion(vdbName, collectionName string) error {
 		return fmt.Errorf("vector database '%s' does not exist", vdbName)
 	}
 
-	// Check if collection exists before deleting
-	collections, err := client.ListCollections(vdbName)
-	if err != nil {
-		return fmt.Errorf("failed to list collections: %w", err)
-	}
-
-	// Simple check if collection exists in the response
-	// This is a basic check - in a production environment you might want more sophisticated parsing
-	if !strings.Contains(collections, collectionName) {
-		return fmt.Errorf("collection '%s' does not exist in vector database '%s'", collectionName, vdbName)
-	}
+	// Collection existence check is now handled by the MCP server
 
 	// Call the MCP server to delete the collection with panic recovery
 	var deleteErr error
@@ -222,6 +238,14 @@ func performCollectionDeletion(vdbName, collectionName string) error {
 	}()
 
 	if deleteErr != nil {
+		// Check if it's a collection not found error and provide cleaner output
+		errMsg := deleteErr.Error()
+		if strings.Contains(errMsg, "not found in vector database") {
+			// Extract the collection name and vdb name from the error message
+			// Error format: "Collection 'collection_name' not found in vector database 'vdb_name'"
+			return &CollectionNotFoundError{CollectionName: collectionName, VDBName: vdbName}
+		}
+		// For other errors, wrap with context
 		return fmt.Errorf("failed to delete collection: %w", deleteErr)
 	}
 

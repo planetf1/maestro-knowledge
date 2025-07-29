@@ -26,6 +26,9 @@ Examples:
   maestro-k retrieve doc my-database my-collection --verbose`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Suppress usage for all errors except usage errors
+		cmd.SilenceUsage = true
+
 		resourceType := args[0]
 		vdbName := args[1]
 
@@ -41,13 +44,13 @@ Examples:
 		// Handle document subcommand
 		if resourceType == "document" || resourceType == "vdb-doc" || resourceType == "doc" {
 			if len(args) < 3 {
-				return fmt.Errorf("COLLECTION_NAME is required for document command")
+				return fmt.Errorf("collection name is required for document command")
 			}
 			collectionName := args[2]
 			return retrieveDocument(vdbName, collectionName)
 		}
 
-		return fmt.Errorf("unsupported resource type: %s. Use 'collection', 'vdb-col', 'col', 'document', 'vdb-doc', or 'doc'", resourceType)
+		return fmt.Errorf("unsupported resource type: %s. use 'collection', 'vdb-col', 'col', 'document', 'vdb-doc', or 'doc'", resourceType)
 	},
 }
 
@@ -71,6 +74,9 @@ Examples:
   maestro-k get doc my-database my-collection --verbose`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Suppress usage for all errors except usage errors
+		cmd.SilenceUsage = true
+
 		resourceType := args[0]
 		vdbName := args[1]
 
@@ -86,13 +92,13 @@ Examples:
 		// Handle document subcommand
 		if resourceType == "document" || resourceType == "vdb-doc" || resourceType == "doc" {
 			if len(args) < 3 {
-				return fmt.Errorf("COLLECTION_NAME is required for document command")
+				return fmt.Errorf("collection name is required for document command")
 			}
 			collectionName := args[2]
 			return retrieveDocument(vdbName, collectionName)
 		}
 
-		return fmt.Errorf("unsupported resource type: %s. Use 'collection', 'vdb-col', 'col', 'document', 'vdb-doc', or 'doc'", resourceType)
+		return fmt.Errorf("unsupported resource type: %s. use 'collection', 'vdb-col', 'col', 'document', 'vdb-doc', or 'doc'", resourceType)
 	},
 }
 
@@ -130,7 +136,7 @@ func retrieveCollection(vdbName, collectionName string) error {
 		errMsg := err.Error()
 		if contains(errMsg, "not found in vector database") {
 			// For collection not found errors, return a clean message
-			return fmt.Errorf("Collection '%s' not found in vector database '%s'", collectionName, vdbName)
+			return fmt.Errorf("collection '%s' not found in vector database '%s'", collectionName, vdbName)
 		}
 		return fmt.Errorf("failed to retrieve collection info: %w", err)
 	}

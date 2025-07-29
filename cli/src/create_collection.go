@@ -19,6 +19,9 @@ Examples:
   maestro-k create collection my-database my-collection --embedding=text-embedding-3-small`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Suppress usage for all errors except usage errors
+		cmd.SilenceUsage = true
+
 		vdbName := args[0]
 		collectionName := args[1]
 		return createCollection(vdbName, collectionName)
@@ -38,6 +41,9 @@ Examples:
   maestro-k create vdb-col my-database my-collection --embedding=text-embedding-3-small`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Suppress usage for all errors except usage errors
+		cmd.SilenceUsage = true
+
 		vdbName := args[0]
 		collectionName := args[1]
 		return createCollection(vdbName, collectionName)
@@ -57,6 +63,9 @@ Examples:
   maestro-k create col my-database my-collection --embedding=text-embedding-3-small`,
 	Args: cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Suppress usage for all errors except usage errors
+		cmd.SilenceUsage = true
+
 		vdbName := args[0]
 		collectionName := args[1]
 		return createCollection(vdbName, collectionName)

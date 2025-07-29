@@ -257,29 +257,38 @@ class MilvusVectorDatabase(VectorDatabase):
             warnings.warn("Milvus client is not available. Returning empty list.")
             return []
 
-        # Query all documents, paginated
-        results = self.client.query(
-            self.collection_name,
-            output_fields=["id", "url", "text", "metadata"],
-            limit=limit,
-            offset=offset,
-        )
+        # Check if collection name is set
+        if self.collection_name is None:
+            warnings.warn("No collection name set. Returning empty list.")
+            return []
 
-        docs = []
-        for doc in results:
-            try:
-                metadata = json.loads(doc.get("metadata", "{}"))
-            except Exception:
-                metadata = {}
-            docs.append(
-                {
-                    "id": doc.get("id"),
-                    "url": doc.get("url", ""),
-                    "text": doc.get("text", ""),
-                    "metadata": metadata,
-                }
+        try:
+            # Query all documents, paginated
+            results = self.client.query(
+                self.collection_name,
+                output_fields=["id", "url", "text", "metadata"],
+                limit=limit,
+                offset=offset,
             )
-        return docs
+
+            docs = []
+            for doc in results:
+                try:
+                    metadata = json.loads(doc.get("metadata", "{}"))
+                except Exception:
+                    metadata = {}
+                docs.append(
+                    {
+                        "id": doc.get("id"),
+                        "url": doc.get("url", ""),
+                        "text": doc.get("text", ""),
+                        "metadata": metadata,
+                    }
+                )
+            return docs
+        except Exception as e:
+            warnings.warn(f"Could not list documents: {e}")
+            return []
 
     def count_documents(self) -> int:
         """Get the current count of documents in the collection."""
@@ -288,9 +297,18 @@ class MilvusVectorDatabase(VectorDatabase):
             warnings.warn("Milvus client is not available. Returning 0.")
             return 0
 
-        # Get collection statistics
-        stats = self.client.get_collection_stats(self.collection_name)
-        return stats.get("row_count", 0)
+        # Check if collection name is set
+        if self.collection_name is None:
+            warnings.warn("No collection name set. Returning 0.")
+            return 0
+
+        try:
+            # Get collection statistics
+            stats = self.client.get_collection_stats(self.collection_name)
+            return stats.get("row_count", 0)
+        except Exception as e:
+            warnings.warn(f"Could not get collection stats: {e}")
+            return 0
 
     def list_collections(self) -> List[str]:
         """List all collections in Milvus."""
@@ -316,29 +334,39 @@ class MilvusVectorDatabase(VectorDatabase):
             warnings.warn("Milvus client is not available. Returning empty list.")
             return []
 
-        # Query documents from the specific collection
-        results = self.client.query(
-            collection_name,
-            output_fields=["id", "url", "text", "metadata"],
-            limit=limit,
-            offset=offset,
-        )
+        try:
+            # Check if collection exists first
+            if not self.client.has_collection(collection_name):
+                return []
 
-        docs = []
-        for doc in results:
-            try:
-                metadata = json.loads(doc.get("metadata", "{}"))
-            except Exception:
-                metadata = {}
-            docs.append(
-                {
-                    "id": doc.get("id"),
-                    "url": doc.get("url", ""),
-                    "text": doc.get("text", ""),
-                    "metadata": metadata,
-                }
+            # Query documents from the specific collection
+            results = self.client.query(
+                collection_name,
+                output_fields=["id", "url", "text", "metadata"],
+                limit=limit,
+                offset=offset,
             )
-        return docs
+
+            docs = []
+            for doc in results:
+                try:
+                    metadata = json.loads(doc.get("metadata", "{}"))
+                except Exception:
+                    metadata = {}
+                docs.append(
+                    {
+                        "id": doc.get("id"),
+                        "url": doc.get("url", ""),
+                        "text": doc.get("text", ""),
+                        "metadata": metadata,
+                    }
+                )
+            return docs
+        except Exception as e:
+            warnings.warn(
+                f"Could not list documents from collection '{collection_name}': {e}"
+            )
+            return []
 
     def count_documents_in_collection(self, collection_name: str) -> int:
         """Get the current count of documents in a specific collection in Milvus."""
@@ -347,9 +375,19 @@ class MilvusVectorDatabase(VectorDatabase):
             warnings.warn("Milvus client is not available. Returning 0.")
             return 0
 
-        # Get collection statistics for the specific collection
-        stats = self.client.get_collection_stats(collection_name)
-        return stats.get("row_count", 0)
+        try:
+            # Check if collection exists first
+            if not self.client.has_collection(collection_name):
+                return 0
+
+            # Get collection statistics for the specific collection
+            stats = self.client.get_collection_stats(collection_name)
+            return stats.get("row_count", 0)
+        except Exception as e:
+            warnings.warn(
+                f"Could not get collection stats for '{collection_name}': {e}"
+            )
+            return 0
 
     def get_collection_info(self, collection_name: str = None) -> Dict[str, Any]:
         """Get detailed information about a collection."""
