@@ -44,8 +44,13 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def setup(self):
-        """Set up the database and create collections if they don't exist."""
+    def setup(self, embedding: str = "default"):
+        """
+        Set up the database and create collections if they don't exist.
+
+        Args:
+            embedding: Embedding model to use for the collection
+        """
         pass
 
     @abstractmethod

@@ -126,6 +126,12 @@ func retrieveCollection(vdbName, collectionName string) error {
 	// Call the get_collection_info method
 	result, err := client.GetCollectionInfo(vdbName, collectionName)
 	if err != nil {
+		// Check if it's a collection not found error and provide cleaner output
+		errMsg := err.Error()
+		if contains(errMsg, "not found in vector database") {
+			// For collection not found errors, return a clean message
+			return fmt.Errorf("Collection '%s' not found in vector database '%s'", collectionName, vdbName)
+		}
 		return fmt.Errorf("failed to retrieve collection info: %w", err)
 	}
 
@@ -134,6 +140,21 @@ func retrieveCollection(vdbName, collectionName string) error {
 	}
 	fmt.Println(result)
 	return nil
+}
+
+// Helper function to check if a string contains a substring
+func contains(s, substr string) bool {
+	return indexOf(s, substr) != -1
+}
+
+// Helper function to find the index of a substring in a string
+func indexOf(s, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
 }
 
 func retrieveDocument(vdbName, collectionName string) error {

@@ -27,6 +27,7 @@ class WeaviateVectorDatabase(VectorDatabase):
     def __init__(self, collection_name: str = "MaestroDocs"):
         super().__init__(collection_name)
         self.client = None
+        self.embedding_model = None  # Store the embedding model used
         self._create_client()
 
     def supported_embeddings(self) -> List[str]:
@@ -125,6 +126,9 @@ class WeaviateVectorDatabase(VectorDatabase):
             embedding: Embedding model to use for the collection
         """
         from weaviate.classes.config import Property, DataType
+
+        # Store the embedding model
+        self.embedding_model = embedding
 
         if not self.client.collections.exists(self.collection_name):
             vectorizer_config = self._get_vectorizer_config(embedding)
@@ -337,12 +341,15 @@ class WeaviateVectorDatabase(VectorDatabase):
             # Get collection configuration
             config = collection.config.get()
 
-            # Extract embedding information from vectorizer config
-            embedding_info = "unknown"
-            if hasattr(config, "vectorizer") and config.vectorizer:
-                embedding_info = config.vectorizer
-            elif hasattr(config, "vectorizer_config") and config.vectorizer_config:
-                embedding_info = str(config.vectorizer_config)
+            # Use stored embedding model if available, otherwise try to extract from config
+            if self.embedding_model:
+                embedding_info = self.embedding_model
+            else:
+                embedding_info = "unknown"
+                if hasattr(config, "vectorizer") and config.vectorizer:
+                    embedding_info = config.vectorizer
+                elif hasattr(config, "vectorizer_config") and config.vectorizer_config:
+                    embedding_info = str(config.vectorizer_config)
 
             # Get additional metadata
             metadata = {

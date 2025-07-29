@@ -525,10 +525,10 @@ fi
 # Test error handling for non-existent collection
 print_status "Testing error handling for non-existent collection..."
 GET_COL_NONEXISTENT_OUTPUT=$(./maestro-k get col test_local_milvus non_existent_collection 2>&1 || true)
-if [[ "$GET_COL_NONEXISTENT_OUTPUT" == *"Collection does not exist"* ]]; then
-    print_success "Get col correctly handles non-existent collection"
+if [[ "$GET_COL_NONEXISTENT_OUTPUT" == *"Collection 'non_existent_collection' not found"* ]]; then
+    print_success "Get col correctly fails for non-existent collection"
 else
-    print_error "Get col should have handled non-existent collection"
+    print_error "Get col should have failed for non-existent collection"
     echo "Output: $GET_COL_NONEXISTENT_OUTPUT"
     exit 1
 fi

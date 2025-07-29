@@ -253,7 +253,9 @@ def create_mcp_server() -> FastMCP:
         # Check if the collection exists
         collections = db.list_collections()
         if input.collection_name not in collections:
-            return f"Error: Collection '{input.collection_name}' not found in vector database '{input.db_name}'. Available collections: {collections}"
+            raise ValueError(
+                f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
+            )
 
         # Use the new list_documents_in_collection method
         documents = db.list_documents_in_collection(
@@ -332,6 +334,13 @@ def create_mcp_server() -> FastMCP:
     async def get_collection_info(input: GetCollectionInfoInput) -> str:
         """Get information about a specific collection in a vector database."""
         db = get_database_by_name(input.db_name)
+
+        # Check if the collection exists
+        collections = db.list_collections()
+        if input.collection_name not in collections:
+            raise ValueError(
+                f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
+            )
 
         # Get collection information using the new method
         info = db.get_collection_info(input.collection_name)

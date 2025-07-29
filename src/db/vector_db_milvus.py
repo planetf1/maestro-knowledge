@@ -30,6 +30,7 @@ class MilvusVectorDatabase(VectorDatabase):
         self.client = None
         self.collection_name = collection_name
         self._client_created = False
+        self.embedding_model = None  # Store the embedding model used
 
     def supported_embeddings(self) -> List[str]:
         """
@@ -147,19 +148,47 @@ class MilvusVectorDatabase(VectorDatabase):
         except Exception as e:
             raise RuntimeError(f"Failed to generate embedding: {e}")
 
-    def setup(self):
+    def _get_embedding_dimension(self, embedding_model: str) -> int:
+        """
+        Get the vector dimension for a given embedding model.
+
+        Args:
+            embedding_model: Name of the embedding model
+
+        Returns:
+            Vector dimension for the model
+        """
+        # Map embedding models to their dimensions
+        dimension_mapping = {
+            "text-embedding-ada-002": 1536,
+            "text-embedding-3-small": 1536,
+            "text-embedding-3-large": 3072,
+            "default": 1536,  # Default to text-embedding-ada-002 dimension
+        }
+
+        return dimension_mapping.get(
+            embedding_model, 1536
+        )  # Default to 1536 if unknown
+
+    def setup(self, embedding: str = "default"):
         """Set up Milvus collection if it doesn't exist."""
         self._ensure_client()
         if self.client is None:
             warnings.warn("Milvus client is not available. Setup skipped.")
             return
 
+        # Store the embedding model
+        self.embedding_model = embedding
+
         # Create collection if it doesn't exist
         if not self.client.has_collection(self.collection_name):
+            # Determine vector dimension based on embedding model
+            dimension = self._get_embedding_dimension(embedding)
+
             # Use the correct API for MilvusClient
             self.client.create_collection(
                 collection_name=self.collection_name,
-                dimension=1536,  # Vector dimension
+                dimension=dimension,  # Vector dimension
                 primary_field_name="id",
                 vector_field_name="vector",
             )
@@ -355,15 +384,18 @@ class MilvusVectorDatabase(VectorDatabase):
             # Get collection schema information
             collection_info = self.client.describe_collection(target_collection)
 
-            # Extract embedding information from schema if available
-            embedding_info = "unknown"
-            if hasattr(collection_info, "fields"):
-                for field in collection_info.fields:
-                    if field.name == "vector":
-                        embedding_info = (
-                            f"vector_dim_{field.params.get('dim', 'unknown')}"
-                        )
-                        break
+            # Use stored embedding model if available, otherwise try to extract from schema
+            if self.embedding_model:
+                embedding_info = self.embedding_model
+            else:
+                embedding_info = "unknown"
+                if hasattr(collection_info, "fields"):
+                    for field in collection_info.fields:
+                        if field.name == "vector":
+                            embedding_info = (
+                                f"vector_dim_{field.params.get('dim', 'unknown')}"
+                            )
+                            break
 
             return {
                 "name": target_collection,
