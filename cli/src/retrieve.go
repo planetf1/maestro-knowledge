@@ -7,7 +7,7 @@ import (
 )
 
 var retrieveCmd = &cobra.Command{
-	Use:   "retrieve (collection | vdb-col | col | document | vdb-doc | doc) VDB_NAME [COLLECTION_NAME]",
+	Use:   "retrieve (collection | vdb-col | col | document | vdb-doc | doc) VDB_NAME [COLLECTION_NAME] [DOC_NAME]",
 	Short: "Retrieve collection or document information from vector databases",
 	Long: `Retrieve collection or document information from vector databases.
 
@@ -15,15 +15,15 @@ Usage:
   maestro-k retrieve collection VDB_NAME [COLLECTION_NAME] [options]
   maestro-k retrieve vdb-col VDB_NAME [COLLECTION_NAME] [options]
   maestro-k retrieve col VDB_NAME [COLLECTION_NAME] [options]
-  maestro-k retrieve document VDB_NAME COLLECTION_NAME [options]
-  maestro-k retrieve vdb-doc VDB_NAME COLLECTION_NAME [options]
-  maestro-k retrieve doc VDB_NAME COLLECTION_NAME [options]
+  maestro-k retrieve document VDB_NAME COLLECTION_NAME DOC_NAME [options]
+  maestro-k retrieve vdb-doc VDB_NAME COLLECTION_NAME DOC_NAME [options]
+  maestro-k retrieve doc VDB_NAME COLLECTION_NAME DOC_NAME [options]
 
 Examples:
   maestro-k retrieve collection my-database
   maestro-k retrieve col my-database my-collection --verbose
-  maestro-k retrieve document my-database my-collection
-  maestro-k retrieve doc my-database my-collection --verbose`,
+  maestro-k retrieve document my-database my-collection my-document
+  maestro-k retrieve doc my-database my-collection my-document --verbose`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Suppress usage for all errors except usage errors
@@ -43,11 +43,12 @@ Examples:
 
 		// Handle document subcommand
 		if resourceType == "document" || resourceType == "vdb-doc" || resourceType == "doc" {
-			if len(args) < 3 {
-				return fmt.Errorf("collection name is required for document command")
+			if len(args) < 4 {
+				return fmt.Errorf("collection name and document name are required for document command")
 			}
 			collectionName := args[2]
-			return retrieveDocument(vdbName, collectionName)
+			docName := args[3]
+			return retrieveDocument(vdbName, collectionName, docName)
 		}
 
 		return fmt.Errorf("unsupported resource type: %s. use 'collection', 'vdb-col', 'col', 'document', 'vdb-doc', or 'doc'", resourceType)
@@ -55,7 +56,7 @@ Examples:
 }
 
 var getCmd = &cobra.Command{
-	Use:   "get (collection | vdb-col | col | document | vdb-doc | doc) VDB_NAME [COLLECTION_NAME]",
+	Use:   "get (collection | vdb-col | col | document | vdb-doc | doc) VDB_NAME [COLLECTION_NAME] [DOC_NAME]",
 	Short: "Get collection or document information from vector databases",
 	Long: `Get collection or document information from vector databases.
 
@@ -63,15 +64,15 @@ Usage:
   maestro-k get collection VDB_NAME [COLLECTION_NAME] [options]
   maestro-k get vdb-col VDB_NAME [COLLECTION_NAME] [options]
   maestro-k get col VDB_NAME [COLLECTION_NAME] [options]
-  maestro-k get document VDB_NAME COLLECTION_NAME [options]
-  maestro-k get vdb-doc VDB_NAME COLLECTION_NAME [options]
-  maestro-k get doc VDB_NAME COLLECTION_NAME [options]
+  maestro-k get document VDB_NAME COLLECTION_NAME DOC_NAME [options]
+  maestro-k get vdb-doc VDB_NAME COLLECTION_NAME DOC_NAME [options]
+  maestro-k get doc VDB_NAME COLLECTION_NAME DOC_NAME [options]
 
 Examples:
   maestro-k get collection my-database
   maestro-k get col my-database my-collection --verbose
-  maestro-k get document my-database my-collection
-  maestro-k get doc my-database my-collection --verbose`,
+  maestro-k get document my-database my-collection my-document
+  maestro-k get doc my-database my-collection my-document --verbose`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Suppress usage for all errors except usage errors
@@ -91,11 +92,12 @@ Examples:
 
 		// Handle document subcommand
 		if resourceType == "document" || resourceType == "vdb-doc" || resourceType == "doc" {
-			if len(args) < 3 {
-				return fmt.Errorf("collection name is required for document command")
+			if len(args) < 4 {
+				return fmt.Errorf("collection name and document name are required for document command")
 			}
 			collectionName := args[2]
-			return retrieveDocument(vdbName, collectionName)
+			docName := args[3]
+			return retrieveDocument(vdbName, collectionName, docName)
 		}
 
 		return fmt.Errorf("unsupported resource type: %s. use 'collection', 'vdb-col', 'col', 'document', 'vdb-doc', or 'doc'", resourceType)
@@ -163,7 +165,7 @@ func indexOf(s, substr string) int {
 	return -1
 }
 
-func retrieveDocument(vdbName, collectionName string) error {
+func retrieveDocument(vdbName, collectionName, docName string) error {
 	if verbose {
 		fmt.Println("Retrieving document information...")
 	}
@@ -190,11 +192,10 @@ func retrieveDocument(vdbName, collectionName string) error {
 	}
 	defer client.Close()
 
-	// For now, just list documents in the collection
-	// TODO: Implement specific document retrieval
-	result, err := client.ListDocumentsInCollection(vdbName, collectionName)
+	// Get the specific document
+	result, err := client.GetDocument(vdbName, collectionName, docName)
 	if err != nil {
-		return fmt.Errorf("failed to retrieve documents: %w", err)
+		return fmt.Errorf("failed to retrieve document: %w", err)
 	}
 
 	if !silent {

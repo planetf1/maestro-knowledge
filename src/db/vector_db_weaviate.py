@@ -280,6 +280,55 @@ class WeaviateVectorDatabase(VectorDatabase):
             )
             return 0
 
+    def get_document(
+        self, doc_name: str, collection_name: str = None
+    ) -> Dict[str, Any]:
+        """Get a specific document by name from a collection in Weaviate."""
+        target_collection = collection_name or self.collection_name
+
+        try:
+            # Check if collection exists
+            if not self.client.collections.exists(target_collection):
+                raise ValueError(f"Collection '{target_collection}' not found")
+
+            # Get the specific collection
+            collection = self.client.collections.get(target_collection)
+
+            # Query for the specific document by doc_name in metadata
+            result = collection.query.fetch_objects(
+                where=collection.query.filter.by_property("metadata").contains_any(
+                    [doc_name]
+                ),
+                limit=1,
+            )
+
+            if not result.objects:
+                raise ValueError(
+                    f"Document '{doc_name}' not found in collection '{target_collection}'"
+                )
+
+            # Find the document with matching doc_name in metadata
+            for obj in result.objects:
+                metadata = obj.properties.get("metadata", {})
+                if isinstance(metadata, dict) and metadata.get("doc_name") == doc_name:
+                    return {
+                        "id": obj.uuid,
+                        "url": obj.properties.get("url", ""),
+                        "text": obj.properties.get("text", ""),
+                        "metadata": metadata,
+                    }
+
+            # If we get here, the document wasn't found
+            raise ValueError(
+                f"Document '{doc_name}' not found in collection '{target_collection}'"
+            )
+
+        except ValueError as e:
+            # Re-raise ValueError as is (these are user-friendly error messages)
+            raise e
+        except Exception as e:
+            raise ValueError(f"Failed to retrieve document '{doc_name}': {e}")
+
     def count_documents(self) -> int:
         """Get the current count of documents in the collection."""
         collection = self.client.collections.get(self.collection_name)

@@ -4,6 +4,13 @@
 # Copyright (c) 2025 dr.max
 
 # Maestro Knowledge End-to-End Testing Script
+#
+# NOTE: Document creation commands currently use --dry-run flags to avoid embedding API calls
+#       due to vector dimension mismatch issues with open-source embedding models.
+#       See: https://github.com/AI4quantum/maestro-knowledge/issues/8
+#       
+# TODO: Remove --dry-run flags from document creation commands after issue #8 is resolved
+#       to enable full end-to-end testing of document creation functionality.
 
 set -e
 
@@ -183,20 +190,64 @@ run_fast_workflow() {
     print_command "echo '$doc_content' > $doc_file"
     print_success "✓ Created test document"
     
-    # Note: Since write command is not yet implemented, we'll skip document writing for now
-    print_warning "Document writing skipped (write command not yet implemented)"
+    # Step 6: Create document using create command (dry-run)
+    # TODO: Remove --dry-run flag after https://github.com/AI4quantum/maestro-knowledge/issues/8 is resolved
+    run_command "$CLI_PATH create document $vdb_name $collection_name test_doc --file-name=$doc_file --dry-run" "Creating document using create command (dry-run)"
     
-    # Step 6: List documents (will be empty since we didn't write any)
-    run_command "$CLI_PATH list documents $vdb_name $collection_name" "Listing documents (empty)"
+    # Step 7: List documents to verify creation (will be empty in dry-run)
+    run_command "$CLI_PATH list documents $vdb_name $collection_name" "Listing documents after creation"
     
-    # Step 7: Delete collection
+    # Step 8: Create another document using write command (dry-run)
+    local doc2_content="This is another test document for end-to-end testing."
+    local doc2_file="/tmp/test_document_2.txt"
+    echo "$doc2_content" > "$doc2_file"
+    
+    print_command "echo '$doc2_content' > $doc2_file"
+    print_success "✓ Created second test document"
+    
+    # TODO: Remove --dry-run flag after https://github.com/AI4quantum/maestro-knowledge/issues/8 is resolved
+    run_command "$CLI_PATH write document $vdb_name $collection_name test_doc_2 --file-name=$doc2_file --dry-run" "Creating document using write command (dry-run)"
+    
+    # Step 9: Test command aliases (dry-run)
+    local doc3_content="This is a test document using command aliases."
+    local doc3_file="/tmp/test_document_3.txt"
+    echo "$doc3_content" > "$doc3_file"
+    
+    print_command "echo '$doc3_content' > $doc3_file"
+    print_success "✓ Created third test document"
+    
+    # TODO: Remove --dry-run flags after https://github.com/AI4quantum/maestro-knowledge/issues/8 is resolved
+    run_command "$CLI_PATH create doc $vdb_name $collection_name test_doc_3 --file-name=$doc3_file --dry-run" "Creating document using 'create doc' alias (dry-run)"
+    run_command "$CLI_PATH write vdb-doc $vdb_name $collection_name test_doc_4 --doc-file-name=$doc3_file --dry-run" "Creating document using 'write vdb-doc' alias with doc-file-name flag (dry-run)"
+    
+    # Step 10: List documents to verify all documents (will be empty in dry-run)
+    run_command "$CLI_PATH list documents $vdb_name $collection_name" "Listing documents after all creations"
+    
+    # Step 11: Test document deletion (dry-run since documents weren't actually created)
+    print_header "Testing document deletion..."
+    run_command "$CLI_PATH delete document $vdb_name $collection_name test_doc --dry-run" "Deleting document using delete command (dry-run)"
+    run_command "$CLI_PATH del doc $vdb_name $collection_name test_doc_2 --dry-run" "Deleting document using del doc alias (dry-run)"
+    run_command "$CLI_PATH delete vdb-doc $vdb_name $collection_name test_doc_3 --dry-run" "Deleting document using delete vdb-doc alias (dry-run)"
+    
+    # Step 12: Test document deletion error handling - try to delete non-existent document
+    print_command "$CLI_PATH delete document $vdb_name $collection_name non_existent_doc --dry-run"
+    echo "--- Attempting to delete non-existent document (dry-run) ---"
+    if ! $CLI_PATH delete document $vdb_name $collection_name non_existent_doc --dry-run 2>&1; then
+        print_success "✓ Correctly failed to delete non-existent document"
+    else
+        print_error "✗ Should have failed to delete non-existent document"
+        return 1
+    fi
+    echo ""
+    
+    # Step 13: Delete collection
     run_command "$CLI_PATH delete collection $vdb_name $collection_name" "Deleting collection"
     
-    # Step 8: Delete vector database
+    # Step 14: Delete vector database
     run_command "$CLI_PATH delete vdb $vdb_name" "Deleting vector database"
     
     # Cleanup
-    rm -f "$doc_file"
+    rm -f "$doc_file" "$doc2_file" "$doc3_file"
     
     print_success "✓ FAST workflow completed successfully!"
     echo ""
@@ -234,24 +285,34 @@ run_complete_workflow() {
     # Step 6: Create test documents
     local doc1_content="This is test document 1 for collection 1."
     local doc2_content="This is test document 2 for collection 2."
+    local doc3_content="This is test document 3 for collection 1 with custom embedding."
     local doc1_file="/tmp/test_document_1.txt"
     local doc2_file="/tmp/test_document_2.txt"
+    local doc3_file="/tmp/test_document_3.txt"
     
     echo "$doc1_content" > "$doc1_file"
     echo "$doc2_content" > "$doc2_file"
+    echo "$doc3_content" > "$doc3_file"
     
     print_command "echo '$doc1_content' > $doc1_file"
     print_command "echo '$doc2_content' > $doc2_file"
+    print_command "echo '$doc3_content' > $doc3_file"
     print_success "✓ Created test documents"
     
-    # Note: Since write command is not yet implemented, we'll skip document writing for now
-    print_warning "Document writing skipped (write command not yet implemented)"
+    # Step 7: Create documents using create command (dry-run)
+    # TODO: Remove --dry-run flags after https://github.com/AI4quantum/maestro-knowledge/issues/8 is resolved
+    run_command "$CLI_PATH create document $vdb_name $collection1 test_doc_1 --file-name=$doc1_file --dry-run" "Creating document 1 using create command (dry-run)"
+    run_command "$CLI_PATH create document $vdb_name $collection2 test_doc_2 --file-name=$doc2_file --dry-run" "Creating document 2 using create command (dry-run)"
     
-    # Step 7: List documents (will be empty since we didn't write any)
-    run_command "$CLI_PATH list documents $vdb_name $collection1" "Listing documents in collection 1 (empty)"
-    run_command "$CLI_PATH list documents $vdb_name $collection2" "Listing documents in collection 2 (empty)"
+    # Step 8: Create document with custom embedding using write command (dry-run)
+    # TODO: Remove --dry-run flag after https://github.com/AI4quantum/maestro-knowledge/issues/8 is resolved
+    run_command "$CLI_PATH write document $vdb_name $collection1 test_doc_3 --file-name=$doc3_file --embed=text-embedding-3-small --dry-run" "Creating document 3 with custom embedding using write command (dry-run)"
     
-    # Step 8: Test error handling - try to delete non-existent collection
+    # Step 9: List documents to verify creation (will be empty in dry-run)
+    run_command "$CLI_PATH list documents $vdb_name $collection1" "Listing documents in collection 1"
+    run_command "$CLI_PATH list documents $vdb_name $collection2" "Listing documents in collection 2"
+    
+    # Step 10: Test error handling - try to delete non-existent collection
     print_header "Testing error handling..."
     print_command "$CLI_PATH delete collection $vdb_name $non_existent_collection"
     echo "--- Attempting to delete non-existent collection ---"
@@ -263,15 +324,57 @@ run_complete_workflow() {
     fi
     echo ""
     
-    # Step 9: Delete collections
+    # Step 11: Test document error handling - try to create document with non-existent file
+    print_header "Testing document error handling..."
+    # TODO: Remove --dry-run flag after https://github.com/AI4quantum/maestro-knowledge/issues/8 is resolved
+    print_command "$CLI_PATH create document $vdb_name $collection1 test_error_doc --file-name=/tmp/non_existent_file.txt --dry-run"
+    echo "--- Attempting to create document with non-existent file (dry-run) ---"
+    if ! $CLI_PATH create document $vdb_name $collection1 test_error_doc --file-name=/tmp/non_existent_file.txt --dry-run 2>&1; then
+        print_success "✓ Correctly failed to create document with non-existent file"
+    else
+        print_error "✗ Should have failed to create document with non-existent file"
+        return 1
+    fi
+    echo ""
+    
+    # Step 12: Test document error handling - try to create document with duplicate name (dry-run mode doesn't check for duplicates)
+    # TODO: Remove --dry-run flag after https://github.com/AI4quantum/maestro-knowledge/issues/8 is resolved
+    print_command "$CLI_PATH create document $vdb_name $collection1 test_doc_1 --file-name=$doc1_file --dry-run"
+    echo "--- Attempting to create document with duplicate name (dry-run) ---"
+    if $CLI_PATH create document $vdb_name $collection1 test_doc_1 --file-name=$doc1_file --dry-run 2>&1; then
+        print_success "✓ Correctly allowed duplicate document creation in dry-run mode"
+    else
+        print_error "✗ Should have allowed duplicate document creation in dry-run mode"
+        return 1
+    fi
+    echo ""
+    
+    # Step 13: Test document deletion (dry-run since documents weren't actually created)
+    print_header "Testing document deletion..."
+    run_command "$CLI_PATH delete document $vdb_name $collection1 test_doc_1 --dry-run" "Deleting document 1 using delete command (dry-run)"
+    run_command "$CLI_PATH del doc $vdb_name $collection2 test_doc_2 --dry-run" "Deleting document 2 using del doc alias (dry-run)"
+    run_command "$CLI_PATH delete vdb-doc $vdb_name $collection1 test_doc_3 --dry-run" "Deleting document 3 using delete vdb-doc alias (dry-run)"
+    
+    # Step 14: Test document deletion error handling - try to delete non-existent document
+    print_command "$CLI_PATH delete document $vdb_name $collection1 non_existent_doc --dry-run"
+    echo "--- Attempting to delete non-existent document (dry-run) ---"
+    if ! $CLI_PATH delete document $vdb_name $collection1 non_existent_doc --dry-run 2>&1; then
+        print_success "✓ Correctly failed to delete non-existent document"
+    else
+        print_error "✗ Should have failed to delete non-existent document"
+        return 1
+    fi
+    echo ""
+    
+    # Step 15: Delete collections
     run_command "$CLI_PATH delete collection $vdb_name $collection1" "Deleting first collection"
     run_command "$CLI_PATH delete collection $vdb_name $collection2" "Deleting second collection"
     
-    # Step 10: Delete vector database
+    # Step 16: Delete vector database
     run_command "$CLI_PATH delete vdb $vdb_name" "Deleting vector database"
     
     # Cleanup
-    rm -f "$doc1_file" "$doc2_file"
+    rm -f "$doc1_file" "$doc2_file" "$doc3_file"
     
     print_success "✓ COMPLETE workflow completed successfully!"
     echo ""

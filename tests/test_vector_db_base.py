@@ -19,6 +19,7 @@ warnings.filterwarnings(
 import sys
 import os
 import pytest
+from typing import Dict, Any
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -77,6 +78,27 @@ class ConcreteVectorDatabase(VectorDatabase):
         if target_collection == self.collection_name:
             self.documents = []
             self.collection_name = None
+
+    def get_document(
+        self, doc_name: str, collection_name: str = None
+    ) -> Dict[str, Any]:
+        """Get a specific document by name from the vector database."""
+        target_collection = collection_name or self.collection_name
+
+        # For testing purposes, search through documents for matching doc_name
+        for doc in self.documents:
+            metadata = doc.get("metadata", {})
+            if metadata.get("doc_name") == doc_name:
+                return {
+                    "id": doc.get("id", "unknown"),
+                    "url": doc.get("url", ""),
+                    "text": doc.get("text", ""),
+                    "metadata": metadata,
+                }
+
+        raise ValueError(
+            f"Document '{doc_name}' not found in collection '{target_collection}'"
+        )
 
     def list_collections(self):
         """List all collections in the vector database."""

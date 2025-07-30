@@ -165,15 +165,38 @@ go build -o maestro-k src/*.go
 ./maestro-k retrieve collection my-database
 ./maestro-k retrieve col my-database my-collection
 
+# Retrieve document information
+./maestro-k retrieve document my-database my-collection my-document
+./maestro-k retrieve doc my-database my-collection my-document
+
 # Get collection information (alternative command)
 ./maestro-k get collection my-database
 ./maestro-k get col my-database my-collection
 
+# Get document information (alternative command)
+./maestro-k get document my-database my-collection my-document
+./maestro-k get doc my-database my-collection my-document
+
 # Create vector database from YAML
 ./maestro-k create vector-db config.yaml
 
+# Create collection in vector database
+./maestro-k create collection my-database my-collection
+
+# Create document in collection
+./maestro-k create document my-database my-collection my-doc --file-name=document.txt
+
+# Write document (alias for create document)
+./maestro-k write document my-database my-collection my-doc --file-name=document.txt
+
 # Delete vector database
 ./maestro-k delete vector-db my-db
+
+# Delete collection
+./maestro-k delete collection my-database my-collection
+
+# Delete document
+./maestro-k delete document my-database my-collection my-document
 
 # Validate YAML configuration
 ./maestro-k validate config.yaml

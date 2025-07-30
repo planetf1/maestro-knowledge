@@ -531,6 +531,109 @@ func (c *MCPClient) DeleteCollection(dbName, collectionName string) error {
 	return nil
 }
 
+// WriteDocument calls the write_document_to_collection tool on the MCP server
+func (c *MCPClient) WriteDocument(dbName, collectionName, docName, fileName, embedding string) error {
+	// Read the file content
+	content, err := os.ReadFile(fileName)
+	if err != nil {
+		return fmt.Errorf("failed to read file '%s': %w", fileName, err)
+	}
+
+	params := map[string]interface{}{
+		"input": map[string]interface{}{
+			"db_name":         dbName,
+			"collection_name": collectionName,
+			"doc_name":        docName,
+			"text":            string(content),
+			"url":             fileName,
+			"metadata": map[string]interface{}{
+				"filename": fileName,
+				"doc_name": docName,
+			},
+			"embedding": embedding,
+		},
+	}
+
+	response, err := c.callMCPServer("write_document_to_collection", params)
+	if err != nil {
+		return err
+	}
+
+	// Check for error in response
+	if response.Error != nil {
+		return fmt.Errorf("MCP server error: %s", response.Error.Message)
+	}
+
+	// The response should be a success message
+	if response.Result == nil {
+		return fmt.Errorf("no response from MCP server")
+	}
+
+	return nil
+}
+
+// DeleteDocumentFromCollection calls the delete_document_from_collection tool on the MCP server
+func (c *MCPClient) DeleteDocumentFromCollection(dbName, collectionName, docName string) error {
+	params := map[string]interface{}{
+		"input": map[string]interface{}{
+			"db_name":         dbName,
+			"collection_name": collectionName,
+			"doc_name":        docName,
+		},
+	}
+
+	response, err := c.callMCPServer("delete_document_from_collection", params)
+	if err != nil {
+		return err
+	}
+
+	// Check for error in response
+	if response.Error != nil {
+		return fmt.Errorf("MCP server error: %s", response.Error.Message)
+	}
+
+	// The response should be a success message
+	if response.Result == nil {
+		return fmt.Errorf("no response from MCP server")
+	}
+
+	return nil
+}
+
+// GetDocument calls the get_document tool on the MCP server
+func (c *MCPClient) GetDocument(dbName, collectionName, docName string) (string, error) {
+	params := map[string]interface{}{
+		"input": map[string]interface{}{
+			"db_name":         dbName,
+			"collection_name": collectionName,
+			"doc_name":        docName,
+		},
+	}
+
+	response, err := c.callMCPServer("get_document", params)
+	if err != nil {
+		return "", err
+	}
+
+	// Check for error in response
+	if response.Error != nil {
+		return "", fmt.Errorf("MCP server error: %s", response.Error.Message)
+	}
+
+	// The response should be a string with the document information
+	if response.Result == nil {
+		return "", fmt.Errorf("no response from MCP server")
+	}
+
+	// Convert the result to a string
+	resultStr, ok := response.Result.(string)
+	if !ok {
+		return "", fmt.Errorf("unexpected response type from MCP server")
+	}
+
+	return resultStr, nil
+}
+
 // Close closes the MCP client
 func (c *MCPClient) Close() error {
 	// Cancel the context to prevent context leaks

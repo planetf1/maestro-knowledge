@@ -330,3 +330,97 @@ class TestMilvusVectorDatabase:
         """Test the db_type property."""
         db = MilvusVectorDatabase()
         assert db.db_type == "milvus"
+
+    @patch("pymilvus.MilvusClient")
+    def test_get_document_success(self, mock_milvus_client):
+        """Test successfully getting a document by name."""
+        mock_client = MagicMock()
+        mock_client.has_collection.return_value = True
+        mock_client.query.return_value = [
+            {
+                "id": "doc123",
+                "url": "test_url",
+                "text": "test content",
+                "metadata": '{"doc_name": "test_doc", "collection_name": "test_collection"}',
+            }
+        ]
+        mock_milvus_client.return_value = mock_client
+
+        db = MilvusVectorDatabase()
+        result = db.get_document("test_doc", "test_collection")
+
+        assert result["id"] == "doc123"
+        assert result["url"] == "test_url"
+        assert result["text"] == "test content"
+        assert result["metadata"]["doc_name"] == "test_doc"
+        assert result["metadata"]["collection_name"] == "test_collection"
+
+        # Verify the query was called with correct parameters
+        mock_client.query.assert_called_once_with(
+            "test_collection",
+            filter='metadata["doc_name"] == "test_doc"',
+            output_fields=["id", "url", "text", "metadata"],
+            limit=1,
+        )
+
+    @patch("pymilvus.MilvusClient")
+    def test_get_document_collection_not_found(self, mock_milvus_client):
+        """Test getting a document when collection doesn't exist."""
+        mock_client = MagicMock()
+        mock_client.has_collection.return_value = False
+        mock_milvus_client.return_value = mock_client
+
+        db = MilvusVectorDatabase()
+
+        with pytest.raises(ValueError, match="Collection 'test_collection' not found"):
+            db.get_document("test_doc", "test_collection")
+
+    @patch("pymilvus.MilvusClient")
+    def test_get_document_document_not_found(self, mock_milvus_client):
+        """Test getting a document when document doesn't exist."""
+        mock_client = MagicMock()
+        mock_client.has_collection.return_value = True
+        mock_client.query.return_value = []  # No documents found
+        mock_milvus_client.return_value = mock_client
+
+        db = MilvusVectorDatabase()
+
+        with pytest.raises(
+            ValueError,
+            match="Document 'test_doc' not found in collection 'test_collection'",
+        ):
+            db.get_document("test_doc", "test_collection")
+
+    @patch("pymilvus.MilvusClient")
+    def test_get_document_no_client(self, mock_milvus_client):
+        """Test getting a document when client is not available."""
+        mock_milvus_client.side_effect = Exception("Connection failed")
+
+        db = MilvusVectorDatabase()
+
+        with pytest.raises(ValueError, match="Milvus client is not available"):
+            db.get_document("test_doc", "test_collection")
+
+    @patch("pymilvus.MilvusClient")
+    def test_get_document_invalid_metadata(self, mock_milvus_client):
+        """Test getting a document with invalid metadata JSON."""
+        mock_client = MagicMock()
+        mock_client.has_collection.return_value = True
+        mock_client.query.return_value = [
+            {
+                "id": "doc123",
+                "url": "test_url",
+                "text": "test content",
+                "metadata": "invalid json",
+            }
+        ]
+        mock_milvus_client.return_value = mock_client
+
+        db = MilvusVectorDatabase()
+        result = db.get_document("test_doc", "test_collection")
+
+        # Should handle invalid JSON gracefully
+        assert result["id"] == "doc123"
+        assert result["url"] == "test_url"
+        assert result["text"] == "test content"
+        assert result["metadata"] == {}  # Should be empty dict for invalid JSON

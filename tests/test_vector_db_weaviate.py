@@ -475,3 +475,141 @@ class TestWeaviateVectorDatabase:
             db = WeaviateVectorDatabase()
 
             assert db.db_type == "weaviate"
+
+    def test_get_document_success(self):
+        """Test successfully getting a document by name."""
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
+            mock_client = MagicMock()
+            mock_collection = MagicMock()
+            mock_result = MagicMock()
+
+            # Create mock object with matching doc_name
+            mock_object = MagicMock()
+            mock_object.uuid = "doc123"
+            mock_object.properties = {
+                "url": "test_url",
+                "text": "test content",
+                "metadata": {
+                    "doc_name": "test_doc",
+                    "collection_name": "test_collection",
+                },
+            }
+
+            mock_result.objects = [mock_object]
+            mock_collection.query.fetch_objects.return_value = mock_result
+            mock_client.collections.exists.return_value = True
+            mock_client.collections.get.return_value = mock_collection
+            mock_connect.return_value = mock_client
+
+            db = WeaviateVectorDatabase()
+            result = db.get_document("test_doc", "test_collection")
+
+            assert result["id"] == "doc123"
+            assert result["url"] == "test_url"
+            assert result["text"] == "test content"
+            assert result["metadata"]["doc_name"] == "test_doc"
+            assert result["metadata"]["collection_name"] == "test_collection"
+
+    def test_get_document_collection_not_found(self):
+        """Test getting a document when collection doesn't exist."""
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
+            mock_client = MagicMock()
+            mock_client.collections.exists.return_value = False
+            mock_connect.return_value = mock_client
+
+            db = WeaviateVectorDatabase()
+
+            with pytest.raises(
+                ValueError, match="Collection 'test_collection' not found"
+            ):
+                db.get_document("test_doc", "test_collection")
+
+    def test_get_document_document_not_found(self):
+        """Test getting a document when document doesn't exist."""
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
+            mock_client = MagicMock()
+            mock_collection = MagicMock()
+            mock_result = MagicMock()
+
+            # No objects returned
+            mock_result.objects = []
+            mock_collection.query.fetch_objects.return_value = mock_result
+            mock_client.collections.exists.return_value = True
+            mock_client.collections.get.return_value = mock_collection
+            mock_connect.return_value = mock_client
+
+            db = WeaviateVectorDatabase()
+
+            with pytest.raises(
+                ValueError,
+                match="Document 'test_doc' not found in collection 'test_collection'",
+            ):
+                db.get_document("test_doc", "test_collection")
+
+    def test_get_document_no_matching_doc_name(self):
+        """Test getting a document when no document has the specified name."""
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
+            mock_client = MagicMock()
+            mock_collection = MagicMock()
+            mock_result = MagicMock()
+
+            # Create mock object with different doc_name
+            mock_object = MagicMock()
+            mock_object.properties = {
+                "url": "test_url",
+                "text": "test content",
+                "metadata": {
+                    "doc_name": "different_doc",
+                    "collection_name": "test_collection",
+                },
+            }
+
+            mock_result.objects = [mock_object]
+            mock_collection.query.fetch_objects.return_value = mock_result
+            mock_client.collections.exists.return_value = True
+            mock_client.collections.get.return_value = mock_collection
+            mock_connect.return_value = mock_client
+
+            db = WeaviateVectorDatabase()
+
+            with pytest.raises(
+                ValueError,
+                match="Document 'test_doc' not found in collection 'test_collection'",
+            ):
+                db.get_document("test_doc", "test_collection")

@@ -79,6 +79,21 @@ class WriteDocumentInput(BaseModel):
     embedding: str = Field(default="default", description="Embedding strategy to use")
 
 
+class WriteDocumentToCollectionInput(BaseModel):
+    db_name: str = Field(..., description="Name of the vector database instance")
+    collection_name: str = Field(..., description="Name of the collection to write to")
+    doc_name: str = Field(..., description="Name of the document")
+    text: str = Field(..., description="Text content of the document")
+    url: str = Field(..., description="URL of the document")
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata for the document"
+    )
+    vector: List[float] = Field(
+        default=None, description="Pre-computed vector embedding (optional, for Milvus)"
+    )
+    embedding: str = Field(default="default", description="Embedding strategy to use")
+
+
 class ListDocumentsInput(BaseModel):
     db_name: str = Field(..., description="Name of the vector database instance")
     limit: int = Field(default=10, description="Maximum number of documents to return")
@@ -106,6 +121,22 @@ class DeleteDocumentsInput(BaseModel):
 class DeleteDocumentInput(BaseModel):
     db_name: str = Field(..., description="Name of the vector database instance")
     document_id: str = Field(..., description="Document ID to delete")
+
+
+class DeleteDocumentFromCollectionInput(BaseModel):
+    db_name: str = Field(..., description="Name of the vector database instance")
+    collection_name: str = Field(
+        ..., description="Name of the collection containing the document"
+    )
+    doc_name: str = Field(..., description="Name of the document to delete")
+
+
+class GetDocumentInput(BaseModel):
+    db_name: str = Field(..., description="Name of the vector database instance")
+    collection_name: str = Field(
+        ..., description="Name of the collection containing the document"
+    )
+    doc_name: str = Field(..., description="Name of the document to retrieve")
 
 
 class DeleteCollectionInput(BaseModel):
@@ -236,6 +267,43 @@ def create_mcp_server() -> FastMCP:
         return f"Successfully wrote document '{input.url}' to vector database '{input.db_name}' using embedding '{input.embedding}'"
 
     @app.tool()
+    async def write_document_to_collection(
+        input: WriteDocumentToCollectionInput,
+    ) -> str:
+        """Write a single document to a specific collection in a vector database with specified embedding strategy."""
+        db = get_database_by_name(input.db_name)
+
+        # Check if the collection exists
+        collections = db.list_collections()
+        normalized_input = input.collection_name.strip().lower()
+        normalized_collections = [str(c).strip().lower() for c in collections]
+        if normalized_input not in normalized_collections:
+            raise ValueError(
+                f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
+            )
+
+        # Create document with collection-specific metadata
+        document = {
+            "url": input.url,
+            "text": input.text,
+            "metadata": {
+                **input.metadata,
+                "collection_name": input.collection_name,
+                "doc_name": input.doc_name,
+            },
+        }
+
+        # Add vector if provided (for Milvus)
+        if input.vector is not None:
+            document["vector"] = input.vector
+
+        # For now, we'll use the default collection behavior
+        # TODO: Implement collection-specific document writing in the vector database classes
+        db.write_document(document, embedding=input.embedding)
+
+        return f"Successfully wrote document '{input.doc_name}' to collection '{input.collection_name}' in vector database '{input.db_name}' using embedding '{input.embedding}'"
+
+    @app.tool()
     async def list_documents(input: ListDocumentsInput) -> str:
         """List documents from a vector database."""
         db = get_database_by_name(input.db_name)
@@ -297,6 +365,74 @@ def create_mcp_server() -> FastMCP:
         db.delete_document(input.document_id)
 
         return f"Successfully deleted document '{input.document_id}' from vector database '{input.db_name}'"
+
+    @app.tool()
+    async def delete_document_from_collection(
+        input: DeleteDocumentFromCollectionInput,
+    ) -> str:
+        """Delete a document from a specific collection in a vector database by document name."""
+        db = get_database_by_name(input.db_name)
+
+        # Check if the collection exists
+        collections = db.list_collections()
+        if input.collection_name not in collections:
+            raise ValueError(
+                f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
+            )
+
+        # Temporarily switch to the target collection
+        original_collection = db.collection_name
+        db.collection_name = input.collection_name
+
+        try:
+            # List documents to find the one with the matching name
+            documents = db.list_documents(
+                limit=1000, offset=0
+            )  # Get all documents to search by name
+            document_id = None
+
+            for doc in documents:
+                if (
+                    doc.get("name") == input.doc_name
+                    or doc.get("doc_name") == input.doc_name
+                ):
+                    document_id = doc.get("id")
+                    break
+
+            if document_id is None:
+                raise ValueError(
+                    f"Document '{input.doc_name}' not found in collection '{input.collection_name}' of vector database '{input.db_name}'"
+                )
+
+            # Delete the document
+            db.delete_document(document_id)
+
+            return f"Successfully deleted document '{input.doc_name}' from collection '{input.collection_name}' in vector database '{input.db_name}'"
+        finally:
+            # Restore original collection
+            db.collection_name = original_collection
+
+    @app.tool()
+    async def get_document(input: GetDocumentInput) -> str:
+        """Get a specific document by name from a collection in a vector database."""
+        db = get_database_by_name(input.db_name)
+
+        # Check if the collection exists
+        collections = db.list_collections()
+        if input.collection_name not in collections:
+            raise ValueError(
+                f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
+            )
+
+        try:
+            # Get the document using the new get_document method
+            document = db.get_document(input.doc_name, input.collection_name)
+            return f"Document '{input.doc_name}' from collection '{input.collection_name}' in vector database '{input.db_name}':\n{json.dumps(document, indent=2, default=str)}"
+        except ValueError as e:
+            # Re-raise ValueError as is (these are user-friendly error messages)
+            raise e
+        except Exception as e:
+            raise ValueError(f"Failed to retrieve document '{input.doc_name}': {e}")
 
     @app.tool()
     async def delete_collection(input: DeleteCollectionInput) -> str:

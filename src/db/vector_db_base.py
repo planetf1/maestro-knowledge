@@ -117,6 +117,25 @@ class VectorDatabase(ABC):
             self.collection_name = original_collection
 
     @abstractmethod
+    def get_document(
+        self, doc_name: str, collection_name: str = None
+    ) -> Dict[str, Any]:
+        """
+        Get a specific document by name from the vector database.
+
+        Args:
+            doc_name: Name of the document to retrieve
+            collection_name: Name of the collection to search in. If None, uses the current collection.
+
+        Returns:
+            Document with its properties
+
+        Raises:
+            ValueError: If the document is not found
+        """
+        pass
+
+    @abstractmethod
     def count_documents(self) -> int:
         """
         Get the current count of documents in the collection.

@@ -342,9 +342,66 @@ The `create` command creates vector databases from YAML configuration files:
 - `--embedding`: Override embedding model
 - `--mode`: Override deployment mode (local, remote)
 
+#### Create Collection Command
+
+The `create` command can also create collections in existing vector databases:
+
+```bash
+# Create collection in vector database
+./maestro-k create collection my-database my-collection
+
+# Create collection with verbose output
+./maestro-k create collection my-database my-collection --verbose
+
+# Create collection using short aliases
+./maestro-k create col my-database my-collection
+./maestro-k create vdb-col my-database my-collection
+
+# Create collection with dry-run mode
+./maestro-k create collection my-database my-collection --dry-run
+```
+
+#### Create Document Command
+
+The `create` command can also create documents in collections:
+
+```bash
+# Create document from file
+./maestro-k create document my-database my-collection my-doc --file-name=document.txt
+
+# Create document with specific embedding
+./maestro-k create document my-database my-collection my-doc --file-name=document.txt --embed=text-embedding-3-small
+
+# Create document using short aliases
+./maestro-k create doc my-database my-collection my-doc --file-name=document.txt
+./maestro-k create vdb-doc my-database my-collection my-doc --file-name=document.txt
+
+# Create document with dry-run mode
+./maestro-k create document my-database my-collection my-doc --file-name=document.txt --dry-run
+```
+
+### Write Command
+
+The `write` command is an alias for creating documents:
+
+```bash
+# Write document from file
+./maestro-k write document my-database my-collection my-doc --file-name=document.txt
+
+# Write document with specific embedding
+./maestro-k write document my-database my-collection my-doc --file-name=document.txt --embed=text-embedding-3-small
+
+# Write document using short aliases
+./maestro-k write doc my-database my-collection my-doc --file-name=document.txt
+./maestro-k write vdb-doc my-database my-collection my-doc --file-name=document.txt
+
+# Write document with dry-run mode
+./maestro-k write document my-database my-collection my-doc --file-name=document.txt --dry-run
+```
+
 ### Delete Command
 
-The `delete` command deletes vector databases by name:
+The `delete` command deletes vector databases, collections, or documents:
 
 ```bash
 # Delete vector database
@@ -355,6 +412,49 @@ The `delete` command deletes vector databases by name:
 
 # Delete with dry-run mode
 ./maestro-k delete vector-db my-database --dry-run
+
+# Delete using short aliases
+./maestro-k delete vdb my-database
+./maestro-k del vector-db my-database
+./maestro-k del vdb my-database
+```
+
+#### Delete Collection Command
+
+```bash
+# Delete collection from vector database
+./maestro-k delete collection my-database my-collection
+
+# Delete collection with verbose output
+./maestro-k delete collection my-database my-collection --verbose
+
+# Delete collection using short aliases
+./maestro-k delete col my-database my-collection
+./maestro-k delete vdb-col my-database my-collection
+./maestro-k del collection my-database my-collection
+./maestro-k del col my-database my-collection
+
+# Delete collection with dry-run mode
+./maestro-k delete collection my-database my-collection --dry-run
+```
+
+#### Delete Document Command
+
+```bash
+# Delete document from collection
+./maestro-k delete document my-database my-collection my-document
+
+# Delete document with verbose output
+./maestro-k delete document my-database my-collection my-document --verbose
+
+# Delete document using short aliases
+./maestro-k delete doc my-database my-collection my-document
+./maestro-k delete vdb-doc my-database my-collection my-document
+./maestro-k del document my-database my-collection my-document
+./maestro-k del doc my-database my-collection my-document
+
+# Delete document with dry-run mode
+./maestro-k delete document my-database my-collection my-document --dry-run
 ```
 
 ### Retrieve/Get Commands
@@ -383,6 +483,28 @@ The `retrieve` and `get` commands retrieve information about collections and doc
 ./maestro-k retrieve collection my-database --dry-run
 ```
 
+#### Retrieve Document Command
+
+```bash
+# Retrieve specific document from collection
+./maestro-k retrieve document my-database my-collection my-document
+
+# Retrieve document using short aliases
+./maestro-k retrieve doc my-database my-collection my-document
+./maestro-k retrieve vdb-doc my-database my-collection my-document
+
+# Get document information (alternative command)
+./maestro-k get document my-database my-collection my-document
+./maestro-k get doc my-database my-collection my-document
+./maestro-k get vdb-doc my-database my-collection my-document
+
+# Retrieve document with verbose output
+./maestro-k retrieve document my-database my-collection my-document --verbose
+
+# Retrieve document with dry-run mode
+./maestro-k retrieve document my-database my-collection my-document --dry-run
+```
+
 **Collection Information Output**: When retrieving collection information, the output shows:
 - Collection name
 - Document count
@@ -402,6 +524,27 @@ Collection information for 'my-collection' in vector database 'my-database': {
     "vectorizer": "text2vec-weaviate",
     "properties_count": 4,
     "module_config": null
+  }
+}
+```
+
+**Document Information Output**: When retrieving document information, the output shows:
+- Document ID
+- Document URL
+- Document text content
+- Document metadata including doc_name and collection_name
+
+Example:
+```json
+Document 'my-document' from collection 'my-collection' in vector database 'my-database': {
+  "id": "doc_123",
+  "url": "https://example.com/my-document",
+  "text": "This is the content of the document...",
+  "metadata": {
+    "doc_name": "my-document",
+    "collection_name": "my-collection",
+    "source": "web",
+    "timestamp": "2024-01-01T00:00:00Z"
   }
 }
 ```

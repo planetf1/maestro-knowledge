@@ -389,6 +389,52 @@ class MilvusVectorDatabase(VectorDatabase):
             )
             return 0
 
+    def get_document(
+        self, doc_name: str, collection_name: str = None
+    ) -> Dict[str, Any]:
+        """Get a specific document by name from a collection in Milvus."""
+        self._ensure_client()
+        if self.client is None:
+            raise ValueError("Milvus client is not available")
+
+        target_collection = collection_name or self.collection_name
+
+        try:
+            # Check if collection exists first
+            if not self.client.has_collection(target_collection):
+                raise ValueError(f"Collection '{target_collection}' not found")
+
+            # Query for the specific document by doc_name in metadata
+            results = self.client.query(
+                target_collection,
+                filter=f'metadata["doc_name"] == "{doc_name}"',
+                output_fields=["id", "url", "text", "metadata"],
+                limit=1,
+            )
+
+            if not results:
+                raise ValueError(
+                    f"Document '{doc_name}' not found in collection '{target_collection}'"
+                )
+
+            doc = results[0]
+            try:
+                metadata = json.loads(doc.get("metadata", "{}"))
+            except Exception:
+                metadata = {}
+
+            return {
+                "id": doc.get("id"),
+                "url": doc.get("url", ""),
+                "text": doc.get("text", ""),
+                "metadata": metadata,
+            }
+        except ValueError as e:
+            # Re-raise ValueError as is (these are user-friendly error messages)
+            raise e
+        except Exception as e:
+            raise ValueError(f"Failed to retrieve document '{doc_name}': {e}")
+
     def get_collection_info(self, collection_name: str = None) -> Dict[str, Any]:
         """Get detailed information about a collection."""
         self._ensure_client()

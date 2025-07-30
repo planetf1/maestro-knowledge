@@ -72,7 +72,7 @@ func replaceEnvVars(content string) (string, error) {
 var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create vector database resources",
-	Long: `Create vector database resources from YAML files or create collections.
+	Long: `Create vector database resources from YAML files, create collections, or create documents.
 	
 Usage:
   maestro-k create vector-database YAML_FILE [options]
@@ -81,12 +81,17 @@ Usage:
   maestro-k create collection VDB_NAME COLLECTION_NAME [options]
   maestro-k create vdb-col VDB_NAME COLLECTION_NAME [options]
   maestro-k create col VDB_NAME COLLECTION_NAME [options]
+  maestro-k create document VDB_NAME COLLECTION_NAME DOC_NAME --file-name=FILE_NAME [options]
+  maestro-k create vdb-doc VDB_NAME COLLECTION_NAME DOC_NAME --file-name=FILE_NAME [options]
+  maestro-k create doc VDB_NAME COLLECTION_NAME DOC_NAME --file-name=FILE_NAME [options]
 
 Examples:
   maestro-k create vector-db config.yaml
   maestro-k create vdb config.yaml --uri=localhost:8000 --mode=local
   maestro-k create collection my-database my-collection
-  maestro-k create col my-database my-collection --embedding=text-embedding-3-small`,
+  maestro-k create col my-database my-collection --embedding=text-embedding-3-small
+  maestro-k create document my-database my-collection my-doc --file-name=document.txt
+  maestro-k create doc my-database my-collection my-doc --file-name=document.txt --embed=text-embedding-3-small`,
 }
 
 // Flags for overriding spec fields
