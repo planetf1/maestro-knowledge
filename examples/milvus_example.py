@@ -16,8 +16,7 @@ from typing import List, Dict, Any
 
 # Set environment variables for Milvus (optional - these are the defaults)
 os.environ.setdefault("VECTOR_DB_TYPE", "milvus")
-os.environ.setdefault("MILVUS_HOST", "localhost")
-os.environ.setdefault("MILVUS_PORT", "19530")
+os.environ.setdefault("MILVUS_URI", "http://localhost:19530")
 
 # Add the project root to the Python path
 import sys
