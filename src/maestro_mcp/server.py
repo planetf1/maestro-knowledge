@@ -44,7 +44,8 @@ class CreateVectorDatabaseInput(BaseModel):
         default="MaestroDocs", description="Name of the collection to use"
     )
     dimension: int = Field(
-        default=None, description="The vector dimension for the collection. If None, it will be inferred from the embedding model."
+        default=None,
+        description="The vector dimension for the collection. If None, it will be inferred from the embedding model.",
     )
 
 
@@ -443,7 +444,7 @@ def create_mcp_server() -> FastMCP:
         if input.db_name in vector_databases:
             db = get_database_by_name(input.db_name)
 
-        # Check if the collection exists
+            # Check if the collection exists
             collections = db.list_collections()
             # Normalize both sides for comparison
 
@@ -459,6 +460,7 @@ def create_mcp_server() -> FastMCP:
             return f"Successfully deleted collection '{input.collection_name}' from vector database '{input.db_name}'"
         try:
             from ..db.vector_db_milvus import MilvusVectorDatabase
+
             temp_db = MilvusVectorDatabase(collection_name=input.collection_name)
             temp_db.delete_collection(input.collection_name)
             return f"Successfully dropped collection '{input.collection_name}' from Milvus (untracked)."
@@ -472,9 +474,12 @@ def create_mcp_server() -> FastMCP:
             db = get_database_by_name(input.db_name)
             db.cleanup()
             del vector_databases[input.db_name]
-            return f"Successfully cleaned up and removed vector database '{input.db_name}'"
+            return (
+                f"Successfully cleaned up and removed vector database '{input.db_name}'"
+            )
         try:
             from ..db.vector_db_milvus import MilvusVectorDatabase
+
             temp_db = MilvusVectorDatabase(collection_name=input.db_name)
             temp_db.delete_collection(input.db_name)
             return f"Successfully dropped collection '{input.db_name}' from Milvus (untracked)."
@@ -600,6 +605,7 @@ async def run_http_server(host: str = "localhost", port: int = 8030):
     print(f"📚 ReDoc docs: http://{host}:{port}/redoc")
 
     import os
+
     custom_url = os.getenv("CUSTOM_EMBEDDING_URL")
     if custom_url:
         custom_model = os.getenv("CUSTOM_EMBEDDING_MODEL", "nomic-embed-text")
@@ -608,7 +614,7 @@ async def run_http_server(host: str = "localhost", port: int = 8030):
         print(f"   - Model:  {custom_model}")
     else:
         print("🧬 Using default OpenAI embedding configuration.")
-        
+
     # Run the MCP server directly
     await mcp_app.run_http_async(host=host, port=port)
 
