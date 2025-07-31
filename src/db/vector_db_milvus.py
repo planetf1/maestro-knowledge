@@ -169,14 +169,9 @@ class MilvusVectorDatabase(VectorDatabase):
             embedding_model: Name of the embedding model
 
         Returns:
-            Vector dimension for the model
+            Vector dimension for the model. Raises ValueError if model is unknown.
         """
-        # Prioritize the dimension passed during initialization.
-        if self.dimension is not None:
-            return self.dimension
-
         # Map embedding models to their dimensions
-
         dimension_mapping = {
             "text-embedding-ada-002": 1536,
             "text-embedding-3-small": 1536,
@@ -184,13 +179,15 @@ class MilvusVectorDatabase(VectorDatabase):
             "default": 1536,
         }
 
+        dimension = dimension_mapping.get(embedding_model)
+
         # For custom models, dimension MUST be passed in __init__ if not in mapping.
-        if embedding_model not in dimension_mapping:
+        if dimension is None:
             raise ValueError(
                 f"Unknown embedding model '{embedding_model}'. Please pass the 'dimension' parameter when creating the database."
             )
 
-        return dimension_mapping.get(embedding_model)
+        return dimension
 
     def setup(self, embedding: str = "default"):
         """Set up Milvus collection if it doesn't exist."""
@@ -200,9 +197,11 @@ class MilvusVectorDatabase(VectorDatabase):
             warnings.warn("Milvus client is not available. Setup skipped.")
             return
 
-        # Store the embedding model
-
         self.embedding_model = embedding
+
+        # If dimension is not set during initialization, infer it from the embedding model.
+        if self.dimension is None:
+            self.dimension = self._get_embedding_dimension(embedding)
 
         # Create collection if it doesn't exist
 
