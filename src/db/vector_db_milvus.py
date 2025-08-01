@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: MIT
-# Copyright (c) 2025 dr.max
+# SPDX-License-Identifier: Apache 2.0
+# Copyright (c) 2025 IBM
 
 import json
 import os
@@ -170,31 +170,39 @@ class MilvusVectorDatabase(VectorDatabase):
             embedding_model, 1536
         )  # Default to 1536 if unknown
 
-    def setup(self, embedding: str = "default"):
+    def setup(self, embedding: str = "default", collection_name: str = None):
         """Set up Milvus collection if it doesn't exist."""
         self._ensure_client()
         if self.client is None:
             warnings.warn("Milvus client is not available. Setup skipped.")
             return
 
+        # Use the specified collection name or fall back to the default
+        target_collection = (
+            collection_name if collection_name is not None else self.collection_name
+        )
+
         # Store the embedding model
         self.embedding_model = embedding
 
         # Create collection if it doesn't exist
-        if not self.client.has_collection(self.collection_name):
+        if not self.client.has_collection(target_collection):
             # Determine vector dimension based on embedding model
             dimension = self._get_embedding_dimension(embedding)
 
             # Use the correct API for MilvusClient
             self.client.create_collection(
-                collection_name=self.collection_name,
+                collection_name=target_collection,
                 dimension=dimension,  # Vector dimension
                 primary_field_name="id",
                 vector_field_name="vector",
             )
 
     def write_documents(
-        self, documents: List[Dict[str, Any]], embedding: str = "default"
+        self,
+        documents: List[Dict[str, Any]],
+        embedding: str = "default",
+        collection_name: str = None,
     ):
         """
         Write documents to Milvus.
@@ -205,11 +213,17 @@ class MilvusVectorDatabase(VectorDatabase):
             embedding: Embedding strategy to use:
                       - "default": Use pre-computed vector if available, otherwise use text-embedding-ada-002
                       - Specific model name: Use the specified embedding model to generate vectors
+            collection_name: Name of the collection to write to (defaults to self.collection_name)
         """
         self._ensure_client()
         if self.client is None:
             warnings.warn("Milvus client is not available. Documents not written.")
             return
+
+        # Use the specified collection name or fall back to the default
+        target_collection = (
+            collection_name if collection_name is not None else self.collection_name
+        )
 
         # Validate embedding parameter
         if embedding not in self.supported_embeddings():
@@ -248,7 +262,7 @@ class MilvusVectorDatabase(VectorDatabase):
                     "vector": doc_vector,
                 }
             )
-        self.client.insert(self.collection_name, data)
+        self.client.insert(target_collection, data)
 
     def list_documents(self, limit: int = 10, offset: int = 0) -> List[Dict[str, Any]]:
         """List documents from Milvus."""
@@ -546,6 +560,157 @@ class MilvusVectorDatabase(VectorDatabase):
         # Placeholder: Milvus does not have a built-in query agent like Weaviate
         # You would implement your own search logic here
         return self
+
+    def query(self, query: str, limit: int = 5) -> str:
+        """
+        Query the vector database using Milvus vector similarity search.
+
+        Args:
+            query: The query string to search for
+            limit: Maximum number of results to consider
+
+        Returns:
+            A string response with relevant information from the database
+        """
+        try:
+            # Perform vector similarity search
+            documents = self._search_documents(query, limit)
+
+            if not documents:
+                return f"No relevant documents found for query: '{query}'"
+
+            # Format the response
+            response_parts = [f"Query: {query}\n"]
+            response_parts.append(f"Found {len(documents)} relevant documents:\n")
+
+            for i, doc in enumerate(documents, 1):
+                url = doc.get("url", "No URL")
+                text = doc.get("text", "No text content")
+                score = doc.get("score", "N/A")
+
+                # Truncate text if too long
+                if len(text) > 500:
+                    text = text[:500] + "..."
+
+                response_parts.append(f"\n{i}. Document (Score: {score}):")
+                response_parts.append(f"   URL: {url}")
+                response_parts.append(f"   Content: {text}")
+
+            return "\n".join(response_parts)
+
+        except Exception as e:
+            import warnings
+
+            warnings.warn(f"Failed to query Milvus: {e}")
+            return f"Error querying database: {str(e)}"
+
+    def _search_documents(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """
+        Search for documents using vector similarity search.
+
+        Args:
+            query: The search query text
+            limit: Maximum number of results to return
+
+        Returns:
+            List of documents sorted by relevance
+        """
+        try:
+            self._ensure_client()
+            if self.client is None:
+                warnings.warn("Milvus client is not available. Returning empty list.")
+                return []
+
+            # Generate embedding for the query
+            query_vector = self._generate_embedding(
+                query, self.embedding_model or "default"
+            )
+
+            # Perform vector similarity search
+            results = self.client.search(
+                self.collection_name,
+                data=[query_vector],
+                anns_field="vector",
+                param={"metric_type": "COSINE", "params": {"nprobe": 10}},
+                limit=limit,
+                output_fields=["id", "url", "text", "metadata"],
+            )
+
+            documents = []
+            for hits in results:
+                for hit in hits:
+                    try:
+                        metadata = json.loads(hit.entity.get("metadata", "{}"))
+                    except Exception:
+                        metadata = {}
+
+                    doc = {
+                        "id": hit.entity.get("id"),
+                        "url": hit.entity.get("url", ""),
+                        "text": hit.entity.get("text", ""),
+                        "metadata": metadata,
+                        "score": hit.score,  # Include similarity score
+                    }
+                    documents.append(doc)
+
+            return documents
+
+        except Exception as e:
+            warnings.warn(f"Failed to perform vector search for query '{query}': {e}")
+            # Fallback to simple keyword matching if vector search fails
+            return self._fallback_keyword_search(query, limit)
+
+    def _fallback_keyword_search(
+        self, query: str, limit: int = 5
+    ) -> List[Dict[str, Any]]:
+        """
+        Fallback to simple keyword matching if vector search fails.
+
+        Args:
+            query: The search query text
+            limit: Maximum number of results to return
+
+        Returns:
+            List of documents sorted by relevance
+        """
+        try:
+            # Get all documents and perform keyword matching
+            documents = self.list_documents(limit=100, offset=0)
+
+            query_lower = query.lower()
+            query_words = query_lower.split()
+            relevant_docs = []
+
+            for doc in documents:
+                text = doc.get("text", "").lower()
+                url = doc.get("url", "").lower()
+                metadata = doc.get("metadata", {})
+                metadata_text = str(metadata).lower()
+
+                # Count how many query words match
+                matches = 0
+                for word in query_words:
+                    if word in text or word in url or word in metadata_text:
+                        matches += 1
+
+                # If at least one word matches, consider it relevant
+                if matches > 0:
+                    relevant_docs.append(
+                        {"doc": doc, "matches": matches, "text_length": len(text)}
+                    )
+
+            if relevant_docs:
+                # Sort by relevance (more matches first, then by text length)
+                relevant_docs.sort(key=lambda x: (-x["matches"], -x["text_length"]))
+
+                # Return the top results
+                return [item["doc"] for item in relevant_docs[:limit]]
+
+            return []
+
+        except Exception as e:
+            warnings.warn(f"Fallback keyword search also failed: {e}")
+            return []
 
     def cleanup(self):
         """Clean up Milvus client."""

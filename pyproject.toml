@@ -36,3 +36,6 @@ filterwarnings = [
     # Suppress our own warning in test_list_collections_exception test
     "ignore::UserWarning:src.db.vector_db_weaviate",
 ]
+# Enable async test support
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

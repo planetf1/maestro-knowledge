@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: MIT
-# Copyright (c) 2025 dr.max
+# SPDX-License-Identifier: Apache 2.0
+# Copyright (c) 2025 IBM
 
 import warnings
 
@@ -51,10 +51,10 @@ class ConcreteVectorDatabase(VectorDatabase):
     def supported_embeddings(self):
         return ["default", "test-embedding"]
 
-    def setup(self):
+    def setup(self, embedding: str = "default", collection_name: str = None):
         pass
 
-    def write_documents(self, documents, embedding="default"):
+    def write_documents(self, documents, embedding="default", collection_name=None):
         for doc in documents:
             doc_copy = doc.copy()
             doc_copy["id"] = str(self.next_id)
@@ -123,6 +123,9 @@ class ConcreteVectorDatabase(VectorDatabase):
 
     def cleanup(self):
         self.documents = []
+
+    def query(self, query: str, limit: int = 5) -> str:
+        return f"Dummy query response: {query} (limit={limit})"
 
 
 class TestConcreteVectorDatabase:

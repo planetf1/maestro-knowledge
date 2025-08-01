@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: MIT
-# Copyright (c) 2025 dr.max
+# SPDX-License-Identifier: Apache 2.0
+# Copyright (c) 2025 IBM
 
 """
 Example demonstrating how to use the Maestro Vector Database MCP server.

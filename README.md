@@ -12,6 +12,7 @@ A modular vector database interface supporting multiple backends (Weaviate, Milv
 - **CLI Tool**: Command-line interface for vector database operations with YAML configuration
 - **Document management**: Write, read, delete, and query documents
 - **Collection management**: List and manage collections across vector databases
+- **Query functionality**: Natural language querying with semantic search across documents
 - **Metadata support**: Rich metadata handling for documents
 - **Environment variable substitution**: Dynamic configuration with `{{ENV_VAR_NAME}}` syntax
 
@@ -52,6 +53,10 @@ db.write_documents(documents, embedding="default")
 # List documents
 docs = db.list_documents(limit=10)
 print(f"Found {len(docs)} documents")
+
+# Query documents using natural language
+results = db.query("What is the main topic of the documents?", limit=5)
+print(f"Query results: {results}")
 
 # Clean up
 db.cleanup()
@@ -160,6 +165,10 @@ go build -o maestro-k src/*.go
 
 # List documents in a collection
 ./maestro-k list docs my-database my-collection
+
+# Query documents using natural language
+./maestro-k query my-database "What is the main topic of the documents?"
+./maestro-k query vdb my-database "Find information about API endpoints" --doc-limit 10
 
 # Retrieve collection information
 ./maestro-k retrieve collection my-database
@@ -290,6 +299,7 @@ Add the following to your MCP client configuration:
 - **write_documents**: Write multiple documents with specified embedding strategy
 - **list_documents**: List documents from the database
 - **count_documents**: Get document count
+- **query**: Query documents using natural language with semantic search
 - **delete_document**: Delete a single document
 - **delete_documents**: Delete multiple documents
 - **delete_collection**: Delete an entire collection
@@ -312,9 +322,9 @@ For more details, see [src/maestro_mcp/README.md](src/maestro_mcp/README.md).
 
 See the [examples/](examples/) directory for usage examples:
 
-- [Weaviate Example](examples/weaviate_example.py) - Demonstrates Weaviate with different embedding models
-- [Milvus Example](examples/milvus_example.py) - Shows Milvus with pre-computed vectors and embedding models
-- [MCP Server Example](examples/mcp_example.py)
+- [Weaviate Example](examples/weaviate_example.py) - Demonstrates Weaviate with different embedding models and querying
+- [Milvus Example](examples/milvus_example.py) - Shows Milvus with pre-computed vectors, embedding models, and querying
+- [MCP Server Example](examples/mcp_example.py) - Demonstrates MCP server integration including query functionality
 
 ## Available Scripts
 
@@ -367,7 +377,8 @@ pytest tests/test_vector_database_yamls.py -v
 ./tools/e2e.sh help                    # Show e2e test options
 ./tools/e2e.sh fast                    # Run fast e2e workflow
 ./tools/e2e.sh complete                # Run complete e2e workflow with error testing
-./tools/e2e.sh all                     # Run both fast and complete workflows
+./tools/e2e.sh query                   # Run query e2e workflow
+./tools/e2e.sh all                     # Run all workflows (fast, complete, and query)
 ```
 
 ## Project Structure
@@ -401,6 +412,7 @@ maestro-knowledge/
 ├── tests/                   # Test suite
 │   ├── test_vector_db_*.py  # Vector database tests
 │   ├── test_mcp_server.py   # MCP server tests
+│   ├── test_query_*.py      # Query functionality tests
 │   ├── test_integration_*.py # Integration tests
 │   ├── test_vector_database_yamls.py # YAML schema validation tests
 │   └── yamls/               # YAML configuration examples

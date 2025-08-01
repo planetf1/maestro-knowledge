@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: MIT
-# Copyright (c) 2025 dr.max
+# SPDX-License-Identifier: Apache 2.0
+# Copyright (c) 2025 IBM
 
 from .vector_db_base import VectorDatabase
 from .vector_db_weaviate import WeaviateVectorDatabase

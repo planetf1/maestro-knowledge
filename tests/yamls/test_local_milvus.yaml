@@ -7,6 +7,6 @@ metadata:
 spec:
   type: milvus
   uri: localhost:19530
-  collection_name: test_collection
+  collection_name: Test_collection_lowercase
   embedding: text-embedding-3-small
   mode: local

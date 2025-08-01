@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: MIT
-# Copyright (c) 2025 dr.max
+# SPDX-License-Identifier: Apache 2.0
+# Copyright (c) 2025 IBM
 
 import json
 import warnings
@@ -59,11 +59,16 @@ class WeaviateVectorDatabase(VectorDatabase):
 
         weaviate_api_key = os.getenv("WEAVIATE_API_KEY")
         weaviate_url = os.getenv("WEAVIATE_URL")
+        openai_api_key = os.getenv("OPENAI_APIKEY") or os.getenv("OPENAI_API_KEY")
 
         if not weaviate_api_key:
             raise ValueError("WEAVIATE_API_KEY is not set")
         if not weaviate_url:
             raise ValueError("WEAVIATE_URL is not set")
+
+        # Set OpenAI API key in environment if available
+        if openai_api_key:
+            os.environ["OPENAI_APIKEY"] = openai_api_key
 
         self.client = weaviate.connect_to_weaviate_cloud(
             cluster_url=weaviate_url,
@@ -108,7 +113,8 @@ class WeaviateVectorDatabase(VectorDatabase):
             "text-embedding-3-large",
         ]:
             return Configure.Vectorizer.text2vec_openai(
-                model=embedding, vectorize_collection_name=False
+                model=embedding,
+                vectorize_collection_name=False,
             )
 
         if embedding not in vectorizer_mapping:
@@ -118,23 +124,29 @@ class WeaviateVectorDatabase(VectorDatabase):
 
         return vectorizer_mapping[embedding]
 
-    def setup(self, embedding: str = "default"):
+    def setup(self, embedding: str = "default", collection_name: str = None):
         """
         Set up Weaviate collection if it doesn't exist.
 
         Args:
             embedding: Embedding model to use for the collection
+            collection_name: Name of the collection to set up (defaults to self.collection_name)
         """
         from weaviate.classes.config import Property, DataType
+
+        # Use the specified collection name or fall back to the default
+        target_collection = (
+            collection_name if collection_name is not None else self.collection_name
+        )
 
         # Store the embedding model
         self.embedding_model = embedding
 
-        if not self.client.collections.exists(self.collection_name):
+        if not self.client.collections.exists(target_collection):
             vectorizer_config = self._get_vectorizer_config(embedding)
 
             self.client.collections.create(
-                self.collection_name,
+                target_collection,
                 description="A dataset with the contents of Maestro Knowledge docs and website",
                 vectorizer_config=vectorizer_config,
                 properties=[
@@ -157,7 +169,10 @@ class WeaviateVectorDatabase(VectorDatabase):
             )
 
     def write_documents(
-        self, documents: List[Dict[str, Any]], embedding: str = "default"
+        self,
+        documents: List[Dict[str, Any]],
+        embedding: str = "default",
+        collection_name: str = None,
     ):
         """
         Write documents to Weaviate.
@@ -167,7 +182,13 @@ class WeaviateVectorDatabase(VectorDatabase):
             embedding: Embedding strategy to use:
                       - "default": Use Weaviate's default text2vec-weaviate
                       - Specific model name: Use the specified embedding model
+            collection_name: Name of the collection to write to (defaults to self.collection_name)
         """
+        # Use the specified collection name or fall back to the default
+        target_collection = (
+            collection_name if collection_name is not None else self.collection_name
+        )
+
         # Validate embedding parameter
         if embedding not in self.supported_embeddings():
             raise ValueError(
@@ -175,10 +196,10 @@ class WeaviateVectorDatabase(VectorDatabase):
             )
 
         # Ensure collection exists with the correct embedding configuration
-        if not self.client.collections.exists(self.collection_name):
-            self.setup(embedding)
+        if not self.client.collections.exists(target_collection):
+            self.setup(embedding, target_collection)
 
-        collection = self.client.collections.get(self.collection_name)
+        collection = self.client.collections.get(target_collection)
         with collection.batch.dynamic() as batch:
             for doc in documents:
                 metadata_text = json.dumps(doc.get("metadata", {}), ensure_ascii=False)
@@ -189,6 +210,24 @@ class WeaviateVectorDatabase(VectorDatabase):
                         "metadata": metadata_text,
                     }
                 )
+
+    def write_documents_to_collection(
+        self,
+        documents: List[Dict[str, Any]],
+        collection_name: str,
+        embedding: str = "default",
+    ):
+        """
+        Write documents to a specific collection in Weaviate.
+
+        Args:
+            documents: List of documents with 'url', 'text', and 'metadata' fields
+            collection_name: Name of the collection to write to
+            embedding: Embedding strategy to use:
+                      - "default": Use Weaviate's default text2vec-weaviate
+                      - Specific model name: Use the specified embedding model
+        """
+        return self.write_documents(documents, embedding, collection_name)
 
     def list_documents(self, limit: int = 10, offset: int = 0) -> List[Dict[str, Any]]:
         """List documents from Weaviate."""
@@ -350,7 +389,19 @@ class WeaviateVectorDatabase(VectorDatabase):
         try:
             # Get all collections from the client
             collections = self.client.collections.list_all()
-            return [collection.name for collection in collections]
+
+            # Handle both object collections and string collections
+            collection_names = []
+            for collection in collections:
+                if hasattr(collection, "name"):
+                    collection_names.append(collection.name)
+                elif isinstance(collection, str):
+                    collection_names.append(collection)
+                else:
+                    # Try to get the name as a property
+                    collection_names.append(str(collection))
+
+            return collection_names
         except Exception as e:
             import warnings
 
@@ -467,6 +518,159 @@ class WeaviateVectorDatabase(VectorDatabase):
         from weaviate.agents.query import QueryAgent
 
         return QueryAgent(client=self.client, collections=[self.collection_name])
+
+    def query(self, query: str, limit: int = 5, collection_name: str = None) -> str:
+        """
+        Query the vector database using Weaviate's vector similarity search.
+
+        Args:
+            query: The query string to search for
+            limit: Maximum number of results to consider
+            collection_name: Optional collection name to search in (defaults to self.collection_name)
+
+        Returns:
+            A string response with relevant information from the database
+        """
+        try:
+            # Use vector similarity search as the primary method
+            documents = self.search(query, limit, collection_name)
+
+            if not documents:
+                return f"No relevant documents found for query: '{query}'"
+
+            # Format the results
+            response_parts = [
+                f"Found {len(documents)} relevant documents for query: '{query}'\n\n"
+            ]
+
+            for i, doc in enumerate(documents, 1):
+                response_parts.append(f"Document {i}:")
+                response_parts.append(f"  URL: {doc.get('url', 'N/A')}")
+                response_parts.append(f"  Text: {doc.get('text', 'N/A')[:200]}...")
+                response_parts.append("")
+
+            return "\n".join(response_parts)
+
+        except Exception as e:
+            import warnings
+
+            warnings.warn(f"Failed to query Weaviate: {e}")
+            return f"Error querying database: {str(e)}"
+
+    def search(
+        self, query: str, limit: int = 5, collection_name: str = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Search for documents using Weaviate's vector similarity search.
+
+        Args:
+            query: The search query text
+            limit: Maximum number of results to return
+            collection_name: Optional collection name to search in (defaults to self.collection_name)
+
+        Returns:
+            List of documents sorted by relevance
+        """
+        try:
+            target_collection = (
+                collection_name if collection_name is not None else self.collection_name
+            )
+            collection = self.client.collections.get(target_collection)
+
+            # Use Weaviate's near_text search for vector similarity
+            result = collection.query.near_text(
+                query=query,
+                limit=limit,
+                include_vector=False,
+            )
+
+            documents = []
+            for obj in result.objects:
+                doc = {
+                    "id": obj.uuid,
+                    "url": obj.properties.get("url", ""),
+                    "text": obj.properties.get("text", ""),
+                    "metadata": obj.properties.get("metadata", "{}"),
+                }
+
+                # Try to parse metadata if it's a JSON string
+                try:
+                    import json
+
+                    doc["metadata"] = json.loads(doc["metadata"])
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
+                documents.append(doc)
+
+            return documents
+
+        except Exception as e:
+            import warnings
+
+            warnings.warn(f"Failed to perform vector search for query '{query}': {e}")
+            # Fallback to simple keyword matching if vector search fails
+            return self._fallback_keyword_search(query, limit, collection_name)
+
+    def _fallback_keyword_search(
+        self, query: str, limit: int = 5, collection_name: str = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Fallback to simple keyword matching if vector search fails.
+
+        Args:
+            query: The search query text
+            limit: Maximum number of results to return
+            collection_name: Optional collection name to search in (defaults to self.collection_name)
+
+        Returns:
+            List of documents sorted by relevance
+        """
+        try:
+            # Get all documents and perform keyword matching
+            target_collection = (
+                collection_name if collection_name is not None else self.collection_name
+            )
+            documents = self.list_documents_in_collection(
+                target_collection, limit=100, offset=0
+            )
+
+            query_lower = query.lower()
+            query_words = query_lower.split()
+            relevant_docs = []
+
+            for doc in documents:
+                text = doc.get("text", "").lower()
+                url = doc.get("url", "").lower()
+                metadata = doc.get("metadata", {})
+                metadata_text = str(metadata).lower()
+
+                # Count how many query words match
+                matches = 0
+                for word in query_words:
+                    if word in text or word in url or word in metadata_text:
+                        matches += 1
+
+                # If at least one word matches, consider it relevant
+                if matches > 0:
+                    relevant_docs.append(
+                        {"doc": doc, "matches": matches, "text_length": len(text)}
+                    )
+
+            if relevant_docs:
+                # Sort by relevance (more matches first, then by text length)
+                relevant_docs.sort(key=lambda x: (-x["matches"], -x["text_length"]))
+
+                # Return the top results
+                return [item["doc"] for item in relevant_docs[:limit]]
+
+            return []
+
+        except Exception as e:
+            import warnings
+
+            warnings.warn(f"Fallback keyword search also failed: {e}")
+            return []
 
     def cleanup(self):
         """Clean up Weaviate client."""

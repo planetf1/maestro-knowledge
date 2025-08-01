@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: MIT
-# Copyright (c) 2025 dr.max
+# SPDX-License-Identifier: Apache 2.0
+# Copyright (c) 2025 IBM
 
 import warnings
 
@@ -54,7 +54,16 @@ class TestWeaviateVectorDatabase:
 
     def test_supported_embeddings(self):
         """Test the supported_embeddings method."""
-        with patch("weaviate.connect_to_weaviate_cloud") as mock_connect:
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
             mock_client = MagicMock()
             mock_connect.return_value = mock_client
 
@@ -72,7 +81,16 @@ class TestWeaviateVectorDatabase:
 
     def test_init_with_collection_name(self):
         """Test WeaviateVectorDatabase initialization with custom collection name."""
-        with patch("weaviate.connect_to_weaviate_cloud") as mock_connect:
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
             mock_client = MagicMock()
             mock_connect.return_value = mock_client
 
@@ -83,7 +101,16 @@ class TestWeaviateVectorDatabase:
 
     def test_init_default_collection_name(self):
         """Test WeaviateVectorDatabase initialization with default collection name."""
-        with patch("weaviate.connect_to_weaviate_cloud") as mock_connect:
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
             mock_client = MagicMock()
             mock_connect.return_value = mock_client
 
@@ -94,7 +121,16 @@ class TestWeaviateVectorDatabase:
 
     def test_setup_collection_exists(self):
         """Test setup when collection already exists."""
-        with patch("weaviate.connect_to_weaviate_cloud") as mock_connect:
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
             mock_client = MagicMock()
             mock_client.collections.exists.return_value = True
             mock_connect.return_value = mock_client
@@ -112,6 +148,13 @@ class TestWeaviateVectorDatabase:
             patch("weaviate.classes.config.Configure") as mock_configure,
             patch("weaviate.classes.config.Property") as mock_property,
             patch("weaviate.classes.config.DataType") as mock_datatype,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
         ):
             mock_client = MagicMock()
             mock_client.collections.exists.return_value = False
@@ -137,6 +180,13 @@ class TestWeaviateVectorDatabase:
             patch("weaviate.classes.config.Configure") as mock_configure,
             patch("weaviate.classes.config.Property") as mock_property,
             patch("weaviate.classes.config.DataType") as mock_datatype,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
         ):
             mock_client = MagicMock()
             mock_client.collections.exists.return_value = False
@@ -160,6 +210,13 @@ class TestWeaviateVectorDatabase:
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
             patch("weaviate.classes.config.Configure") as mock_configure,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
         ):
             mock_client = MagicMock()
             mock_connect.return_value = mock_client
@@ -175,7 +232,16 @@ class TestWeaviateVectorDatabase:
 
     def test_get_vectorizer_config_unsupported(self):
         """Test getting vectorizer config for unsupported embedding."""
-        with patch("weaviate.connect_to_weaviate_cloud") as mock_connect:
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
             mock_client = MagicMock()
             mock_connect.return_value = mock_client
 
@@ -185,7 +251,16 @@ class TestWeaviateVectorDatabase:
 
     def test_write_documents_default_embedding(self):
         """Test writing documents to Weaviate with default embedding."""
-        with patch("weaviate.connect_to_weaviate_cloud") as mock_connect:
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
             mock_client = MagicMock()
             mock_collection = MagicMock()
             mock_batch = MagicMock()
@@ -224,6 +299,13 @@ class TestWeaviateVectorDatabase:
             patch("weaviate.classes.config.Configure") as mock_configure,
             patch("weaviate.classes.config.Property") as mock_property,
             patch("weaviate.classes.config.DataType") as mock_datatype,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
         ):
             mock_client = MagicMock()
             mock_collection = MagicMock()
@@ -261,7 +343,16 @@ class TestWeaviateVectorDatabase:
 
     def test_write_documents_unsupported_embedding(self):
         """Test writing documents with unsupported embedding."""
-        with patch("weaviate.connect_to_weaviate_cloud") as mock_connect:
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
             mock_client = MagicMock()
             mock_connect.return_value = mock_client
 
@@ -273,13 +364,21 @@ class TestWeaviateVectorDatabase:
                     "metadata": {"type": "webpage"},
                 }
             ]
-
             with pytest.raises(ValueError, match="Unsupported embedding"):
                 db.write_documents(documents, embedding="unsupported-model")
 
     def test_list_documents(self):
         """Test listing documents from Weaviate."""
-        with patch("weaviate.connect_to_weaviate_cloud") as mock_connect:
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
             mock_client = MagicMock()
             mock_collection = MagicMock()
             mock_result = MagicMock()
@@ -317,7 +416,16 @@ class TestWeaviateVectorDatabase:
 
     def test_count_documents(self):
         """Test counting documents in Weaviate."""
-        with patch("weaviate.connect_to_weaviate_cloud") as mock_connect:
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
             mock_client = MagicMock()
             mock_collection = MagicMock()
             mock_result = MagicMock()
@@ -407,7 +515,16 @@ class TestWeaviateVectorDatabase:
 
     def test_delete_documents(self):
         """Test deleting documents from Weaviate."""
-        with patch("weaviate.connect_to_weaviate_cloud") as mock_connect:
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
             mock_client = MagicMock()
             mock_collection = MagicMock()
             mock_client.collections.get.return_value = mock_collection
@@ -423,7 +540,16 @@ class TestWeaviateVectorDatabase:
 
     def test_delete_collection(self):
         """Test deleting a collection from Weaviate."""
-        with patch("weaviate.connect_to_weaviate_cloud") as mock_connect:
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
             mock_client = MagicMock()
             mock_client.collections.exists.return_value = True
             mock_connect.return_value = mock_client
@@ -442,6 +568,13 @@ class TestWeaviateVectorDatabase:
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
             patch("weaviate.agents.query.QueryAgent") as mock_query_agent,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
         ):
             mock_client = MagicMock()
             mock_connect.return_value = mock_client
@@ -456,7 +589,16 @@ class TestWeaviateVectorDatabase:
 
     def test_cleanup(self):
         """Test cleanup method."""
-        with patch("weaviate.connect_to_weaviate_cloud") as mock_connect:
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
             mock_client = MagicMock()
             mock_connect.return_value = mock_client
 
@@ -468,7 +610,16 @@ class TestWeaviateVectorDatabase:
 
     def test_db_type_property(self):
         """Test the db_type property."""
-        with patch("weaviate.connect_to_weaviate_cloud") as mock_connect:
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
             mock_client = MagicMock()
             mock_connect.return_value = mock_client
 

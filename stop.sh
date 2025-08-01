@@ -1,6 +1,6 @@
 #!/bin/bash
-# SPDX-License-Identifier: MIT
-# Copyright (c) 2025 dr.max
+# SPDX-License-Identifier: Apache 2.0
+# Copyright (c) 2025 IBM
 
 # Maestro Knowledge MCP Server Stop Script
 
@@ -93,6 +93,21 @@ stop_server() {
         
         # Remove the PID file
         rm -f "$PID_FILE"
+        
+        # Also kill any processes using port 8030 (default port)
+        if command -v lsof > /dev/null 2>&1; then
+            local port_pids=$(lsof -ti :8030 2>/dev/null)
+            if [ -n "$port_pids" ]; then
+                print_status "Cleaning up any remaining processes on port 8030..."
+                for port_pid in $port_pids; do
+                    if [ "$port_pid" != "$pid" ]; then
+                        print_status "Killing process $port_pid on port 8030"
+                        kill "$port_pid" 2>/dev/null || kill -9 "$port_pid" 2>/dev/null || true
+                    fi
+                done
+            fi
+        fi
+        
         return 0
     fi
     

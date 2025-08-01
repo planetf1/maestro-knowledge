@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: MIT
-# Copyright (c) 2025 dr.max
+# SPDX-License-Identifier: Apache 2.0
+# Copyright (c) 2025 IBM
 
 import warnings
 from abc import ABC, abstractmethod
@@ -44,18 +44,22 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def setup(self, embedding: str = "default"):
+    def setup(self, embedding: str = "default", collection_name: str = None):
         """
         Set up the database and create collections if they don't exist.
 
         Args:
             embedding: Embedding model to use for the collection
+            collection_name: Name of the collection to set up (optional)
         """
         pass
 
     @abstractmethod
     def write_documents(
-        self, documents: List[Dict[str, Any]], embedding: str = "default"
+        self,
+        documents: List[Dict[str, Any]],
+        embedding: str = "default",
+        collection_name: str = None,
     ):
         """
         Write documents to the vector database.
@@ -66,10 +70,35 @@ class VectorDatabase(ABC):
             embedding: Embedding strategy to use. Options:
                       - "default": Use database's default embedding strategy
                       - Specific model name: Use the specified embedding model
+            collection_name: Name of the collection to write to (optional)
         """
         pass
 
-    def write_document(self, document: Dict[str, Any], embedding: str = "default"):
+    def write_documents_to_collection(
+        self,
+        documents: List[Dict[str, Any]],
+        collection_name: str,
+        embedding: str = "default",
+    ):
+        """
+        Write documents to a specific collection in the vector database.
+
+        Args:
+            documents: List of documents with 'url', 'text', and 'metadata' fields.
+                       For Milvus, documents may also include a 'vector' field.
+            collection_name: Name of the collection to write to
+            embedding: Embedding strategy to use. Options:
+                      - "default": Use database's default embedding strategy
+                      - Specific model name: Use the specified embedding model
+        """
+        return self.write_documents(documents, embedding, collection_name)
+
+    def write_document(
+        self,
+        document: Dict[str, Any],
+        embedding: str = "default",
+        collection_name: str = None,
+    ):
         """
         Write a single document to the vector database.
 
@@ -77,8 +106,9 @@ class VectorDatabase(ABC):
             document: Document with 'url', 'text', and 'metadata' fields.
                      For Milvus, document may also include a 'vector' field.
             embedding: Embedding strategy to use (see write_documents for options)
+            collection_name: Name of the collection to write to (optional)
         """
-        return self.write_documents([document], embedding)
+        return self.write_documents([document], embedding, collection_name)
 
     @abstractmethod
     def list_documents(self, limit: int = 10, offset: int = 0) -> List[Dict[str, Any]]:
@@ -223,6 +253,20 @@ class VectorDatabase(ABC):
     @abstractmethod
     def create_query_agent(self):
         """Create and return a query agent for this vector database."""
+        pass
+
+    @abstractmethod
+    def query(self, query: str, limit: int = 5) -> str:
+        """
+        Query the vector database using the default query agent.
+
+        Args:
+            query: The query string to search for
+            limit: Maximum number of results to consider
+
+        Returns:
+            A string response with relevant information from the database
+        """
         pass
 
     @abstractmethod
