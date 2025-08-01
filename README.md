@@ -23,13 +23,11 @@ A modular vector database interface supporting multiple backends (Weaviate, Milv
 First, clone the repository and navigate into the directory:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/AI4quantum/maestro-knowledge.git
 cd maestro-knowledge
 ```
 
 You will need [Python](https://www.python.org/) 3.11+ and [uv](https://docs.astral.sh/uv/#highlights).
-
-
 
 Create and activate a virtual environment:
 
@@ -86,6 +84,7 @@ The library supports flexible embedding strategies for both vector databases:
 ### Supported Embedding Models
 
 #### Weaviate
+
 - `default`: Uses Weaviate's built-in text2vec-weaviate vectorizer
 - `text2vec-weaviate`: Weaviate's built-in text vectorizer
 - `text2vec-openai`: OpenAI's embedding models (requires API key)
@@ -96,6 +95,7 @@ The library supports flexible embedding strategies for both vector databases:
 - `text-embedding-3-large`: OpenAI's text-embedding-3-large model
 
 #### Milvus
+
 - `default`: Uses pre-computed vectors if available, otherwise text-embedding-ada-002
 - `text-embedding-ada-002`: OpenAI's Ada-002 embedding model
 - `text-embedding-3-small`: OpenAI's text-embedding-3-small model
@@ -149,6 +149,7 @@ print(f"Supported embeddings: {supported}")
 ### Environment Variables for Embeddings
 
 For OpenAI embedding models, set the following environment variable:
+
 ```bash
 export OPENAI_API_KEY="your-openai-api-key"
 ```
@@ -261,6 +262,7 @@ spec:
 ```
 
 When you run `./maestro-k create vector-db config.yaml`, the CLI will:
+
 1. Load environment variables from `.env` file (if present)
 2. Replace `{{WEAVIATE_URL}}` with the actual value from the environment
 3. Process the YAML file with the substituted values
@@ -400,7 +402,7 @@ pytest tests/test_vector_database_yamls.py -v
 
 ## Project Structure
 
-```
+```text
 maestro-knowledge/
 ├── src/                     # Source code
 │   ├── db/                  # Vector database implementations
@@ -477,6 +479,7 @@ For a complete development workflow that tests everything end-to-end:
 ```
 
 This workflow:
+
 1. Starts the MCP server
 2. Runs the fast end-to-end test suite
 3. Stops the MCP server
