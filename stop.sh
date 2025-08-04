@@ -83,30 +83,27 @@ stop_server() {
         local pid=$(cat "$PID_FILE")
         print_status "Found running HTTP server (PID: $pid)"
         
-        # Kill the process
-        if kill "$pid" 2>/dev/null; then
-            print_success "HTTP server stopped successfully"
+        # Attempt graceful shutdown
+        print_status "Attempting graceful shutdown of HTTP server (PID: $pid)..."
+        kill "$pid" 2>/dev/null # Send SIGTERM
+
+        # Wait and check if process is still running
+        local max_attempts=10
+        local attempt=0
+        while ps -p "$pid" > /dev/null 2>&1 && [ $attempt -lt $max_attempts ]; do
+            sleep 1
+            attempt=$((attempt+1))
+        done
+
+        if ps -p "$pid" > /dev/null 2>&1; then
+            print_warning "HTTP server (PID: $pid) did not stop gracefully after $attempt seconds, force killing..."
+            kill -9 "$pid"
         else
-            print_warning "Failed to stop HTTP server gracefully, force killing..."
-            kill -9 "$pid" 2>/dev/null || true
+            print_success "HTTP server stopped successfully"
         fi
         
         # Remove the PID file
         rm -f "$PID_FILE"
-        
-        # Also kill any processes using port 8030 (default port)
-        if command -v lsof > /dev/null 2>&1; then
-            local port_pids=$(lsof -ti :8030 2>/dev/null)
-            if [ -n "$port_pids" ]; then
-                print_status "Cleaning up any remaining processes on port 8030..."
-                for port_pid in $port_pids; do
-                    if [ "$port_pid" != "$pid" ]; then
-                        print_status "Killing process $port_pid on port 8030"
-                        kill "$port_pid" 2>/dev/null || kill -9 "$port_pid" 2>/dev/null || true
-                    fi
-                done
-            fi
-        fi
         
         return 0
     fi
@@ -121,8 +118,40 @@ stop_server() {
         print_success "MCP stdio server status cleared"
         return 0
     fi
+
+    # Always kill any processes using port 8030 (default port)
+    if command -v lsof > /dev/null 2>&1; then
+        local port_pids=$(lsof -ti :8030 2>/dev/null)
+        if [ -n "$port_pids" ]; then
+            print_status "Cleaning up any remaining processes on port 8030..."
+            for port_pid in $port_pids; do
+                print_status "Attempting graceful shutdown of process $port_pid on port 8030..."
+                kill "$port_pid" 2>/dev/null # Send SIGTERM
+
+                local lsof_max_attempts=5
+                local lsof_attempt=0
+                while ps -p "$port_pid" > /dev/null 2>&1 && [ $lsof_attempt -lt $lsof_max_attempts ]; do
+                    sleep 1
+                    lsof_attempt=$((lsof_attempt+1))
+                done
+
+                if ps -p "$port_pid" > /dev/null 2>&1; then
+                    print_warning "Process $port_pid on port 8030 did not stop gracefully after $lsof_attempt seconds, force killing..."
+                    kill -9 "$port_pid"
+                else
+                    print_success "Process $port_pid on port 8030 stopped successfully"
+                fi
+            done
+        else
+            print_status "No processes found on port 8030."
+        fi
+    else
+        print_warning "lsof command not found. Cannot check for processes on port 8030."
+    fi
     
-    print_warning "No MCP server is running"
+    if [ "$server_stopped" = false ]; then
+        print_warning "No MCP server was found running."
+    fi
     return 0
 }
 
