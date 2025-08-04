@@ -250,9 +250,7 @@ class MilvusVectorDatabase(VectorDatabase):
                 primary_field_name="id",
                 vector_field_name="vector",
             )
-            warnings.warn(
-                f"[Milvus setup] Collection '{target_collection}' created."
-            )
+            warnings.warn(f"[Milvus setup] Collection '{target_collection}' created.")
 
     def write_documents(
         self,
