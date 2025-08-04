@@ -15,6 +15,7 @@ A modular vector database interface supporting multiple backends (Weaviate, Milv
 - **Query functionality**: Natural language querying with semantic search across documents
 - **Metadata support**: Rich metadata handling for documents
 - **Environment variable substitution**: Dynamic configuration with `{{ENV_VAR_NAME}}` syntax
+- **Safety features**: Confirmation prompts for destructive operations with `--force` flag bypass
 
 ## Quick Start
 
@@ -77,6 +78,43 @@ print(f"Query results: {results}")
 db.cleanup()
 ```
 
+## Components
+
+### CLI Tool
+
+The project includes a Go-based CLI tool for managing vector databases through the MCP server. For comprehensive CLI usage, installation, and examples, see [cli/README.md](cli/README.md).
+
+**Quick CLI Examples:**
+```bash
+# Build and use the CLI
+cd cli && go build -o maestro-k src/*.go
+
+# List vector databases
+./maestro-k vectordb list
+
+# Create vector database from YAML
+./maestro-k vectordb create config.yaml
+
+# Query documents
+./maestro-k query "What is the main topic?" --vdb=my-database
+```
+
+### MCP Server
+
+The project includes a Model Context Protocol (MCP) server that exposes vector database functionality to AI agents. For detailed MCP server documentation, configuration, and examples, see [src/maestro_mcp/README.md](src/maestro_mcp/README.md).
+
+**Quick MCP Server Usage:**
+```bash
+# Start the MCP server
+./start.sh
+
+# Stop the MCP server
+./stop.sh
+
+# Check server status
+./stop.sh status
+```
+
 ## Embedding Strategies
 
 The library supports flexible embedding strategies for both vector databases. For detailed embedding model support and usage examples, see [src/maestro_mcp/README.md](src/maestro_mcp/README.md).
@@ -98,127 +136,6 @@ print(f"Supported embeddings: {supported}")
 db.write_documents(documents, embedding="text-embedding-3-small")
 ```
 
-## CLI Tool
-
-The project includes a Go-based CLI tool for managing vector databases through the MCP server with support for YAML configuration and environment variable substitution.
-
-### Installation
-
-```bash
-# Build the CLI tool
-cd cli
-go build -o maestro-k src/*.go
-
-# Or use the build script
-./build.sh
-```
-
-### Basic Usage
-
-The CLI provides concise error output by default and detailed verbose output when needed. For comprehensive CLI usage examples and detailed command reference, see [cli/README.md](cli/README.md).
-
-```bash
-# List vector databases (using plural form)
-./maestro-k list vector-dbs
-
-# List embeddings for a specific database
-./maestro-k list embeds my-database
-
-# List collections for a specific database
-./maestro-k list cols my-database
-
-# List documents in a collection
-./maestro-k list docs my-database my-collection
-
-# Query documents using natural language
-./maestro-k query my-database "What is the main topic of the documents?"
-
-# Create vector database from YAML
-./maestro-k create vector-db config.yaml
-
-# Validate YAML configuration
-./maestro-k validate config.yaml
-```
-
-### Configuration
-
-The CLI supports multiple configuration methods including environment variables, command-line flags, and `.env` files. For detailed configuration options and environment variable substitution examples, see [cli/README.md](cli/README.md).
-
-## MCP Server
-
-The project includes a Model Context Protocol (MCP) server that exposes vector database functionality to AI agents through a standardized interface with support for multiple simultaneous databases.
-
-### Running the MCP Server
-
-```bash
-# Start the MCP server
-./start.sh
-
-# Stop the MCP server
-./stop.sh
-
-# Check server status with detailed information
-./stop.sh status
-
-# Restart the server
-./stop.sh restart
-
-# Restart HTTP server specifically
-./stop.sh restart-http
-
-# Clean up stale files
-./stop.sh cleanup
-```
-
-### MCP Server Features
-
-The MCP server includes enhanced process management with:
-
-- **✅ Visual status indicators** - Green checkmarks and red X marks for clear status display
-- **📄 PID file management** - Automatic cleanup of stale process IDs
-- **🌐 Port monitoring** - Real-time port availability checking
-- **🔄 Graceful restarts** - Proper process cleanup and restart sequencing
-- **🧹 Automatic cleanup** - Removal of stale files and processes
-
-### MCP Configuration
-
-Add the following to your MCP client configuration:
-
-```json
-{
-  "mcpServers": {
-    "maestro-vector-db": {
-      "command": "python",
-      "args": ["-m", "src.maestro_mcp.server"],
-      "env": {
-        "PYTHONPATH": "."
-      }
-    }
-  }
-}
-```
-
-### Available MCP Tools
-
-The MCP server provides comprehensive tools for database management, document operations, and querying. For detailed tool descriptions and usage examples, see [src/maestro_mcp/README.md](src/maestro_mcp/README.md).
-
-**Key Tool Categories:**
-- **Database Management**: Create, setup, and manage vector databases
-- **Document Operations**: Write, list, and delete documents with flexible embedding strategies
-- **Query Functionality**: Natural language querying with semantic search
-- **Collection Management**: List and manage collections across databases
-
-### Multi-Database Support
-
-The MCP server supports managing multiple vector databases simultaneously. Each database is identified by a unique name, allowing you to:
-
-- Create and manage multiple databases of different types (Weaviate, Milvus)
-- Use different databases for different purposes or projects
-- Operate on specific databases by providing the database name in tool calls
-- List all available databases and their status
-
-For more details, see [src/maestro_mcp/README.md](src/maestro_mcp/README.md).
-
 ## Examples
 
 See the [examples/](examples/) directory for usage examples:
@@ -233,7 +150,8 @@ The project includes several utility scripts for development and testing:
 
 ```bash
 # Code quality and formatting
-./tools/lint.sh              # Run linting and formatting checks
+./tools/lint.sh              # Run Python linting and formatting checks
+cd cli && ./lint.sh          # Run Go linting and code quality checks
 
 # MCP server management
 ./start.sh                   # Start the MCP server
@@ -260,7 +178,7 @@ cd cli && ./build.sh         # Build the CLI tool
 ./test.sh help               # Show test command help
 
 # Run comprehensive test suite (recommended before PR)
-./tools/lint.sh && ./test.sh all
+./tools/lint.sh && cd cli && ./lint.sh && cd .. && ./test.sh all
 
 # Run integration and end-to-end tests
 ./test-integration.sh        # CLI integration tests
@@ -269,6 +187,40 @@ cd cli && ./build.sh         # Build the CLI tool
 # Monitor logs in real-time
 ./tools/tail-logs.sh status  # Show service status
 ./tools/tail-logs.sh all     # Tail all service logs
+```
+
+## Code Quality
+
+The project maintains high code quality standards through comprehensive linting and automated checks.
+
+### Python Code Quality
+
+- **ruff**: Fast Python linter and formatter
+- **Formatting**: Consistent code style across Python files
+- **Import sorting**: Organized and clean imports
+- **CI Integration**: Automated Python linting in CI/CD
+
+### Go Code Quality (CLI)
+
+- **staticcheck**: Detects unused code, unreachable code, and other quality issues
+- **golangci-lint**: Advanced Go linting with multiple analyzers
+- **go fmt**: Consistent Go code formatting
+- **go vet**: Static analysis for potential bugs
+- **Dependency management**: Clean and verified module dependencies
+- **Race condition detection**: Thread safety validation
+- **CI Integration**: Automated Go linting in CI/CD with quality gates
+
+### Running Quality Checks
+
+```bash
+# Python quality checks
+./tools/lint.sh
+
+# Go quality checks (CLI)
+cd cli && ./lint.sh
+
+# All quality checks
+./tools/lint.sh && cd cli && ./lint.sh
 ```
 
 ## Project Structure
@@ -291,6 +243,7 @@ maestro-knowledge/
 │   ├── tests/               # CLI tests
 │   ├── examples/            # CLI usage examples
 │   ├── build.sh             # Build script
+│   ├── lint.sh              # Go linting and code quality script
 │   └── README.md            # CLI documentation
 ├── start.sh                 # MCP server start script
 ├── stop.sh                  # MCP server stop script
@@ -318,6 +271,7 @@ maestro-knowledge/
 │   └── README.md            # Schema documentation
 └── docs/                    # Documentation
     ├── CONTRIBUTING.md      # Contribution guidelines
+    ├── CLI_UX_REVIEW.md     # CLI UX review and improvements
     └── PRESENTATION.md      # Project presentation
 ```
 
@@ -328,6 +282,8 @@ maestro-knowledge/
 - `MAESTRO_KNOWLEDGE_MCP_SERVER_URI`: MCP server URI for CLI tool
 - `MILVUS_URI`: Milvus connection URI. **Important**: Do not use quotes around the URI value in your `.env` file (e.g., `MILVUS_URI=http://localhost:19530` instead of `MILVUS_URI="http://localhost:19530"`).
 - Database-specific environment variables for Weaviate and Milvus connections
+
+For detailed environment variable usage in CLI and MCP server, see their respective README files.
 
 ## Contributing
 

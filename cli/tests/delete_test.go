@@ -7,7 +7,7 @@ import (
 
 // TestDeleteVectorDatabase tests the delete vector-database command
 func TestDeleteVectorDatabase(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "vector-db", "test-db", "--dry-run")
+	cmd := exec.Command("../maestro-k", "vdb", "delete", "test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -22,7 +22,7 @@ func TestDeleteVectorDatabase(t *testing.T) {
 
 // TestDeleteVectorDatabaseWithVerbose tests the delete command with verbose output
 func TestDeleteVectorDatabaseWithVerbose(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "vector-db", "test-db", "--verbose", "--dry-run")
+	cmd := exec.Command("../maestro-k", "vdb", "delete", "test-db", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -40,23 +40,19 @@ func TestDeleteVectorDatabaseWithVerbose(t *testing.T) {
 
 // TestDeleteVectorDatabaseWithInvalidResourceType tests invalid resource type
 func TestDeleteVectorDatabaseWithInvalidResourceType(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "invalid-resource", "test-db")
-	output, err := cmd.CombinedOutput()
+	cmd := exec.Command("../maestro-k", "vdb", "invalid-action", "test-db")
+	output, _ := cmd.CombinedOutput()
 
-	// Should fail with invalid resource type
-	if err == nil {
-		t.Error("Delete command should fail with invalid resource type")
-	}
-
+	// Should show help for invalid action (Cobra's default behavior)
 	outputStr := string(output)
-	if !contains(outputStr, "unsupported resource type") {
-		t.Errorf("Error message should mention unsupported resource type, got: %s", outputStr)
+	if !contains(outputStr, "Available Commands") {
+		t.Errorf("Error message should mention available commands, got: %s", outputStr)
 	}
 }
 
 // TestDeleteVectorDatabaseWithEmptyName tests with empty name
 func TestDeleteVectorDatabaseWithEmptyName(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "vector-db", "")
+	cmd := exec.Command("../maestro-k", "vdb", "delete", "")
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with empty name
@@ -72,7 +68,7 @@ func TestDeleteVectorDatabaseWithEmptyName(t *testing.T) {
 
 // TestDeleteVectorDatabaseDryRun tests dry run functionality
 func TestDeleteVectorDatabaseDryRun(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "vector-db", "test-db", "--dry-run")
+	cmd := exec.Command("../maestro-k", "vdb", "delete", "test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -87,7 +83,7 @@ func TestDeleteVectorDatabaseDryRun(t *testing.T) {
 
 // TestDeleteVectorDatabaseSilent tests silent mode
 func TestDeleteVectorDatabaseSilent(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "vector-db", "test-db", "--silent", "--dry-run")
+	cmd := exec.Command("../maestro-k", "vdb", "delete", "test-db", "--silent", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -103,7 +99,7 @@ func TestDeleteVectorDatabaseSilent(t *testing.T) {
 // TestDeleteVectorDatabaseWithLongName tests with a long name
 func TestDeleteVectorDatabaseWithLongName(t *testing.T) {
 	longName := "very-long-vector-database-name-that-should-still-work"
-	cmd := exec.Command("../maestro-k", "delete", "vector-db", longName, "--dry-run")
+	cmd := exec.Command("../maestro-k", "vdb", "delete", longName, "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -119,7 +115,7 @@ func TestDeleteVectorDatabaseWithLongName(t *testing.T) {
 // TestDeleteVectorDatabaseWithSpecialCharacters tests with special characters in name
 func TestDeleteVectorDatabaseWithSpecialCharacters(t *testing.T) {
 	specialName := "test-db-with-special-chars_123"
-	cmd := exec.Command("../maestro-k", "delete", "vector-db", specialName, "--dry-run")
+	cmd := exec.Command("../maestro-k", "vdb", "delete", specialName, "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -132,9 +128,9 @@ func TestDeleteVectorDatabaseWithSpecialCharacters(t *testing.T) {
 	}
 }
 
-// TestDeleteVectorDatabaseWithVdbShortcut tests the delete command with vdb shortcut
+// TestDeleteVectorDatabaseWithVdbShortcut tests the delete command with vdb command
 func TestDeleteVectorDatabaseWithVdbShortcut(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "vdb", "test-db", "--dry-run")
+	cmd := exec.Command("../maestro-k", "vdb", "delete", "test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -149,7 +145,7 @@ func TestDeleteVectorDatabaseWithVdbShortcut(t *testing.T) {
 
 // TestDeleteCollection tests the delete collection command
 func TestDeleteCollection(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "collection", "test-db", "test-collection", "--dry-run")
+	cmd := exec.Command("../maestro-k", "collection", "delete", "test-collection", "--vdb=test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -164,7 +160,7 @@ func TestDeleteCollection(t *testing.T) {
 
 // TestDeleteCollectionWithVerbose tests the delete collection command with verbose output
 func TestDeleteCollectionWithVerbose(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "collection", "test-db", "test-collection", "--verbose", "--dry-run")
+	cmd := exec.Command("../maestro-k", "collection", "delete", "test-collection", "--vdb=test-db", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -182,23 +178,23 @@ func TestDeleteCollectionWithVerbose(t *testing.T) {
 
 // TestDeleteCollectionWithInvalidResourceType tests invalid collection resource type
 func TestDeleteCollectionWithInvalidResourceType(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "invalid-collection", "test-db", "test-collection")
+	cmd := exec.Command("../maestro-k", "collection", "invalid-action", "test-collection", "--vdb=test-db")
 	output, err := cmd.CombinedOutput()
 
-	// Should fail with invalid resource type
+	// Should fail with invalid action
 	if err == nil {
-		t.Error("Delete collection command should fail with invalid resource type")
+		t.Error("Delete collection command should fail with invalid action")
 	}
 
 	outputStr := string(output)
-	if !contains(outputStr, "unsupported resource type") {
-		t.Errorf("Error message should mention unsupported resource type, got: %s", outputStr)
+	if !contains(outputStr, "Available Commands") {
+		t.Errorf("Error message should mention available commands, got: %s", outputStr)
 	}
 }
 
 // TestDeleteCollectionWithMissingCollectionName tests with missing collection name
 func TestDeleteCollectionWithMissingCollectionName(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "collection", "test-db")
+	cmd := exec.Command("../maestro-k", "collection", "delete")
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with missing collection name
@@ -207,30 +203,30 @@ func TestDeleteCollectionWithMissingCollectionName(t *testing.T) {
 	}
 
 	outputStr := string(output)
-	if !contains(outputStr, "collection deletion requires both VDB_NAME and COLLECTION_NAME") {
+	if !contains(outputStr, "accepts 1 arg") {
 		t.Errorf("Error message should mention missing collection name, got: %s", outputStr)
 	}
 }
 
 // TestDeleteCollectionWithEmptyNames tests with empty names
 func TestDeleteCollectionWithEmptyNames(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "collection", "", "test-collection")
+	cmd := exec.Command("../maestro-k", "collection", "delete", "", "--vdb=test-db")
 	output, err := cmd.CombinedOutput()
 
-	// Should fail with empty database name
+	// Should fail with empty collection name
 	if err == nil {
-		t.Error("Delete collection command should fail with empty database name")
+		t.Error("Delete collection command should fail with empty collection name")
 	}
 
 	outputStr := string(output)
-	if !contains(outputStr, "vector database name is required") {
-		t.Errorf("Error message should mention database name is required, got: %s", outputStr)
+	if !contains(outputStr, "collection name is required") {
+		t.Errorf("Error message should mention collection name is required, got: %s", outputStr)
 	}
 }
 
-// TestDeleteCollectionWithVdbColAlias tests the delete command with vdb-col alias
+// TestDeleteCollectionWithVdbColAlias tests the delete command with collection command
 func TestDeleteCollectionWithVdbColAlias(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "vdb-col", "test-db", "test-collection", "--dry-run")
+	cmd := exec.Command("../maestro-k", "collection", "delete", "test-collection", "--vdb=test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -243,9 +239,9 @@ func TestDeleteCollectionWithVdbColAlias(t *testing.T) {
 	}
 }
 
-// TestDeleteCollectionWithColAlias tests the delete command with col alias
+// TestDeleteCollectionWithColAlias tests the delete command with collection command
 func TestDeleteCollectionWithColAlias(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "col", "test-db", "test-collection", "--dry-run")
+	cmd := exec.Command("../maestro-k", "collection", "delete", "test-collection", "--vdb=test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -258,40 +254,9 @@ func TestDeleteCollectionWithColAlias(t *testing.T) {
 	}
 }
 
-// TestDeleteCollectionWithDelAlias tests the delete command with del alias
-func TestDeleteCollectionWithDelAlias(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "del", "collection", "test-db", "test-collection", "--dry-run")
-	output, err := cmd.CombinedOutput()
-
-	if err != nil {
-		t.Fatalf("Delete collection command with del alias failed: %v, output: %s", err, string(output))
-	}
-
-	outputStr := string(output)
-	if !contains(outputStr, "[DRY RUN] Would delete collection 'test-collection' from vector database 'test-db'") {
-		t.Errorf("Should show dry run message, got: %s", outputStr)
-	}
-}
-
-// TestDeleteCollectionWithDelAliasAndMissingCollectionName tests del alias with missing collection name
-func TestDeleteCollectionWithDelAliasAndMissingCollectionName(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "del", "collection", "test-db")
-	output, err := cmd.CombinedOutput()
-
-	// Should fail with missing collection name
-	if err == nil {
-		t.Error("Delete collection command with del alias should fail with missing collection name")
-	}
-
-	outputStr := string(output)
-	if !contains(outputStr, "collection deletion requires both VDB_NAME and COLLECTION_NAME") {
-		t.Errorf("Error message should mention missing collection name, got: %s", outputStr)
-	}
-}
-
 // TestDeleteDocument tests the delete document command
 func TestDeleteDocument(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "document", "test-vdb", "test-collection", "test-document", "--dry-run")
+	cmd := exec.Command("../maestro-k", "document", "delete", "test-document", "--vdb=test-vdb", "--collection=test-collection", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -306,7 +271,7 @@ func TestDeleteDocument(t *testing.T) {
 
 // TestDeleteDocumentWithVerbose tests the delete document command with verbose output
 func TestDeleteDocumentWithVerbose(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "document", "test-vdb", "test-collection", "test-document", "--verbose", "--dry-run")
+	cmd := exec.Command("../maestro-k", "document", "delete", "test-document", "--vdb=test-vdb", "--collection=test-collection", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -324,23 +289,23 @@ func TestDeleteDocumentWithVerbose(t *testing.T) {
 
 // TestDeleteDocumentWithInvalidResourceType tests invalid resource type
 func TestDeleteDocumentWithInvalidResourceType(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "invalid-resource", "test-vdb", "test-collection", "test-document")
+	cmd := exec.Command("../maestro-k", "document", "invalid-action", "test-document", "--vdb=test-vdb", "--collection=test-collection")
 	output, err := cmd.CombinedOutput()
 
-	// Should fail with invalid resource type
+	// Should fail with invalid action
 	if err == nil {
-		t.Error("Delete command should fail with invalid resource type")
+		t.Error("Delete command should fail with invalid action")
 	}
 
 	outputStr := string(output)
-	if !contains(outputStr, "unsupported resource type") {
-		t.Errorf("Error message should mention unsupported resource type, got: %s", outputStr)
+	if !contains(outputStr, "Available Commands") {
+		t.Errorf("Error message should mention available commands, got: %s", outputStr)
 	}
 }
 
 // TestDeleteDocumentWithMissingArguments tests with missing arguments
 func TestDeleteDocumentWithMissingArguments(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "document", "test-vdb")
+	cmd := exec.Command("../maestro-k", "document", "delete")
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with missing arguments
@@ -349,14 +314,14 @@ func TestDeleteDocumentWithMissingArguments(t *testing.T) {
 	}
 
 	outputStr := string(output)
-	if !contains(outputStr, "document deletion requires VDB_NAME, COLLECTION_NAME, and DOC_NAME") {
+	if !contains(outputStr, "accepts 1 arg") {
 		t.Errorf("Error message should mention missing arguments, got: %s", outputStr)
 	}
 }
 
 // TestDeleteDocumentWithEmptyNames tests with empty names
 func TestDeleteDocumentWithEmptyNames(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "document", "", "", "")
+	cmd := exec.Command("../maestro-k", "document", "delete", "", "--vdb=test-vdb", "--collection=test-collection")
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with empty names
@@ -365,14 +330,14 @@ func TestDeleteDocumentWithEmptyNames(t *testing.T) {
 	}
 
 	outputStr := string(output)
-	if !contains(outputStr, "vector database name is required") {
+	if !contains(outputStr, "document name is required") {
 		t.Errorf("Error message should mention name is required, got: %s", outputStr)
 	}
 }
 
-// TestDeleteDocumentWithVdbDocAlias tests the vdb-doc alias
+// TestDeleteDocumentWithVdbDocAlias tests the document command
 func TestDeleteDocumentWithVdbDocAlias(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "vdb-doc", "test-vdb", "test-collection", "test-document", "--dry-run")
+	cmd := exec.Command("../maestro-k", "document", "delete", "test-document", "--vdb=test-vdb", "--collection=test-collection", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -385,9 +350,9 @@ func TestDeleteDocumentWithVdbDocAlias(t *testing.T) {
 	}
 }
 
-// TestDeleteDocumentWithDocAlias tests the doc alias
+// TestDeleteDocumentWithDocAlias tests the document command
 func TestDeleteDocumentWithDocAlias(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "doc", "test-vdb", "test-collection", "test-document", "--dry-run")
+	cmd := exec.Command("../maestro-k", "document", "delete", "test-document", "--vdb=test-vdb", "--collection=test-collection", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -400,39 +365,9 @@ func TestDeleteDocumentWithDocAlias(t *testing.T) {
 	}
 }
 
-// TestDeleteDocumentWithDelAlias tests the del alias
-func TestDeleteDocumentWithDelAlias(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "del", "document", "test-vdb", "test-collection", "test-document", "--dry-run")
-	output, err := cmd.CombinedOutput()
-
-	if err != nil {
-		t.Fatalf("Delete document command with del alias failed: %v, output: %s", err, string(output))
-	}
-
-	outputStr := string(output)
-	if !contains(outputStr, "[DRY RUN] Would delete document 'test-document' from collection 'test-collection' in vector database 'test-vdb'") {
-		t.Errorf("Should show dry run message, got: %s", outputStr)
-	}
-}
-
-// TestDeleteDocumentWithDelAliasAndDocAlias tests the del doc alias combination
-func TestDeleteDocumentWithDelAliasAndDocAlias(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "del", "doc", "test-vdb", "test-collection", "test-document", "--dry-run")
-	output, err := cmd.CombinedOutput()
-
-	if err != nil {
-		t.Fatalf("Delete document command with del doc alias failed: %v, output: %s", err, string(output))
-	}
-
-	outputStr := string(output)
-	if !contains(outputStr, "[DRY RUN] Would delete document 'test-document' from collection 'test-collection' in vector database 'test-vdb'") {
-		t.Errorf("Should show dry run message, got: %s", outputStr)
-	}
-}
-
 // TestDeleteDocumentSilent tests silent mode
 func TestDeleteDocumentSilent(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "delete", "document", "test-vdb", "test-collection", "test-document", "--silent", "--dry-run")
+	cmd := exec.Command("../maestro-k", "document", "delete", "test-document", "--vdb=test-vdb", "--collection=test-collection", "--silent", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {

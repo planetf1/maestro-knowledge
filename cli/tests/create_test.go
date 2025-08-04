@@ -25,7 +25,7 @@ spec:
 	tempFile := createTempFile(t, "valid-*.yaml", validYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../maestro-k", "create", "vector-db", tempFile, "--dry-run")
+	cmd := exec.Command("../maestro-k", "vdb", "create", tempFile, "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -57,7 +57,7 @@ spec:
 	tempFile := createTempFile(t, "valid-*.yaml", validYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../maestro-k", "create", "vector-db", tempFile, "--uri=localhost:8000", "--mode=remote", "--verbose", "--dry-run")
+	cmd := exec.Command("../maestro-k", "vdb", "create", tempFile, "--uri=localhost:8000", "--mode=remote", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -78,19 +78,19 @@ spec:
 
 // TestCreateVectorDatabaseWithInvalidResourceType tests invalid resource type
 func TestCreateVectorDatabaseWithInvalidResourceType(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "create", "invalid-resource", "test.yaml")
+	cmd := exec.Command("../maestro-k", "vdb", "invalid-action", "test.yaml")
 	output, _ := cmd.CombinedOutput()
 
-	// Should show help message for invalid resource type
+	// Should show help message for invalid action
 	outputStr := string(output)
 	if !contains(outputStr, "Available Commands:") {
-		t.Errorf("Should show available commands for invalid resource type, got: %s", outputStr)
+		t.Errorf("Should show available commands for invalid action, got: %s", outputStr)
 	}
 }
 
 // TestCreateVectorDatabaseWithNonExistentFile tests with non-existent file
 func TestCreateVectorDatabaseWithNonExistentFile(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "create", "vector-db", "nonexistent.yaml")
+	cmd := exec.Command("../maestro-k", "vdb", "create", "nonexistent.yaml")
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with non-existent file
@@ -123,7 +123,7 @@ spec:
 	tempFile := createTempFile(t, "invalid-*.yaml", invalidYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../maestro-k", "create", "vector-db", tempFile)
+	cmd := exec.Command("../maestro-k", "vdb", "create", tempFile)
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with invalid YAML
@@ -156,7 +156,7 @@ spec:
 	tempFile := createTempFile(t, "invalid-*.yaml", invalidYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../maestro-k", "create", "vector-db", tempFile)
+	cmd := exec.Command("../maestro-k", "vdb", "create", tempFile)
 	output, err := cmd.CombinedOutput()
 
 	// Should fail with invalid configuration
@@ -189,7 +189,7 @@ spec:
 	tempFile := createTempFile(t, "valid-*.yaml", validYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../maestro-k", "create", "vector-db", tempFile, "--dry-run")
+	cmd := exec.Command("../maestro-k", "vdb", "create", tempFile, "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -221,7 +221,7 @@ spec:
 	tempFile := createTempFile(t, "valid-*.yaml", validYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../maestro-k", "create", "vector-db", tempFile, "--silent", "--dry-run")
+	cmd := exec.Command("../maestro-k", "vdb", "create", tempFile, "--silent", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -237,7 +237,7 @@ spec:
 	}
 }
 
-// TestCreateVectorDatabaseWithVdbShortcut tests the create command with vdb shortcut
+// TestCreateVectorDatabaseWithVdbShortcut tests the create command with vdb command
 func TestCreateVectorDatabaseWithVdbShortcut(t *testing.T) {
 	// Create a valid YAML file for testing
 	validYAML := `---
@@ -256,11 +256,11 @@ spec:
 	tempFile := createTempFile(t, "valid-*.yaml", validYAML)
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../maestro-k", "create", "vdb", tempFile, "--dry-run")
+	cmd := exec.Command("../maestro-k", "vdb", "create", tempFile, "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		t.Fatalf("Create command with vdb shortcut failed: %v, output: %s", err, string(output))
+		t.Fatalf("Create command with vdb command failed: %v, output: %s", err, string(output))
 	}
 
 	outputStr := string(output)

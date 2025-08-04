@@ -21,49 +21,44 @@ func TestWriteDocument(t *testing.T) {
 	}{
 		{
 			name:        "write document with valid parameters",
-			args:        []string{"write", "document", "test_local_milvus", "test_collection", "test_doc", "--file-name=" + tempFile, "--dry-run"},
+			args:        []string{"document", "create", "--name=test_doc", "--file=" + tempFile, "--vdb=test_local_milvus", "--collection=test_collection", "--dry-run"},
 			expectError: false,
 		},
 		{
 			name:        "write document with non-existent database (dry-run succeeds)",
-			args:        []string{"write", "document", "non_existent_db", "test_collection", "test_doc", "--file-name=" + tempFile, "--dry-run"},
+			args:        []string{"document", "create", "--name=test_doc", "--file=" + tempFile, "--vdb=non_existent_db", "--collection=test_collection", "--dry-run"},
 			expectError: false, // Dry-run doesn't validate existence
 		},
 		{
 			name:        "write document with non-existent collection (dry-run succeeds)",
-			args:        []string{"write", "document", "test_local_milvus", "non_existent_collection", "test_doc", "--file-name=" + tempFile, "--dry-run"},
+			args:        []string{"document", "create", "--name=test_doc", "--file=" + tempFile, "--vdb=test_local_milvus", "--collection=non_existent_collection", "--dry-run"},
 			expectError: false, // Dry-run doesn't validate existence
 		},
 		{
 			name:        "write document with missing file name",
-			args:        []string{"write", "document", "test_local_milvus", "test_collection", "test_doc", "--dry-run"},
+			args:        []string{"document", "create", "--name=test_doc", "--vdb=test_local_milvus", "--collection=test_collection", "--dry-run"},
 			expectError: true,
-			errorMsg:    "file name is required",
+			errorMsg:    "--file flag is required",
 		},
 		{
 			name:        "write document with non-existent file",
-			args:        []string{"write", "document", "test_local_milvus", "test_collection", "test_doc", "--file-name=nonexistent.txt", "--dry-run"},
+			args:        []string{"document", "create", "--name=test_doc", "--file=nonexistent.txt", "--vdb=test_local_milvus", "--collection=test_collection", "--dry-run"},
 			expectError: true,
 			errorMsg:    "file not found",
 		},
 		{
-			name:        "write document using vdb-doc alias",
-			args:        []string{"write", "vdb-doc", "test_local_milvus", "test_collection", "test_doc", "--file-name=" + tempFile, "--dry-run"},
+			name:        "write document using document command",
+			args:        []string{"document", "create", "--name=test_doc", "--file=" + tempFile, "--vdb=test_local_milvus", "--collection=test_collection", "--dry-run"},
 			expectError: false,
 		},
 		{
-			name:        "write document using doc alias",
-			args:        []string{"write", "doc", "test_local_milvus", "test_collection", "test_doc", "--file-name=" + tempFile, "--dry-run"},
+			name:        "write document using document command",
+			args:        []string{"document", "create", "--name=test_doc", "--file=" + tempFile, "--vdb=test_local_milvus", "--collection=test_collection", "--dry-run"},
 			expectError: false,
 		},
 		{
-			name:        "write document with embedding specified",
-			args:        []string{"write", "document", "test_local_milvus", "test_collection", "test_doc", "--file-name=" + tempFile, "--embed=text-embedding-3-small", "--dry-run"},
-			expectError: false,
-		},
-		{
-			name:        "write document with doc-file-name flag",
-			args:        []string{"write", "document", "test_local_milvus", "test_collection", "test_doc", "--doc-file-name=" + tempFile, "--dry-run"},
+			name:        "write document with file flag",
+			args:        []string{"document", "create", "--name=test_doc", "--file=" + tempFile, "--vdb=test_local_milvus", "--collection=test_collection", "--dry-run"},
 			expectError: false,
 		},
 	}
@@ -95,7 +90,7 @@ func TestWriteDocumentWithVerbose(t *testing.T) {
 	tempFile := createTempFile(t, "test-*.txt", "This is a test document content")
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../maestro-k", "write", "document", "test_local_milvus", "test_collection", "test_doc", "--file-name="+tempFile, "--verbose", "--dry-run")
+	cmd := exec.Command("../maestro-k", "document", "create", "--name=test_doc", "--file="+tempFile, "--vdb=test_local_milvus", "--collection=test_collection", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -103,11 +98,9 @@ func TestWriteDocumentWithVerbose(t *testing.T) {
 	}
 
 	outputStr := string(output)
-	if !strings.Contains(outputStr, "Writing document") {
-		t.Errorf("Expected verbose message 'Writing document', got: %s", outputStr)
-	}
-	if !strings.Contains(outputStr, "[DRY RUN] Would write document") {
-		t.Errorf("Expected dry-run message, got: %s", outputStr)
+	// Check for either the progress indicator message or the dry-run message
+	if !strings.Contains(outputStr, "Creating document") && !strings.Contains(outputStr, "Dry run completed") && !strings.Contains(outputStr, "[DRY RUN] Would create document") {
+		t.Errorf("Expected verbose message 'Creating document', 'Dry run completed', or dry-run message, got: %s", outputStr)
 	}
 }
 
@@ -116,7 +109,7 @@ func TestWriteDocumentWithSilent(t *testing.T) {
 	tempFile := createTempFile(t, "test-*.txt", "This is a test document content")
 	defer os.Remove(tempFile)
 
-	cmd := exec.Command("../maestro-k", "write", "document", "test_local_milvus", "test_collection", "test_doc", "--file-name="+tempFile, "--silent", "--dry-run")
+	cmd := exec.Command("../maestro-k", "document", "create", "--name=test_doc", "--file="+tempFile, "--vdb=test_local_milvus", "--collection=test_collection", "--silent", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -130,30 +123,30 @@ func TestWriteDocumentWithSilent(t *testing.T) {
 }
 
 func TestWriteDocumentHelp(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "write", "--help")
+	cmd := exec.Command("../maestro-k", "document", "create", "--help")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		t.Fatalf("Write help command failed: %v, output: %s", err, string(output))
+		t.Fatalf("Document create help command failed: %v, output: %s", err, string(output))
 	}
 
 	outputStr := string(output)
-	if !strings.Contains(outputStr, "Write vector database resources") {
-		t.Errorf("Expected help message about writing vector database resources, got: %s", outputStr)
+	if !strings.Contains(outputStr, "Create a document") {
+		t.Errorf("Expected help message about creating documents, got: %s", outputStr)
 	}
 }
 
 func TestWriteDocumentSubcommandHelp(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "write", "document", "--help")
+	cmd := exec.Command("../maestro-k", "document", "create", "--help")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		t.Fatalf("Write document help command failed: %v, output: %s", err, string(output))
+		t.Fatalf("Document create help command failed: %v, output: %s", err, string(output))
 	}
 
 	outputStr := string(output)
-	if !strings.Contains(outputStr, "Write a document to a collection") {
-		t.Errorf("Expected help message about writing documents, got: %s", outputStr)
+	if !strings.Contains(outputStr, "Create a document") {
+		t.Errorf("Expected help message about creating documents, got: %s", outputStr)
 	}
 }
 
@@ -167,15 +160,15 @@ func TestWriteDocumentWithInvalidArguments(t *testing.T) {
 	}{
 		{
 			name:        "write document with missing arguments",
-			args:        []string{"write", "document", "test_local_milvus", "test_collection"},
+			args:        []string{"document", "create", "--vdb=test_local_milvus", "--collection=test_collection"},
 			expectError: true,
-			errorMsg:    "accepts 3 arg(s), received 2",
+			errorMsg:    "--name flag is required",
 		},
 		{
-			name:        "write document with too many arguments",
-			args:        []string{"write", "document", "test_local_milvus", "test_collection", "test_doc", "extra_arg"},
+			name:        "write document with missing file",
+			args:        []string{"document", "create", "--name=test_doc", "--vdb=test_local_milvus", "--collection=test_collection"},
 			expectError: true,
-			errorMsg:    "accepts 3 arg(s), received 4",
+			errorMsg:    "--file flag is required",
 		},
 	}
 

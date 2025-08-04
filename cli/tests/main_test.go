@@ -8,6 +8,9 @@ import (
 
 // TestMain runs before all tests
 func TestMain(m *testing.M) {
+	// Set test mode environment variable
+	os.Setenv("MAESTRO_K_TEST_MODE", "true")
+
 	// Check if CLI binary exists, if not build it
 	if _, err := os.Stat("../maestro-k"); os.IsNotExist(err) {
 		buildCLI()

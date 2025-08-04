@@ -103,18 +103,27 @@ func init() {
 }
 
 func createDocument(vdbName, collectionName, docName string) error {
-	if verbose && !silent {
-		fmt.Printf("Creating document '%s' in collection '%s' of vector database '%s'...\n", docName, collectionName, vdbName)
+	// Initialize progress indicator
+	var progress *ProgressIndicator
+	if ShouldShowProgress() {
+		progress = NewProgressIndicator("Creating document...")
+		progress.Start()
 	}
 
 	// Validate that we have a file name
 	fileName := getDocumentFileName()
 	if fileName == "" {
+		if progress != nil {
+			progress.StopWithError("File name is required")
+		}
 		return fmt.Errorf("file name is required (use --file-name or --doc-file-name)")
 	}
 
 	// Check if file exists
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		if progress != nil {
+			progress.StopWithError("File not found")
+		}
 		return fmt.Errorf("file not found: %s", fileName)
 	}
 
@@ -122,12 +131,22 @@ func createDocument(vdbName, collectionName, docName string) error {
 		if !silent {
 			fmt.Printf("[DRY RUN] Would create document '%s' in collection '%s' of vector database '%s' with embedding '%s' from file '%s'\n", docName, collectionName, vdbName, documentEmbedding, fileName)
 		}
+		if progress != nil {
+			progress.Stop("Dry run completed")
+		}
 		return nil
+	}
+
+	if progress != nil {
+		progress.Update("Connecting to MCP server...")
 	}
 
 	// Get MCP server URI
 	serverURI, err := getMCPServerURI(mcpServerURI)
 	if err != nil {
+		if progress != nil {
+			progress.StopWithError("Failed to get MCP server URI")
+		}
 		return fmt.Errorf("failed to get MCP server URI: %w", err)
 	}
 
@@ -138,41 +157,78 @@ func createDocument(vdbName, collectionName, docName string) error {
 	// Create MCP client
 	client, err := NewMCPClient(serverURI)
 	if err != nil {
+		if progress != nil {
+			progress.StopWithError("Failed to create MCP client")
+		}
 		return fmt.Errorf("failed to create MCP client: %w", err)
 	}
 	defer client.Close()
 
+	if progress != nil {
+		progress.Update("Validating database...")
+	}
+
 	// Check if the database exists first
 	exists, err := client.DatabaseExists(vdbName)
 	if err != nil {
+		if progress != nil {
+			progress.StopWithError("Failed to check database")
+		}
 		return fmt.Errorf("failed to check if database exists: %w", err)
 	}
 
 	if !exists {
+		if progress != nil {
+			progress.StopWithError("Database does not exist")
+		}
 		return fmt.Errorf("vector database '%s' does not exist. Please create it first", vdbName)
+	}
+
+	if progress != nil {
+		progress.Update("Validating collection...")
 	}
 
 	// Check if the collection exists
 	collectionsResult, err := client.ListCollections(vdbName)
 	if err != nil {
+		if progress != nil {
+			progress.StopWithError("Failed to list collections")
+		}
 		return fmt.Errorf("failed to list collections: %w", err)
 	}
 
 	// Simple check if collection exists in the result string
 	if !strings.Contains(strings.ToLower(collectionsResult), strings.ToLower(collectionName)) {
+		if progress != nil {
+			progress.StopWithError("Collection does not exist")
+		}
 		return fmt.Errorf("collection '%s' does not exist in vector database '%s'. Please create it first", collectionName, vdbName)
 	}
 
 	// Validate embedding if specified
 	if documentEmbedding != "default" {
+		if progress != nil {
+			progress.Update("Validating embedding...")
+		}
+
 		embeddingsResult, err := client.GetSupportedEmbeddings(vdbName)
 		if err != nil {
+			if progress != nil {
+				progress.StopWithError("Failed to get embeddings")
+			}
 			return fmt.Errorf("failed to get supported embeddings: %w", err)
 		}
 
 		if !strings.Contains(strings.ToLower(embeddingsResult), strings.ToLower(documentEmbedding)) {
+			if progress != nil {
+				progress.StopWithError("Embedding not supported")
+			}
 			return fmt.Errorf("embedding '%s' is not supported by vector database '%s'", documentEmbedding, vdbName)
 		}
+	}
+
+	if progress != nil {
+		progress.Update("Checking for existing document...")
 	}
 
 	// Check if document already exists (simple check by listing documents)
@@ -185,8 +241,15 @@ func createDocument(vdbName, collectionName, docName string) error {
 	} else {
 		// Simple check if document name exists in the result
 		if strings.Contains(strings.ToLower(documentsResult), strings.ToLower(docName)) {
+			if progress != nil {
+				progress.StopWithError("Document already exists")
+			}
 			return fmt.Errorf("document '%s' already exists in collection '%s' of vector database '%s'", docName, collectionName, vdbName)
 		}
+	}
+
+	if progress != nil {
+		progress.Update("Creating document...")
 	}
 
 	// Call the MCP server to create the document with panic recovery
@@ -202,7 +265,14 @@ func createDocument(vdbName, collectionName, docName string) error {
 	}()
 
 	if createErr != nil {
+		if progress != nil {
+			progress.StopWithError("Failed to create document")
+		}
 		return fmt.Errorf("failed to create document '%s' in collection '%s' of vector database '%s': %w", docName, collectionName, vdbName, createErr)
+	}
+
+	if progress != nil {
+		progress.Stop("Document created successfully")
 	}
 
 	if !silent {

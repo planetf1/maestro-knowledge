@@ -3,11 +3,10 @@
 ## OPENED
 
 ### CLI
-* review CLI commands for UI / UX in terms of ease of use
 * add a `create query` command as a way to retrieve a maestro agent configuration (YAML) for the query agent of a vdb
 
 ### chore
-* clean up code /tests (remove duplicate and refactor) and ensure consistency in CLI commands and tests
+* clean up code /tests (remove duplicate and refactor)
 
 ### feature
 * add a way to retrieve and query the maestro agent config for the query agent of a vbd
@@ -40,88 +39,82 @@
 
 ### other
 * a few bugs remain
-  - test-integration.sh still pollutes tests db and should leave it empty
+  - ✅ test-integration.sh still pollutes tests db and should leave it empty
+  - ✅ fix Go version mismatch in CI
+  - ✅ fix golangci-lint compatibility issues
 
 ## COMPLETED
 
 ### CLI
 * ✅ add sub-command to return `vector-databases` configured. Usage like:
     ```bash
-    $ maestro-k list (vector-database | vector-db | vdbs) [options]
+    $ maestro-k vectordb list [options]
     ```
 
 * ✅ add sub-command to return `embeddings` that a vdb supports. Usage like:
     ```bash
-    $ maestro-k list (embeddings | embed | vdb-embed) VDB_NAME [options]
+    $ maestro-k embedding list --vdb=VDB_NAME [options]
     ```
 
 * ✅ add sub-command to return `documents` in a collection of a vdb. CLI usage examples:
     ```bash
-    $ maestro-k list (documents | docs | vdb-docs) VDB_NAME COLLECTION_NAME [options]
+    $ maestro-k document list --vdb=VDB_NAME --collection=COLLECTION_NAME [options]
     ```
 
 * ✅ add sub-command to return `collections` in a vdb. Usage like:
     ```bash
-    $ maestro-k list (collections | cols | vdb-cols) VDB_NAME [options]
+    $ maestro-k collection list --vdb=VDB_NAME [options]
     ```
 
 * ✅ add sub-command to `create` a `collection` in a vdb. Usage like:
     ```bash
-    $ maestro-k create (collection | vdb-col | col) VBD_NAME [options]
+    $ maestro-k collection create --name=COLLECTION_NAME --vdb=VDB_NAME [options]
     ```
 
-* ✅ add sub-command to (`create` | `write`) a `document` in a collection of a vdb with a specified embedding or the default if none specified. Some notes for errors:
-  - If specified the `embedding` or `embed` must exist when listing embedding for the vdb otherwise the command should fail. If not specified the embedding will be the default embedding
-  - VBD_NAME must refer to an existing vdb -- in other words in the list of vdbs
-  - COL_NAME must refer to an existing collection -- in other words in the list of collections for this vdb
+* ✅ add sub-command to `create` a `document` in a collection of a vdb with a specified embedding or the default if none specified. Some notes for errors:
+  - If specified the `embedding` must exist when listing embedding for the vdb otherwise the command should fail. If not specified the embedding will be the default embedding
+  - VDB_NAME must refer to an existing vdb -- in other words in the list of vdbs
+  - COLLECTION_NAME must refer to an existing collection -- in other words in the list of collections for this vdb
   - DOC_NAME must be unique - such that no other documents in the collection in this vdb already has that name
 
 Usage like:
     ```bash
-    $ maestro-k create (document | vdb-doc | doc) VBD_NAME COL_NAME DOC_NAME --doc-file-name=DOC_FILE_NAME [options] 
-    $ maestro-k create (document | vdb-doc | doc) VBD_NAME COL_NAME DOC_NAME --file-name=DOC_FILE_NAME --embed=EMBEDDING_NAME [options]
-    
-    $ maestro-k write (document | vdb-doc | doc) VBD_NAME COL_NAME DOC_NAME --doc-file-name=DOC_FILE_NAME [options]
-    $ maestro-k write (document | vdb-doc | doc) VBD_NAME COL_NAME DOC_NAME --file-name=DOC_FILE_NAME --embed=EMBEDDING_NAME [options]
+    $ maestro-k document create --name=DOC_NAME --file=DOC_FILE_NAME --vdb=VDB_NAME --collection=COLLECTION_NAME [options] 
+    $ maestro-k document create --name=DOC_NAME --file=DOC_FILE_NAME --vdb=VDB_NAME --collection=COLLECTION_NAME --embedding=EMBEDDING_NAME [options]
     ```
 
-* ✅ add sub-command to (`delete` | `del`) a `collection` in a vdb. Some notes for errors:
-  - VBD_NAME must refer to an existing vdb -- in other words in the list of vdbs
-  - COL_NAME must refer to an existing collection -- in other words in the list of collections for this vdb
+* ✅ add sub-command to `delete` a `collection` in a vdb. Some notes for errors:
+  - VDB_NAME must refer to an existing vdb -- in other words in the list of vdbs
+  - COLLECTION_NAME must refer to an existing collection -- in other words in the list of collections for this vdb
 
 Usage like:
     ```bash
-    $ maestro-k delete (collection | vdb-col | col) VDB_NAME COL_NAME [options]
-    $ maestro-k del (collection | vdb-col | col) VDB_NAME COL_NAME [options]
+    $ maestro-k collection delete COLLECTION_NAME --vdb=VDB_NAME [options]
     ```
 
-* ✅ add sub-command to (`delete` | `del`) a `document` in a collection of a vdb. Some notes for errors:
-  - VBD_NAME must refer to an existing vdb -- in other words in the list of vdbs
-  - COL_NAME must refer to an existing collection -- in other words in the list of collections for this vdb
+* ✅ add sub-command to `delete` a `document` in a collection of a vdb. Some notes for errors:
+  - VDB_NAME must refer to an existing vdb -- in other words in the list of vdbs
+  - COLLECTION_NAME must refer to an existing collection -- in other words in the list of collections for this vdb
   - DOC_NAME must refer to an existing document in that collection
 
 Usage like:
     ```bash
-    $ maestro-k delete (document | vdb-doc | doc) VDB_NAME COL_NAME DOC_NAME [options]
-    $ maestro-k del (document | vdb-doc | doc) VDB_NAME COL_NAME DOC_NAME [options]
+    $ maestro-k document delete DOC_NAME --vdb=VDB_NAME --collection=COLLECTION_NAME [options]
     ```
 
-* ✅ add sub-command to (`retrieve` | `get`) a `collection` in a vdb. Some notes for errors:
-  - VBD_NAME must refer to an existing vdb -- in other words in the list of vdbs
+* ✅ add sub-command to `list` a `collection` in a vdb. Some notes for errors:
+  - VDB_NAME must refer to an existing vdb -- in other words in the list of vdbs
 Usage like:
     ```bash
-    $ maestro-k retrieve (collection | vdb-col | col) VBD_NAME [options]
-    $ maestro-k get (collection | vdb-col | col) VBD_NAME [options]
+    $ maestro-k collection list --vdb=VDB_NAME [options]
     ```
 
-* ✅ add sub-command to (`retrieve` | `get`) a `document` in a collection of a vdb. Some notes for errors:
-  - VBD_NAME must refer to an existing vdb -- in other words in the list of vdbs
-  - COL_NAME must refer to an existing collection -- in other words in the list of collections for this vdb
-  - DOC_NAME must refer to an existing document in that collection
+* ✅ add sub-command to `list` `documents` in a collection of a vdb. Some notes for errors:
+  - VDB_NAME must refer to an existing vdb -- in other words in the list of vdbs
+  - COLLECTION_NAME must refer to an existing collection -- in other words in the list of collections for this vdb
 Usage like:
     ```bash
-    $ maestro-k retrieve (document | vdb-doc | doc) VDB_NAME COL_NAME DOC_NAME [options]
-    $ maestro-k get (document | vdb-doc | doc) VDB_NAME COL_NAME DOC_NAME [options]
+    $ maestro-k document list --vdb=VDB_NAME --collection=COLLECTION_NAME [options]
     ```
 
 ### chore
@@ -132,6 +125,28 @@ Usage like:
 * ✅ add recommended development workflow for contributions
 * ✅ update `stop.sh status` script to be more like RAGme equivalent showing a nice summary status on services
 * ✅ add `tools/tail-logs.sh` script adapted from RAGme-ai for log monitoring
+* ✅ review CLI commands for UI / UX in terms of ease of use
+* ✅ implement CLI UX improvements based on review findings:
+  - ✅ simplify command structure by removing redundant commands (delete/del, retrieve/get, query/query vdb)
+  - ✅ standardize command patterns to use consistent argument structures
+  - ✅ improve error messages to be concise by default and detailed only in verbose mode
+  - ✅ add confirmation prompts for destructive operations
+  - ✅ improve Go code quality with comprehensive linting:
+  - ✅ Added staticcheck for unused code detection
+  - ✅ Added golangci-lint for advanced Go linting
+  - ✅ Integrated linting into CI/CD pipelines
+  - ✅ Updated documentation to reflect linting capabilities
+  - ✅ Added quality gates to prevent merging code with linting issues
+  - ✅ Add suggestions: "Did you mean..." for typos
+  - ✅ Add examples: Show correct usage for common mistakes
+  - ✅ Contextual help: Show relevant commands after operations
+  - ✅ Workflow guidance: Suggest next steps after operations
+  - ✅ Resource selection: Interactive menus for choosing VDBs/collections
+  - ✅ Auto-completion: For resource names and file paths 
+  - ✅ Status commands: Quick overview of current state
+  - ✅ Progress indicators: For long-running operations
+* ✅ fix Go version mismatch in CI (golangci-lint compatibility with Go 1.24.1)
+* ✅ remove documentation duplications between README files
 
 ### feature
 * (No completed features yet)
