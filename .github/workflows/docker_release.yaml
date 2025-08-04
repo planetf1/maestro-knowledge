@@ -27,7 +27,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/checkout@v4
-      - name: Set ENV VARS
+      - name: get release version
         id: version
         run: |
           VERSION=$(grep -E '^(version|tool\.poetry\.version) *= *"[^"]+"' "pyproject.toml" | \
@@ -40,7 +40,7 @@ jobs:
           echo "github_org=${OWNER,,}" >>${GITHUB_OUTPUT}
         env:
           OWNER: '${{ github.repository_owner }}'
-      - name: Build and Push Docker Image to ghcr.io
+      - name: build and push docker image to ghcr.io
         uses: docker/build-push-action@v6
         with:
           push: true
