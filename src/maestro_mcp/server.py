@@ -1,10 +1,11 @@
-# SPDX-License-Identifier: MIT
-# Copyright (c) 2025 dr.max
+# SPDX-License-Identifier: Apache 2.0
+# Copyright (c) 2025 IBM
 
 import asyncio
 import json
 import logging
 import sys
+import os
 from typing import Any, Dict, List
 
 from fastmcp import FastMCP
@@ -12,6 +13,25 @@ from pydantic import BaseModel, Field
 
 from ..db.vector_db_factory import create_vector_database
 from ..db.vector_db_base import VectorDatabase
+
+
+# Load environment variables from .env file
+def load_env_file():
+    """Load environment variables from .env file."""
+    env_file = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"
+    )
+    if os.path.exists(env_file):
+        with open(env_file, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    os.environ[key] = value
+
+
+# Load environment variables
+load_env_file()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -180,6 +200,15 @@ class CreateCollectionInput(BaseModel):
     )
 
 
+class QueryInput(BaseModel):
+    db_name: str = Field(..., description="Name of the vector database instance")
+    query: str = Field(..., description="The query string to search for")
+    limit: int = Field(default=5, description="Maximum number of results to consider")
+    collection_name: str = Field(
+        default=None, description="Optional collection name to search in"
+    )
+
+
 def create_mcp_server() -> FastMCP:
     """Create and configure the FastMCP server with vector database tools."""
 
@@ -225,10 +254,15 @@ def create_mcp_server() -> FastMCP:
             db = get_database_by_name(input.db_name)
 
             # Check if the database supports the setup method with embedding parameter
-            if hasattr(db, "setup") and len(db.setup.__code__.co_varnames) > 1:
-                db.setup(embedding=input.embedding)
-            else:
-                db.setup()
+            if hasattr(db, "setup"):
+                # Get the number of parameters in the setup method
+                param_count = len(db.setup.__code__.co_varnames)
+                if param_count > 2:  # self, embedding, collection_name
+                    db.setup(embedding=input.embedding)
+                elif param_count > 1:  # self, embedding
+                    db.setup(embedding=input.embedding)
+                else:  # self only
+                    db.setup()
 
             return f"Successfully set up {db.db_type} vector database '{input.db_name}' with embedding '{input.embedding}'"
         except Exception as e:
@@ -279,9 +313,7 @@ def create_mcp_server() -> FastMCP:
 
         # Check if the collection exists
         collections = db.list_collections()
-        normalized_input = input.collection_name.strip().lower()
-        normalized_collections = [str(c).strip().lower() for c in collections]
-        if normalized_input not in normalized_collections:
+        if input.collection_name not in collections:
             raise ValueError(
                 f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
             )
@@ -301,9 +333,10 @@ def create_mcp_server() -> FastMCP:
         if input.vector is not None:
             document["vector"] = input.vector
 
-        # For now, we'll use the default collection behavior
-        # TODO: Implement collection-specific document writing in the vector database classes
-        db.write_document(document, embedding=input.embedding)
+        # Use the new write_documents_to_collection method
+        db.write_documents_to_collection(
+            [document], input.collection_name, embedding=input.embedding
+        )
 
         return f"Successfully wrote document '{input.doc_name}' to collection '{input.collection_name}' in vector database '{input.db_name}' using embedding '{input.embedding}'"
 
@@ -329,12 +362,10 @@ def create_mcp_server() -> FastMCP:
         )
         for c in collections:
             print(f"[DEBUG] collection in list: {repr(c)} (type: {type(c)})")
-        # Normalize both sides for comparison
-        normalized_input = input.collection_name.strip().lower()
-        normalized_collections = [str(c).strip().lower() for c in collections]
-        if normalized_input not in normalized_collections:
+        # Use case-sensitive comparison
+        if input.collection_name not in collections:
             print(
-                f"[DEBUG] Raising ValueError: Collection '{input.collection_name}' not found in vector database '{input.db_name}' (normalized check)"
+                f"[DEBUG] Raising ValueError: Collection '{input.collection_name}' not found in vector database '{input.db_name}' (case-sensitive check)"
             )
             raise ValueError(
                 f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
@@ -546,8 +577,18 @@ def create_mcp_server() -> FastMCP:
 
             try:
                 # Create the collection using the setup method
-                if hasattr(db, "setup") and len(db.setup.__code__.co_varnames) > 1:
-                    db.setup(embedding=input.embedding)
+                if hasattr(db, "setup"):
+                    # Get the number of parameters in the setup method
+                    param_count = len(db.setup.__code__.co_varnames)
+                    if param_count > 2:  # self, embedding, collection_name
+                        db.setup(
+                            embedding=input.embedding,
+                            collection_name=input.collection_name,
+                        )
+                    elif param_count > 1:  # self, embedding
+                        db.setup(embedding=input.embedding)
+                    else:  # self only
+                        db.setup()
                 else:
                     db.setup()
 
@@ -558,6 +599,20 @@ def create_mcp_server() -> FastMCP:
 
         except Exception as e:
             error_msg = f"Failed to create collection '{input.collection_name}' in vector database '{input.db_name}': {str(e)}"
+            logger.error(error_msg)
+            return f"Error: {error_msg}"
+
+    @app.tool()
+    async def query(input: QueryInput) -> str:
+        """Query a vector database using the default query agent."""
+        try:
+            db = get_database_by_name(input.db_name)
+            response = db.query(
+                input.query, limit=input.limit, collection_name=input.collection_name
+            )
+            return response
+        except Exception as e:
+            error_msg = f"Failed to query vector database '{input.db_name}': {str(e)}"
             logger.error(error_msg)
             return f"Error: {error_msg}"
 

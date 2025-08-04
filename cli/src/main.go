@@ -52,6 +52,7 @@ A command-line interface for working with Maestro Knowledge configurations.`,
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(retrieveCmd)
 	rootCmd.AddCommand(getCmd)
+	rootCmd.AddCommand(queryCmd)
 
 	// Add sub-commands to create command
 	createCmd.AddCommand(createVdbCmd)
@@ -68,6 +69,9 @@ A command-line interface for working with Maestro Knowledge configurations.`,
 	writeCmd.AddCommand(writeDocumentCmd)
 	writeCmd.AddCommand(writeVdbDocCmd)
 	writeCmd.AddCommand(writeDocCmd)
+
+	// Add sub-commands to query command
+	queryCmd.AddCommand(queryVdbCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

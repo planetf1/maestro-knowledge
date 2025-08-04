@@ -83,7 +83,9 @@ class TestVectorDatabaseYAMLValidation:
         assert local_milvus_yaml["metadata"]["labels"]["app"] == "testdb"
         assert local_milvus_yaml["spec"]["type"] == "milvus"
         assert local_milvus_yaml["spec"]["uri"] == "localhost:19530"
-        assert local_milvus_yaml["spec"]["collection_name"] == "test_collection"
+        assert (
+            local_milvus_yaml["spec"]["collection_name"] == "Test_collection_lowercase"
+        )
         assert local_milvus_yaml["spec"]["embedding"] == "text-embedding-3-small"
         assert local_milvus_yaml["spec"]["mode"] == "local"
 
@@ -99,7 +101,10 @@ class TestVectorDatabaseYAMLValidation:
             "WEAVIATE_URL", "https://your-weaviate-cluster.weaviate.network"
         )
         assert remote_weaviate_yaml["spec"]["uri"] == expected_uri
-        assert remote_weaviate_yaml["spec"]["collection_name"] == "test_collection"
+        assert (
+            remote_weaviate_yaml["spec"]["collection_name"]
+            == "Test_collection_lowercase"
+        )
         assert remote_weaviate_yaml["spec"]["embedding"] == "text-embedding-3-small"
         assert remote_weaviate_yaml["spec"]["mode"] == "remote"
 

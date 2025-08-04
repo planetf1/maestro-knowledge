@@ -1,6 +1,6 @@
 #!/bin/bash
-# SPDX-License-Identifier: MIT
-# Copyright (c) 2025 dr.max
+# SPDX-License-Identifier: Apache 2.0
+# Copyright (c) 2025 IBM
 
 # Maestro Knowledge MCP Server Start Script
 
@@ -56,6 +56,41 @@ check_running() {
         fi
     fi
     return 1  # Server is not running
+}
+
+# Check if port is available
+check_port_available() {
+    local port=$1
+    if command -v lsof > /dev/null 2>&1; then
+        if lsof -i :$port > /dev/null 2>&1; then
+            return 1  # Port is in use
+        fi
+    else
+        # Fallback using netstat if lsof is not available
+        if netstat -an 2>/dev/null | grep ":$port " | grep LISTEN > /dev/null 2>&1; then
+            return 1  # Port is in use
+        fi
+    fi
+    return 0  # Port is available
+}
+
+# Kill processes using the specified port
+kill_port_processes() {
+    local port=$1
+    print_warning "Port $port is already in use. Attempting to kill existing processes..."
+    
+    if command -v lsof > /dev/null 2>&1; then
+        local pids=$(lsof -ti :$port 2>/dev/null)
+        if [ -n "$pids" ]; then
+            for pid in $pids; do
+                print_status "Killing process $pid using port $port"
+                kill "$pid" 2>/dev/null || kill -9 "$pid" 2>/dev/null || true
+            done
+            sleep 2
+            return 0
+        fi
+    fi
+    return 1
 }
 
 # Parse command line arguments
@@ -147,6 +182,20 @@ start_http_server() {
     print_info "Starting FastMCP HTTP server..."
     print_status "Host: $HOST"
     print_status "Port: $PORT"
+    
+    # Check if port is available
+    if ! check_port_available "$PORT"; then
+        print_warning "Port $PORT is already in use"
+        if ! kill_port_processes "$PORT"; then
+            print_error "Failed to free port $PORT. Please manually stop the process using this port."
+            return 1
+        fi
+        # Check again after killing processes
+        if ! check_port_available "$PORT"; then
+            print_error "Port $PORT is still in use after cleanup attempt"
+            return 1
+        fi
+    fi
     
     # Load .env file if it exists
     if [ -f "$SCRIPT_DIR/.env" ]; then

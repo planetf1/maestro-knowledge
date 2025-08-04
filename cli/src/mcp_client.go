@@ -639,6 +639,41 @@ func (c *MCPClient) GetDocument(dbName, collectionName, docName string) (string,
 	return resultStr, nil
 }
 
+// Query calls the query tool on the MCP server
+func (c *MCPClient) Query(dbName, query string, limit int, collectionName string) (string, error) {
+	params := map[string]interface{}{
+		"input": map[string]interface{}{
+			"db_name":         dbName,
+			"query":           query,
+			"limit":           limit,
+			"collection_name": collectionName,
+		},
+	}
+
+	response, err := c.callMCPServer("query", params)
+	if err != nil {
+		return "", err
+	}
+
+	// Check for error in response
+	if response.Error != nil {
+		return "", fmt.Errorf("MCP server error: %s", response.Error.Message)
+	}
+
+	// The response should be a string with the query result
+	if response.Result == nil {
+		return "", fmt.Errorf("no response from MCP server")
+	}
+
+	// Convert the result to a string
+	resultStr, ok := response.Result.(string)
+	if !ok {
+		return "", fmt.Errorf("unexpected response type from MCP server")
+	}
+
+	return resultStr, nil
+}
+
 // Close closes the MCP client
 func (c *MCPClient) Close() error {
 	// Cancel the context to prevent context leaks

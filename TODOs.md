@@ -85,8 +85,18 @@ Usage like:
     $ maestro-k retrieve (document | vdb-doc | doc) VDB_NAME COL_NAME DOC_NAME [options]
     $ maestro-k get (document | vdb-doc | doc) VDB_NAME COL_NAME DOC_NAME [options]
     ```
+# ✅ `query` command
+
+* add a way to send a query to the vdb default query agent. This should:
+
+  - include a `query(string) -> string` function to the MCP server 
+  - corresponding `query VDB COL_NAME QUERY` command to the CLI
+  - changes to the VDB abstraction to support `query` and creating default query agent that can be used to perform the query. 
+    An example of this abstraction and implementation for Weeviate and Milvus is in the RAGme-ai project at: https://github.com/maximilien/ragme-ai
 
 # other
+
+* ✅ change "SPDX-License-Identifier: MIT" in source and tests files in this repo to "SPDX-License-Identifier: Apache 2.0" since that's the LICENSE we are using and "Copyright (c) 2025 dr.max" to "Copyright (c) 2025 IBM"
 
 * ✅ clean up tools scripts into one directory
 
@@ -96,12 +106,16 @@ Usage like:
 
 * ✅ add recommended development workflow for contributions
 
+**OPEN**
+
+* clean up code /tests (remove duplicate and refactor) and ensure consistency in CLI commands and tests
+
+* review CLI commands for UI / UX in terms of ease of use
+
+* add a `create query` command as a way to retrieve a maestro agent configuration (YAML) for the query agent of a vdb
+
 * a few bugs remain
 - test-integration.sh still pollutes tests db and should leave it empty
-
-* add a way to send a query to the vdb default query agent
-
-* add a way to retrieve a maestro agent configuration for the query agent of a vdb
 
 * add a way to retrieve and query the maestro agent config for the query agent of a vbd
 

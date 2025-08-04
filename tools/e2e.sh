@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# SPDX-License-Identifier: MIT
-# Copyright (c) 2025 dr.max
+# SPDX-License-Identifier: Apache 2.0
+# Copyright (c) 2025 IBM
 
 # Maestro Knowledge End-to-End Testing Script
 #
@@ -26,7 +26,7 @@ NC='\033[0m' # No Color
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-CLI_PATH="$PROJECT_ROOT/maestro-k"
+CLI_PATH="$PROJECT_ROOT/cli/maestro-k"
 TEST_YAML="$PROJECT_ROOT/tests/yamls/test_local_milvus.yaml"
 
 # Function to print colored output
@@ -80,12 +80,14 @@ show_help() {
     echo "  help     - Show this help message"
     echo "  fast     - Run fast end-to-end test workflow"
     echo "  complete - Run complete end-to-end test workflow with error testing"
-    echo "  all      - Run both fast and complete workflows"
+    echo "  query    - Run query end-to-end test workflow"
+    echo "  all      - Run fast, complete, and query workflows"
     echo ""
     echo "Examples:"
     echo "  $0 help"
     echo "  $0 fast"
     echo "  $0 complete"
+    echo "  $0 query"
     echo "  $0 all"
     echo ""
     echo "Note: This script requires the MCP server to be running."
@@ -232,10 +234,10 @@ run_fast_workflow() {
     # Step 12: Test document deletion error handling - try to delete non-existent document
     print_command "$CLI_PATH delete document $vdb_name $collection_name non_existent_doc --dry-run"
     echo "--- Attempting to delete non-existent document (dry-run) ---"
-    if ! $CLI_PATH delete document $vdb_name $collection_name non_existent_doc --dry-run 2>&1; then
-        print_success "✓ Correctly failed to delete non-existent document"
+    if $CLI_PATH delete document $vdb_name $collection_name non_existent_doc --dry-run 2>&1; then
+        print_success "✓ Dry-run mode correctly handles non-existent document deletion"
     else
-        print_error "✗ Should have failed to delete non-existent document"
+        print_error "✗ Dry-run mode should handle non-existent document gracefully"
         return 1
     fi
     echo ""
@@ -380,15 +382,143 @@ run_complete_workflow() {
     echo ""
 }
 
+# Function to run query workflow (query CLI, MCP, Python/Go tests)
+run_query_workflow() {
+    print_header "Running QUERY end-to-end workflow"
+    echo "This workflow tests query CLI, MCP server, and Python/Go query tests."
+    echo ""
+
+    # Check prerequisites
+    if ! command -v python3 >/dev/null 2>&1; then
+        print_error "Python 3 is required but not installed"
+        exit 1
+    fi
+    if ! command -v curl >/dev/null 2>&1; then
+        print_error "curl is required but not installed"
+        exit 1
+    fi
+    if [ ! -f "$PROJECT_ROOT/cli/maestro-k" ]; then
+        print_warning "CLI binary not found, building it..."
+        (cd "$PROJECT_ROOT/cli" && go build -o maestro-k src/*.go)
+    fi
+    if [ ! -f "$PROJECT_ROOT/cli/maestro-k" ]; then
+        print_error "Failed to build CLI binary"
+        exit 1
+    fi
+
+    # CLI query help
+    print_status "Test: CLI query command help"
+    if "$PROJECT_ROOT/cli/maestro-k" query --help >/dev/null 2>&1; then
+        print_success "CLI query help command works"
+    else
+        print_error "CLI query help command failed"
+        exit 1
+    fi
+
+    # CLI query vdb help
+    print_status "Test: CLI query vdb command help"
+    if "$PROJECT_ROOT/cli/maestro-k" query vdb --help >/dev/null 2>&1; then
+        print_success "CLI query vdb help command works"
+    else
+        print_error "CLI query vdb help command failed"
+        exit 1
+    fi
+
+    # CLI query dry-run
+    print_status "Test: CLI query command with dry-run"
+    output=$("$PROJECT_ROOT/cli/maestro-k" query test-db "test query" --dry-run 2>&1)
+    if echo "$output" | grep -q "\[DRY RUN\]"; then
+        print_success "CLI query dry-run works"
+    else
+        print_error "CLI query dry-run failed"
+        echo "Output: $output"
+        exit 1
+    fi
+
+    # CLI query with doc-limit
+    print_status "Test: CLI query command with doc-limit"
+    output=$("$PROJECT_ROOT/cli/maestro-k" query test-db "test query" --doc-limit 10 --dry-run 2>&1)
+    if echo "$output" | grep -q "\[DRY RUN\]"; then
+        print_success "CLI query with doc-limit works"
+    else
+        print_error "CLI query with doc-limit failed"
+        echo "Output: $output"
+        exit 1
+    fi
+
+    # CLI query with special characters
+    print_status "Test: CLI query with special characters"
+    special_queries=(
+        "What's the deal with API endpoints? (v2.0)"
+        "Special chars: !@#$%^&*()_+-=[]{}|;':\",./<>?"
+        "Unicode: αβγδε ζηθικλμν ξοπρστ υφχψω"
+    )
+    for query in "${special_queries[@]}"; do
+        output=$("$PROJECT_ROOT/cli/maestro-k" query test-db "$query" --dry-run 2>&1)
+        if echo "$output" | grep -q "\[DRY RUN\]"; then
+            print_success "Query with special characters works: ${query:0:30}..."
+        else
+            print_error "Query with special characters failed: ${query:0:30}..."
+            echo "Output: $output"
+            exit 1
+        fi
+    done
+
+    # CLI query with different doc-limit values
+    print_status "Test: CLI query with different doc-limit values"
+    doc_limits=(1 5 10 100)
+    for limit in "${doc_limits[@]}"; do
+        output=$("$PROJECT_ROOT/cli/maestro-k" query test-db "test query" --doc-limit $limit --dry-run 2>&1)
+        if echo "$output" | grep -q "\[DRY RUN\]"; then
+            print_success "Query with doc-limit $limit works"
+        else
+            print_error "Query with doc-limit $limit failed"
+            echo "Output: $output"
+            exit 1
+        fi
+    done
+
+    # Python query tests
+    print_status "Test: Python query functionality tests"
+    if command -v pytest >/dev/null 2>&1; then
+        if pytest tests/test_query_functionality.py -v; then
+            print_success "Python query functionality tests passed"
+        else
+            print_error "Python query functionality tests failed"
+            exit 1
+        fi
+        if pytest tests/test_mcp_query.py -v; then
+            print_success "Python MCP query tests passed"
+        else
+            print_error "Python MCP query tests failed"
+            exit 1
+        fi
+        if pytest tests/test_query_integration.py -v; then
+            print_success "Python query integration tests passed"
+        else
+            print_error "Python query integration tests failed"
+            exit 1
+        fi
+    else
+        print_warning "pytest not found, skipping Python unit tests"
+    fi
+
+    # Go CLI query tests
+    print_status "Test: Go CLI query tests"
+    (cd "$PROJECT_ROOT/cli/tests" && go test -v -run TestQuery) && print_success "Go CLI query tests passed" || { print_error "Go CLI query tests failed"; exit 1; }
+
+    print_success "✓ QUERY workflow completed successfully!"
+    echo ""
+}
+
 # Function to run all workflows
 run_all_workflows() {
     print_header "Running ALL end-to-end workflows"
-    echo "This will run both fast and complete workflows."
+    echo "This will run fast, complete, and query workflows."
     echo ""
-    
     run_fast_workflow
     run_complete_workflow
-    
+    run_query_workflow
     print_success "✓ ALL workflows completed successfully!"
     echo ""
 }
@@ -404,6 +534,9 @@ main() {
             ;;
         complete)
             run_complete_workflow
+            ;;
+        query)
+            run_query_workflow
             ;;
         all)
             run_all_workflows

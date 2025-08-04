@@ -42,7 +42,8 @@ jobs:
     - name: Install dependencies
       run: |
         uv pip install -r requirements.txt
-        uv pip install pytest pytest-cov
+        uv pip install "weaviate-client[agents]"
+        uv pip install -r requirements-test.txt
 
     - name: Run tests
       run: |
@@ -93,7 +94,8 @@ jobs:
     - name: Install dependencies with optional packages
       run: |
         uv pip install -r requirements.txt
-        uv pip install pytest pytest-cov
+        uv pip install "weaviate-client[agents]"
+        uv pip install -r requirements-test.txt
 
     - name: Run tests with all dependencies
       run: |

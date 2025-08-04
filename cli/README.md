@@ -8,6 +8,7 @@ A command-line interface for interacting with the Maestro Knowledge MCP server w
 - **List embeddings**: List supported embeddings for a specific vector database
 - **List collections**: List all collections in a specific vector database
 - **List documents**: List documents in a specific collection of a vector database
+- **Query documents**: Query documents using natural language with semantic search
 - **Create vector databases**: Create vector databases from YAML configuration files
 - **Delete vector databases**: Delete vector databases by name
 - **Validate configurations**: Validate YAML configuration files
@@ -75,6 +76,10 @@ go build -o maestro-k src/*.go
 
 # List documents using short alias
 ./maestro-k list docs my-database my-collection
+
+# Query documents using natural language
+./maestro-k query my-database "What is the main topic of the documents?"
+./maestro-k query vdb my-database "Find information about API endpoints" --doc-limit 10
 
 # Create vector database from YAML file
 ./maestro-k create vector-db config.yaml
@@ -457,6 +462,66 @@ The `delete` command deletes vector databases, collections, or documents:
 ./maestro-k delete document my-database my-collection my-document --dry-run
 ```
 
+### Query Command
+
+The `query` command allows you to search documents using natural language queries with semantic search:
+
+```bash
+# Query documents using natural language
+./maestro-k query my-database "What is the main topic of the documents?"
+
+# Query with specific document limit
+./maestro-k query my-database "Find information about API endpoints" --doc-limit 10
+
+# Query using vdb subcommand
+./maestro-k query vdb my-database "What are the key features mentioned?"
+
+# Query with collection name specification
+./maestro-k query my-database "Search for technical documentation" --collection-name my-collection
+
+# Query with dry-run mode
+./maestro-k query my-database "Test query" --dry-run
+
+# Query with verbose output
+./maestro-k query my-database "Complex search query" --verbose
+```
+
+#### Query Command Features
+
+- **Natural Language Queries**: Use plain English to search through your documents
+- **Semantic Search**: Finds relevant documents based on meaning, not just keywords
+- **Document Limit Control**: Control how many documents to consider with `--doc-limit`
+- **Collection Targeting**: Optionally specify which collection to search in
+- **Dry-run Mode**: Test queries without actually executing them
+- **Verbose Output**: Get detailed information about the query process
+
+#### Query Command Flags
+
+- `--doc-limit, -d`: Maximum number of documents to consider (default: 5)
+- `--collection-name, -c`: Specific collection to search in (optional)
+- `--dry-run`: Test the command without making changes
+- `--verbose`: Show detailed output
+- `--silent`: Suppress success messages
+
+#### Query Examples
+
+```bash
+# Basic query
+./maestro-k query my-database "What is machine learning?"
+
+# Query with higher document limit
+./maestro-k query my-database "Find all API documentation" --doc-limit 20
+
+# Query specific collection
+./maestro-k query my-database "Search for user guides" --collection-name documentation
+
+# Query with vdb subcommand
+./maestro-k query vdb my-database "What are the system requirements?"
+
+# Test query without execution
+./maestro-k query my-database "Test query" --dry-run
+```
+
 ### Retrieve/Get Commands
 
 The `retrieve` and `get` commands retrieve information about collections and documents:
@@ -597,20 +662,26 @@ The `validate` command validates YAML configuration files:
    ./maestro-k list documents my-database my-collection --mcp-server-uri="http://localhost:8030"
    ```
 
-7. **Retrieve collection information**:
+7. **Query documents using natural language**:
+   ```bash
+   ./maestro-k query my-database "What is the main topic?" --mcp-server-uri="http://localhost:8030"
+   ./maestro-k query vdb my-database "Find API documentation" --doc-limit 10 --mcp-server-uri="http://localhost:8030"
+   ```
+
+8. **Retrieve collection information**:
    ```bash
    ./maestro-k retrieve collection my-database --mcp-server-uri="http://localhost:8030"
    ```
 
-8. **Create a vector database from YAML**:
+9. **Create a vector database from YAML**:
    ```bash
    ./maestro-k create vector-db config.yaml --mcp-server-uri="http://localhost:8030"
    ```
 
-9. **Delete a vector database**:
-   ```bash
-   ./maestro-k delete vector-db my-database --mcp-server-uri="http://localhost:8030"
-   ```
+10. **Delete a vector database**:
+    ```bash
+    ./maestro-k delete vector-db my-database --mcp-server-uri="http://localhost:8030"
+    ```
 
 ### Examples
 
@@ -635,6 +706,8 @@ This will test:
 - .env file support
 - YAML validation
 - Environment variable substitution
+- Query functionality
+- Query command validation
 
 ## Troubleshooting
 
@@ -678,6 +751,7 @@ cli/
 │   ├── list.go          # List command implementation
 │   ├── create.go        # Create command implementation
 │   ├── delete.go        # Delete command implementation
+│   ├── query.go         # Query command implementation
 │   ├── validate.go      # Validate command implementation
 │   └── mcp_client.go    # MCP server client
 ├── examples/
@@ -687,6 +761,7 @@ cli/
 │   ├── list_test.go     # List command tests
 │   ├── create_test.go   # Create command tests
 │   ├── delete_test.go   # Delete command tests
+│   ├── query_test.go    # Query command tests
 │   ├── validate_test.go # Validate command tests
 │   └── main_test.go     # Main CLI tests
 ├── go.mod               # Go module dependencies

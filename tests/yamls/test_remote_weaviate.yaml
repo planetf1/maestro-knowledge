@@ -7,6 +7,6 @@ metadata:
 spec:
   type: weaviate
   uri: {{WEAVIATE_URL}}
-  collection_name: test_collection
+  collection_name: Test_collection_lowercase
   embedding: text-embedding-3-small
   mode: remote

@@ -32,11 +32,50 @@ The MCP server provides the following tools for vector database operations with 
 - **list_documents**: List documents from a specific vector database
 - **list_documents_in_collection**: List documents from a specific collection in a vector database
 - **count_documents**: Get the current count of documents in a specific collection
+- **query**: Query documents using natural language with semantic search
 
 ### Document Management
 - **delete_document**: Delete a single document by ID from a specific database
 - **delete_documents**: Delete multiple documents by IDs from a specific database
 - **delete_collection**: Delete an entire collection from a specific database
+
+## Query Functionality
+
+The MCP server provides natural language querying capabilities that work across both Weaviate and Milvus vector databases:
+
+### Query Features
+
+- **Natural Language Queries**: Use plain English to search through your documents
+- **Semantic Search**: Finds relevant documents based on meaning, not just keywords
+- **Multi-Database Support**: Query works consistently across Weaviate and Milvus
+- **Collection Targeting**: Optionally specify which collection to search in
+- **Configurable Limits**: Control how many documents to consider in the search
+- **Rich Results**: Returns relevant document content with metadata
+
+### Query Parameters
+
+- **db_name**: The name of the vector database to query
+- **query**: The natural language query string
+- **limit**: Maximum number of documents to consider (default: 5)
+- **collection_name**: Optional collection name to restrict search to
+
+### Query Examples
+
+```json
+{
+  "name": "query",
+  "arguments": {
+    "input": {
+      "db_name": "my_database",
+      "query": "What is machine learning?",
+      "limit": 10,
+      "collection_name": "technical_docs"
+    }
+  }
+}
+```
+
+This will search through the documents in the specified database and return relevant results based on semantic similarity to the query.
 
 ## Embedding Strategies
 
@@ -241,7 +280,22 @@ Here's how an AI agent might interact with multiple vector databases:
    }
    ```
 
-7. **List documents from a specific database**:
+7. **Query documents using natural language**:
+   ```json
+   {
+     "name": "query",
+     "arguments": {
+       "input": {
+         "db_name": "project_a_db",
+         "query": "What is the main topic of the documents?",
+         "limit": 5,
+         "collection_name": "ProjectADocuments"
+       }
+     }
+   }
+   ```
+
+8. **List documents from a specific database**:
    ```json
    {
      "name": "list_documents",
@@ -255,7 +309,7 @@ Here's how an AI agent might interact with multiple vector databases:
    }
    ```
 
-8. **List documents from a specific collection**:
+9. **List documents from a specific collection**:
    ```json
    {
      "name": "list_documents_in_collection",
@@ -270,19 +324,19 @@ Here's how an AI agent might interact with multiple vector databases:
    }
    ```
 
-9. **Get information about a specific database**:
-   ```json
-   {
-     "name": "get_database_info",
-     "arguments": {
-       "input": {
-         "db_name": "project_a_db"
-       }
-     }
-   }
-   ```
+10. **Get information about a specific database**:
+    ```json
+    {
+      "name": "get_database_info",
+      "arguments": {
+        "input": {
+          "db_name": "project_a_db"
+        }
+      }
+    }
+    ```
 
-10. **Clean up a specific database**:
+11. **Clean up a specific database**:
     ```json
     {
       "name": "cleanup",
