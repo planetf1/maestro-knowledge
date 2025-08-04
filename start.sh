@@ -98,6 +98,7 @@ parse_args() {
     MODE="http"
     HOST="$DEFAULT_HOST"
     PORT="$DEFAULT_PORT"
+    TAIL="false"
     
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -115,6 +116,10 @@ parse_args() {
                 ;;
             --stdio)
                 MODE="stdio"
+                shift
+                ;;
+            --tail)
+                TAIL="true"
                 shift
                 ;;
             -h|--help)
@@ -287,7 +292,16 @@ main() {
     fi
     
     start_server
-    exit $?
+    exit_status=$?
+
+    if [[ $exit_status == 0 && $TAIL == "true" ]]; then
+      tail -f mcp_server.log &
+      tail_pid=$!
+      trap 'kill $tail_pid; exit' INT
+      wait $tail_pid
+    fi
+
+    exit $exit_status
 }
 
 # Run main function
