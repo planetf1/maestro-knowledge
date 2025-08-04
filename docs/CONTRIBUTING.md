@@ -580,8 +580,6 @@ This script will:
 If you need to run individual checks:
 
 ```bash
-# Install development dependencies
-uv pip install ruff bandit safety
 
 # Run linting only
 uv run ruff check src/ tests/ examples/
