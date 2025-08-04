@@ -242,16 +242,16 @@ class MilvusVectorDatabase(VectorDatabase):
                     "Database was not created with a specific dimension, which is required for setup."
                 )
             warnings.warn(
-                f"[Milvus setup] Creating collection '{self.collection_name}' with dimension {self.dimension}"
+                f"[Milvus setup] Creating collection '{target_collection}' with dimension {self.dimension}"
             )
             self.client.create_collection(
-                collection_name=target_collection, //TODO: CHeck. Was self.collection_name
-                dimension=dimension,  # Vector dimension TODO: Check. Was self.dimension
+                collection_name=target_collection,
+                dimension=self.dimension,  # Vector dimension
                 primary_field_name="id",
                 vector_field_name="vector",
             )
             warnings.warn(
-                f"[Milvus setup] Collection '{self.collection_name}' created."
+                f"[Milvus setup] Collection '{target_collection}' created."
             )
 
     def write_documents(

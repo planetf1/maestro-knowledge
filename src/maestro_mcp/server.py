@@ -357,16 +357,8 @@ def create_mcp_server() -> FastMCP:
 
         # Check if the collection exists
         collections = db.list_collections()
-        print(
-            f"[DEBUG] input.collection_name: {repr(input.collection_name)} (type: {type(input.collection_name)})"
-        )
-        for c in collections:
-            print(f"[DEBUG] collection in list: {repr(c)} (type: {type(c)})")
         # Use case-sensitive comparison
         if input.collection_name not in collections:
-            print(
-                f"[DEBUG] Raising ValueError: Collection '{input.collection_name}' not found in vector database '{input.db_name}' (case-sensitive check)"
-            )
             raise ValueError(
                 f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
             )
@@ -427,10 +419,7 @@ def create_mcp_server() -> FastMCP:
             document_id = None
 
             for doc in documents:
-                if (
-                    doc.get("name") == input.doc_name
-                    or doc.get("doc_name") == input.doc_name
-                ):
+                if doc.get("metadata", {}).get("doc_name") == input.doc_name:
                     document_id = doc.get("id")
                     break
 
@@ -477,11 +466,7 @@ def create_mcp_server() -> FastMCP:
 
             # Check if the collection exists
             collections = db.list_collections()
-            # Normalize both sides for comparison
-
-            normalized_input = input.collection_name.strip().lower()
-            normalized_collections = [str(c).strip().lower() for c in collections]
-            if normalized_input not in normalized_collections:
+            if input.collection_name not in collections:
                 raise ValueError(
                     f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
                 )
