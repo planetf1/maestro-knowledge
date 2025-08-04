@@ -34,11 +34,17 @@ jobs:
             head -n 1 | \
             sed -E 's/.*"([^"]+)".*/\1/')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: get docker-compatible GITHUB_ORG
+        id: org
+        run: |
+          echo "github_org=${OWNER,,}" >>${GITHUB_OUTPUT}
+        env:
+          OWNER: '${{ github.repository_owner }}'
       - name: Build and Push Docker Image to ghcr.io
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/maestro-knowledge:${{ steps.version.outputs.version }}-${{ matrix.arch }}
+          tags: ghcr.io/${{ steps.org.outputs.github_org }}/maestro-knowledge:${{ steps.version.outputs.version }}-${{ matrix.arch }}
   upload-manifest:
     needs: build-upload
     runs-on: ubuntu-latest
