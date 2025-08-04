@@ -40,9 +40,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.db.vector_db_milvus import MilvusVectorDatabase
 
 
-
-
-
 class TestMilvusVectorDatabase:
     """Test cases for the MilvusVectorDatabase implementation."""
 
