@@ -63,10 +63,6 @@ class CreateVectorDatabaseInput(BaseModel):
     collection_name: str = Field(
         default="MaestroDocs", description="Name of the collection to use"
     )
-    dimension: int = Field(
-        default=None,
-        description="The vector dimension for the collection. If None, it will be inferred from the embedding model.",
-    )
 
 
 class SetupDatabaseInput(BaseModel):
@@ -234,7 +230,7 @@ def create_mcp_server() -> FastMCP:
 
             # Create new database instance
             vector_databases[input.db_name] = create_vector_database(
-                input.db_type, input.collection_name, input.dimension
+                input.db_type, input.collection_name
             )
 
             logger.info(

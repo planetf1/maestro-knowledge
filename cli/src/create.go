@@ -29,7 +29,6 @@ type VectorDatabaseSpec struct {
 	CollectionName string `yaml:"collection_name"`
 	Embedding      string `yaml:"embedding"`
 	Mode           string `yaml:"mode"`
-	Dimension      int    `yaml:"dimension,omitempty"`
 }
 
 // replaceEnvVars replaces {{ENV_VAR_NAME}} placeholders with environment variable values
@@ -102,7 +101,6 @@ var (
 	overrideCollectionName string
 	overrideEmbedding      string
 	overrideMode           string
-	overrideDimension      int
 )
 
 func createVectorDatabase(yamlFile string) error {
@@ -204,13 +202,6 @@ func applyOverrides(config *VectorDatabaseConfig) {
 		}
 		config.Spec.Mode = overrideMode
 	}
-
-	if overrideDimension != 0 {
-		if verbose && !silent {
-			fmt.Printf("Overriding dimension: %d -> %d\n", config.Spec.Dimension, overrideDimension)
-		}
-		config.Spec.Dimension = overrideDimension
-	}
 }
 
 func validateVectorDatabaseConfig(config *VectorDatabaseConfig) error {
@@ -256,10 +247,6 @@ func validateVectorDatabaseConfig(config *VectorDatabaseConfig) error {
 		return fmt.Errorf("invalid spec.mode: %s (must be 'local' or 'remote')", config.Spec.Mode)
 	}
 
-	if config.Spec.Dimension < 0 {
-		return fmt.Errorf("invalid spec.dimension: %d (must be a non-negative integer)", config.Spec.Dimension)
-	}
-
 	return nil
 }
 
@@ -270,9 +257,6 @@ func performVectorDatabaseCreation(config *VectorDatabaseConfig) error {
 		fmt.Printf("  Collection: %s\n", config.Spec.CollectionName)
 		fmt.Printf("  Embedding: %s\n", config.Spec.Embedding)
 		fmt.Printf("  Mode: %s\n", config.Spec.Mode)
-		if config.Spec.Dimension > 0 {
-			fmt.Printf("  Dimension: %d\n", config.Spec.Dimension)
-		}
 	}
 
 	// Get MCP server URI
@@ -310,7 +294,7 @@ func performVectorDatabaseCreation(config *VectorDatabaseConfig) error {
 				createErr = fmt.Errorf("MCP server could not be reached at %s. Please ensure the server is running and accessible", serverURI)
 			}
 		}()
-		createErr = client.CreateVectorDatabase(config.Metadata.Name, config.Spec.Type, config.Spec.CollectionName, config.Spec.Dimension)
+		createErr = client.CreateVectorDatabase(config.Metadata.Name, config.Spec.Type, config.Spec.CollectionName)
 	}()
 
 	if createErr != nil {

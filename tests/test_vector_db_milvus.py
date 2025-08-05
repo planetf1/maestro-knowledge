@@ -79,8 +79,14 @@ class TestMilvusVectorDatabase:
         mock_client.has_collection.return_value = False
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
+        db.dimension = 1536
         db.setup()
-        mock_client.create_collection.assert_called_once()
+        mock_client.create_collection.assert_called_once_with(
+            collection_name="MaestroDocs",
+            dimension=1536,
+            primary_field_name="id",
+            vector_field_name="vector",
+        )
 
     @patch("pymilvus.MilvusClient")
     def test_write_documents_with_precomputed_vector(self, mock_milvus_client):
@@ -155,7 +161,7 @@ class TestMilvusVectorDatabase:
         with patch.object(
             db,
             "_generate_embedding",
-            side_effect=ImportError("No module named 'openai'"),
+            side_effect=ValueError("OPENAI_API_KEY is required for OpenAI embeddings."),
         ):
             documents = [
                 {
@@ -167,7 +173,10 @@ class TestMilvusVectorDatabase:
 
             # Ensure no OpenAI API key is set
             with patch.dict(os.environ, {}, clear=True):
-                with pytest.raises(ImportError, match="No module named 'openai'"):
+                with pytest.raises(
+                    ValueError,
+                    match="OPENAI_API_KEY is required for OpenAI embeddings.",
+                ):
                     db.write_documents(documents, embedding="text-embedding-ada-002")
 
     @patch("pymilvus.MilvusClient")
@@ -218,13 +227,13 @@ class TestMilvusVectorDatabase:
                 "id": 1,
                 "url": "http://test1.com",
                 "text": "content1",
-                "metadata": '{"type": "webpage"}',
+                "metadata": """{"type": "webpage"}""",
             },
             {
                 "id": 2,
                 "url": "http://test2.com",
                 "text": "content2",
-                "metadata": '{"type": "webpage"}',
+                "metadata": """{"type": "webpage"}""",
             },
         ]
         mock_milvus_client.return_value = mock_client
@@ -328,7 +337,7 @@ class TestMilvusVectorDatabase:
                 "id": "doc123",
                 "url": "test_url",
                 "text": "test content",
-                "metadata": '{"doc_name": "test_doc", "collection_name": "test_collection"}',
+                "metadata": """{"doc_name": "test_doc", "collection_name": "test_collection"}""",
             }
         ]
         mock_milvus_client.return_value = mock_client
@@ -345,7 +354,7 @@ class TestMilvusVectorDatabase:
         # Verify the query was called with correct parameters
         mock_client.query.assert_called_once_with(
             "test_collection",
-            filter='metadata["doc_name"] == "test_doc"',
+            filter='''metadata["doc_name"] == "test_doc"''',
             output_fields=["id", "url", "text", "metadata"],
             limit=1,
         )
@@ -411,3 +420,52 @@ class TestMilvusVectorDatabase:
         assert result["url"] == "test_url"
         assert result["text"] == "test content"
         assert result["metadata"] == {}  # Should be empty dict for invalid JSON
+
+    def test_custom_local_embedding_missing_url(self):
+        db = MilvusVectorDatabase()
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(ValueError, match="CUSTOM_EMBEDDING_URL must be set"):
+                db._generate_embedding("test", "custom_local")
+
+    def test_custom_local_embedding_missing_model(self):
+        db = MilvusVectorDatabase()
+        with patch.dict(
+            os.environ, {"CUSTOM_EMBEDDING_URL": "http://localhost:8080"}, clear=True
+        ):
+            with pytest.raises(ValueError, match="CUSTOM_EMBEDDING_MODEL must be set"):
+                db._generate_embedding("test", "custom_local")
+
+    def test_custom_local_embedding_missing_vectorsize(self):
+        db = MilvusVectorDatabase()
+        with patch.dict(
+            os.environ,
+            {
+                "CUSTOM_EMBEDDING_URL": "http://localhost:8080",
+                "CUSTOM_EMBEDDING_MODEL": "test-model",
+            },
+            clear=True,
+        ):
+            with pytest.raises(
+                ValueError, match="CUSTOM_EMBEDDING_VECTORSIZE must be set"
+            ):
+                db._get_embedding_dimension("custom_local")
+
+    def test_custom_local_embedding_invalid_vectorsize(self):
+        db = MilvusVectorDatabase()
+        with patch.dict(
+            os.environ,
+            {
+                "CUSTOM_EMBEDDING_URL": "http://localhost:8080",
+                "CUSTOM_EMBEDDING_MODEL": "test-model",
+                "CUSTOM_EMBEDDING_VECTORSIZE": "invalid",
+            },
+            clear=True,
+        ):
+            with pytest.raises(
+                ValueError, match="CUSTOM_EMBEDDING_VECTORSIZE must be a valid integer"
+            ):
+                db._get_embedding_dimension("custom_local")
+
+
+if __name__ == "__main__":
+    pytest.main()

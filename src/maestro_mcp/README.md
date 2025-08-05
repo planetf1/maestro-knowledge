@@ -98,8 +98,7 @@ The MCP server supports flexible embedding strategies for both vector databases:
 - `text-embedding-ada-002`: OpenAI's Ada-002 embedding model
 - `text-embedding-3-small`: OpenAI's text-embedding-3-small model
 - `text-embedding-3-large`: OpenAI's text-embedding-3-large model
-- `text-embedding-3-large`: OpenAI's text-embedding-3-large model
-- `custom_local`: Uses a custom, local embedding endpoint. Requires `CUSTOM_EMBEDDING_URL` and `CUSTOM_EMBEDDING_MODEL` environment variables, plus optionally `CUSTOM_EMBEDDING_API_KEY`.
+- `custom_local`: Uses a custom, local embedding endpoint. **All three** `CUSTOM_EMBEDDING_URL`, `CUSTOM_EMBEDDING_MODEL`, and `CUSTOM_EMBEDDING_VECTORSIZE` environment variables are **required** for this embedding type. `CUSTOM_EMBEDDING_API_KEY` is optional.
 
 
 ## Multi-Database Support
@@ -178,8 +177,7 @@ Here's how an AI agent might interact with multiple vector databases:
        "input": {
          "db_name": "project_b_db",
          "db_type": "milvus",
-         "collection_name": "ProjectBDocuments",
-        "dimension": 768
+         "collection_name": "ProjectBDocuments"
        }
      }
    }
@@ -354,6 +352,10 @@ The server respects the following environment variables:
 
 - `VECTOR_DB_TYPE`: Default vector database type (defaults to "weaviate")
 - `OPENAI_API_KEY`: Required for OpenAI embedding models
+- `CUSTOM_EMBEDDING_URL`: The URL for the custom embedding endpoint (required for `custom_local` embedding for Milvus).
+- `CUSTOM_EMBEDDING_API_KEY`: The API key for the custom embedding endpoint (optional, but recommended for authentication).
+- `CUSTOM_EMBEDDING_MODEL`: The model name for the custom embedding endpoint (required for `custom_local` embedding for Milvus).
+- `CUSTOM_EMBEDDING_VECTORSIZE`: The vector dimension for the `custom_local` embedding model (required when using `custom_local`).
 - Database-specific environment variables for Weaviate and Milvus connections
 
 ## Error Handling

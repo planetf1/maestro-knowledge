@@ -49,16 +49,7 @@ class TestCreateVectorDatabase:
             mock_instance = MagicMock()
             mock_milvus_db.return_value = mock_instance
             db = create_vector_database("milvus", "TestCollection")
-            mock_milvus_db.assert_called_once_with("TestCollection", dimension=None)
-            assert db == mock_instance
-
-    def test_create_milvus_database_with_dimension(self):
-        """Test creating a Milvus vector database with a specific dimension."""
-        with patch("src.db.vector_db_factory.MilvusVectorDatabase") as mock_milvus_db:
-            mock_instance = MagicMock()
-            mock_milvus_db.return_value = mock_instance
-            db = create_vector_database("milvus", "TestCollection", dimension=1024)
-            mock_milvus_db.assert_called_once_with("TestCollection", dimension=1024)
+            mock_milvus_db.assert_called_once_with("TestCollection")
             assert db == mock_instance
 
     def test_create_unsupported_database(self):
@@ -85,7 +76,7 @@ class TestCreateVectorDatabase:
                 mock_instance = MagicMock()
                 mock_milvus_db.return_value = mock_instance
                 db = create_vector_database(collection_name="TestCollection")
-                mock_milvus_db.assert_called_once_with("TestCollection", dimension=None)
+                mock_milvus_db.assert_called_once_with("TestCollection")
                 assert db == mock_instance
 
     def test_create_database_with_no_type_and_no_env_var(self):

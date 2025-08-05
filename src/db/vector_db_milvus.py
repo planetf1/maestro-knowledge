@@ -25,16 +25,13 @@ from .vector_db_base import VectorDatabase
 class MilvusVectorDatabase(VectorDatabase):
     """Milvus implementation of the vector database interface."""
 
-    def __init__(self, collection_name: str = "MaestroDocs", dimension: int = None):
+    def __init__(self, collection_name: str = "MaestroDocs"):
         super().__init__(collection_name)
         self.client = None
         self.collection_name = collection_name
-        self.dimension = dimension
+        self.dimension = None
         self._client_created = False
         self.embedding_model = None  # Store the embedding model used
-        print(
-            f"[SERVER DEBUG] MilvusVectorDatabase initialized with dimension: {dimension}"
-        )
 
     def supported_embeddings(self) -> List[str]:
         """
@@ -133,10 +130,12 @@ class MilvusVectorDatabase(VectorDatabase):
                     )
 
                 client_kwargs["base_url"] = custom_endpoint_url
-                client_kwargs["api_key"] = os.getenv(
-                    "CUSTOM_EMBEDDING_API_KEY", "ollama"
-                )
-                model_to_use = os.getenv("CUSTOM_EMBEDDING_MODEL", "nomic-embed-text")
+                client_kwargs["api_key"] = os.getenv("CUSTOM_EMBEDDING_API_KEY")
+                model_to_use = os.getenv("CUSTOM_EMBEDDING_MODEL")
+                if not model_to_use:
+                    raise ValueError(
+                        "CUSTOM_EMBEDDING_MODEL must be set for 'custom_local' embedding."
+                    )
             else:
                 # Get OpenAI API key from environment
                 api_key = os.getenv("OPENAI_API_KEY")
@@ -158,6 +157,8 @@ class MilvusVectorDatabase(VectorDatabase):
             raise ImportError(
                 "openai package is required for embedding generation. Install with: pip install openai"
             )
+        except ValueError as e:
+            raise e
         except Exception as e:
             raise RuntimeError(f"Failed to generate embedding: {e}")
 
@@ -169,8 +170,19 @@ class MilvusVectorDatabase(VectorDatabase):
             embedding_model: Name of the embedding model
 
         Returns:
-            Vector dimension for the model. Raises ValueError if model is unknown.
+            Vector dimension for the model. Raises ValueError if model is unknown or misconfigured.
         """
+        if embedding_model == "custom_local":
+            vectorsize_str = os.getenv("CUSTOM_EMBEDDING_VECTORSIZE")
+            if not vectorsize_str:
+                raise ValueError(
+                    "CUSTOM_EMBEDDING_VECTORSIZE must be set for 'custom_local' embedding."
+                )
+            try:
+                return int(vectorsize_str)
+            except ValueError:
+                raise ValueError("CUSTOM_EMBEDDING_VECTORSIZE must be a valid integer.")
+
         # Map embedding models to their dimensions
         dimension_mapping = {
             "text-embedding-ada-002": 1536,
@@ -181,11 +193,8 @@ class MilvusVectorDatabase(VectorDatabase):
 
         dimension = dimension_mapping.get(embedding_model)
 
-        # For custom models, dimension MUST be passed in __init__ if not in mapping.
         if dimension is None:
-            raise ValueError(
-                f"Unknown embedding model '{embedding_model}'. Please pass the 'dimension' parameter when creating the database."
-            )
+            raise ValueError(f"Unknown embedding model '{embedding_model}'.")
 
         return dimension
 
@@ -193,6 +202,27 @@ class MilvusVectorDatabase(VectorDatabase):
         """Set up Milvus collection if it doesn't exist."""
 
         self._ensure_client()
+        if embedding == "custom_local":
+            custom_url = os.getenv("CUSTOM_EMBEDDING_URL")
+            custom_model = os.getenv("CUSTOM_EMBEDDING_MODEL")
+            custom_vectorsize = os.getenv("CUSTOM_EMBEDDING_VECTORSIZE")
+
+            if not custom_url:
+                raise ValueError(
+                    "CUSTOM_EMBEDDING_URL must be set for 'custom_local' embedding."
+                )
+            if not custom_model:
+                raise ValueError(
+                    "CUSTOM_EMBEDDING_MODEL must be set for 'custom_local' embedding."
+                )
+            if not custom_vectorsize:
+                raise ValueError(
+                    "CUSTOM_EMBEDDING_VECTORSIZE must be set for 'custom_local' embedding."
+                )
+            try:
+                int(custom_vectorsize)
+            except ValueError:
+                raise ValueError("CUSTOM_EMBEDDING_VECTORSIZE must be a valid integer.")
         if self.client is None:
             warnings.warn("Milvus client is not available. Setup skipped.")
             return
@@ -205,22 +235,16 @@ class MilvusVectorDatabase(VectorDatabase):
         # Store the embedding model
         self.embedding_model = embedding
 
-        # If dimension is not set during initialization, infer it from the embedding model.
-        if self.dimension is None:
-            self.dimension = self._get_embedding_dimension(embedding)
+        # Determine dimension based on embedding model
+        self.dimension = self._get_embedding_dimension(embedding)
 
         # Create collection if it doesn't exist
 
-        warnings.warn(
-            f"[Milvus setup] Checking collection '{self.collection_name}' (dimension={self.dimension})"
-        )
         collection_exists = self.client.has_collection(target_collection)
-        warnings.warn(f"[Milvus setup] Collection exists: {collection_exists}")
 
         if collection_exists:
             try:
                 info = self.client.describe_collection(self.collection_name)
-                warnings.warn(f"[Milvus setup] Existing collection info: {info}")
                 for field in info.get("fields", []):
                     if field.get("name") == "vector":
                         existing_dim = field.get("params", {}).get("dim")
@@ -234,23 +258,12 @@ class MilvusVectorDatabase(VectorDatabase):
                 )
 
         if not collection_exists:
-            if self.dimension is None:
-                warnings.warn(
-                    "Database was not created with a specific dimension, which is required for setup."
-                )
-                raise ValueError(
-                    "Database was not created with a specific dimension, which is required for setup."
-                )
-            warnings.warn(
-                f"[Milvus setup] Creating collection '{target_collection}' with dimension {self.dimension}"
-            )
             self.client.create_collection(
                 collection_name=target_collection,
                 dimension=self.dimension,  # Vector dimension
                 primary_field_name="id",
                 vector_field_name="vector",
             )
-            warnings.warn(f"[Milvus setup] Collection '{target_collection}' created.")
 
     def write_documents(
         self,
