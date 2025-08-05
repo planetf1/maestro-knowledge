@@ -4,7 +4,11 @@ WORKDIR /app
 ENV PYTHONPATH=/app
 ENV UV_CACHE_DIR=/app/cache
 
-ADD . /app
+# ADD . /app
+COPY ./src /app/src
+COPY pyproject.toml /app
+COPY start.sh /app
+COPY stop.sh /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends procps
 
