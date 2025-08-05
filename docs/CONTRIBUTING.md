@@ -133,7 +133,8 @@ maestro-knowledge/
 ├── tools/                   # Development tools
 │   ├── lint.sh              # Linting and formatting script
 │   ├── e2e.sh               # End-to-end testing script
-│   └── test-integration.sh  # Integration tests
+│   ├── test-integration.sh  # Integration tests
+│   └── tail-logs.sh        # Real-time log monitoring script
 ├── pyproject.toml           # Project configuration
 └── README.md                # Main project documentation
 ```
@@ -541,6 +542,7 @@ This comprehensive test sequence will:
 4. **Run integration tests** (`./test-integration.sh`) - Tests end-to-end functionality
 5. **Run e2e tests** (`./tools/e2e.sh all`) - Tests complete workflows with CLI tool
 6. **Stop the MCP server** (`./stop.sh`) - Cleans up the environment
+7. **Monitor logs** (`./tools/tail-logs.sh status`) - Verify services are running correctly
 
 **⚠️ Important**: This sequence must pass completely before submitting a PR. If any step fails, fix the issues and run the sequence again.
 
@@ -580,8 +582,6 @@ This script will:
 If you need to run individual checks:
 
 ```bash
-# Install development dependencies
-uv pip install ruff bandit safety
 
 # Run linting only
 uv run ruff check src/ tests/ examples/
@@ -629,6 +629,32 @@ We have end-to-end tests that validate complete workflows with the CLI tool:
 ./tools/e2e.sh complete
 
 # Run both fast and complete workflows
+
+### Log Monitoring and Debugging
+
+For debugging and monitoring during development, use the log monitoring tools:
+
+```bash
+# Show service status with visual indicators
+./tools/tail-logs.sh status
+
+# Monitor all logs in real-time
+./tools/tail-logs.sh all
+
+# Monitor specific service logs
+./tools/tail-logs.sh mcp    # MCP server logs
+./tools/tail-logs.sh cli    # CLI logs
+
+# View recent logs
+./tools/tail-logs.sh recent
+```
+
+**Enhanced Process Management:**
+- **✅ Visual status indicators** - Clear service status with checkmarks and X marks
+- **📡 Real-time log tailing** - Monitor logs as they're generated
+- **🌐 Port monitoring** - Check service availability on ports
+- **📄 Log file management** - Automatic detection and size tracking
+- **🔄 Graceful restarts** - Proper process cleanup and restart sequencing
 ./tools/e2e.sh all
 
 # The e2e test suite includes:

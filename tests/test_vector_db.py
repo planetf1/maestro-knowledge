@@ -36,15 +36,6 @@ from src.db.vector_db_weaviate import WeaviateVectorDatabase
 from src.db.vector_db_milvus import MilvusVectorDatabase
 from src.db.vector_db_factory import create_vector_database
 
-# Check if pymilvus is available
-try:
-    import pymilvus  # noqa: F401
-
-    PYMILVUS_AVAILABLE = True
-except ImportError:
-    PYMILVUS_AVAILABLE = False
-
-
 # This file now serves as a compatibility layer and re-exports the tests
 # The actual test implementations are in the separate test files:
 # - test_vector_db_base.py
@@ -58,5 +49,4 @@ __all__ = [
     "WeaviateVectorDatabase",
     "MilvusVectorDatabase",
     "create_vector_database",
-    "PYMILVUS_AVAILABLE",
 ]

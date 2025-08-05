@@ -20,14 +20,29 @@ A modular vector database interface supporting multiple backends (Weaviate, Milv
 
 ### Installation
 
-```bash
-# Clone the repository
-git clone <repository-url>
-cd maestro-knowledge
+First, clone the repository and navigate into the directory:
 
-# Install dependencies
+```bash
+git clone https://github.com/AI4quantum/maestro-knowledge.git
+cd maestro-knowledge
+```
+
+You will need [Python](https://www.python.org/) 3.11+ and [uv](https://docs.astral.sh/uv/#highlights).
+
+Create and activate a virtual environment:
+
+```bash
+uv venv
+source .venv/bin/activate
+```
+
+Next, install the required dependencies:
+
+```bash
 uv sync
 ```
+
+This should be rerun after pulling changes to ensure all dependencies are up-to-date.
 
 ### Basic Usage
 
@@ -64,109 +79,23 @@ db.cleanup()
 
 ## Embedding Strategies
 
-The library supports flexible embedding strategies for both vector databases:
+The library supports flexible embedding strategies for both vector databases. For detailed embedding model support and usage examples, see [src/maestro_mcp/README.md](src/maestro_mcp/README.md).
 
-### Supported Embedding Models
+### Quick Overview
 
-#### Weaviate
-- `default`: Uses Weaviate's built-in text2vec-weaviate vectorizer
-- `text2vec-weaviate`: Weaviate's built-in text vectorizer
-- `text2vec-openai`: OpenAI's embedding models (requires API key)
-- `text2vec-cohere`: Cohere's embedding models
-- `text2vec-huggingface`: Hugging Face models
-- `text-embedding-ada-002`: OpenAI's Ada-002 model
-- `text-embedding-3-small`: OpenAI's text-embedding-3-small model
-- `text-embedding-3-large`: OpenAI's text-embedding-3-large model
+- **Weaviate**: Supports built-in vectorizers and external embedding models
+- **Milvus**: Supports pre-computed vectors and OpenAI embedding models
+- **Environment Variables**: Set `OPENAI_API_KEY` for OpenAI embedding models
 
-#### Milvus
-- `default`: Uses pre-computed vectors if available, otherwise text-embedding-ada-002
-- `text-embedding-ada-002`: OpenAI's Ada-002 embedding model
-- `text-embedding-3-small`: OpenAI's text-embedding-3-small model
-- `text-embedding-3-large`: OpenAI's text-embedding-3-large model
-- `custom_local`: Uses a custom, local embedding endpoint (e.g., Ollama). Requires `CUSTOM_EMBEDDING_URL`, `CUSTOM_EMBEDDING_MODEL` environment variable, and optionally `CUSTOM_EMBEDDING_API_KEY`.
-
-### Usage Examples
-
-#### Using Pre-computed Vectors (Milvus)
+### Basic Usage
 
 ```python
-# Documents with pre-computed vectors
-documents_with_vectors = [
-    {
-        "url": "https://example.com/doc1",
-        "text": "Machine learning algorithms",
-        "metadata": {"topic": "ML"},
-        "vector": [0.1, 0.2, 0.3, ...]  # 1536-dimensional vector
-    }
-]
-
-db.write_documents(documents_with_vectors, embedding="default")
-```
-
-#### Using Embedding Models
-
-Simple example:
-
-```python
-# Documents without vectors (will be generated using embedding model)
-documents_without_vectors = [
-    {
-        "url": "https://example.com/doc1",
-        "text": "Machine learning algorithms",
-        "metadata": {"topic": "ML"}
-    }
-]
-
-# Use OpenAI's Ada-002 model (requires OPENAI_API_KEY)
-db.write_documents(documents_without_vectors, embedding="text-embedding-ada-002")
-
-# Use Weaviate's built-in vectorizer
-db.write_documents(documents_without_vectors, embedding="text2vec-weaviate")
-
-```
-
-Using milvus with a custom embedding :
-
-Ensure `CUSTOM_EMBEDDING_URL` and `CUSTOM_EMBEDDING_MODEL` are set in your environment variables, and optionally `CUSTOM_EMBEDDING_API_KEY` if your model requires authentication.
-
-```bash
-export CUSTOM_EMBEDDING_URL="http://localhost:11434/v1/"
-export CUSTOM_EMBEDDING_MODEL="nomic-embed-text"
-export CUSTOM_EMBEDDING_API_KEY="your-api-key"  # Optional
-```
-Then, you can create a Milvus database with a custom local embedding model:
-
-```python
-# Create a Milvus database with a specific dimension for a custom model (must match model)
-db = create_vector_database("milvus", "MyCustomCollection", dimension=768)
-db.setup(embedding="custom_local") # Setup with custom local model
-
-# Documents without vectors (will be generated using embedding model)
-documents_without_vectors = [
-    {
-        "url": "https://example.com/doc1",
-        "text": "Machine learning algorithms",
-        "metadata": {"topic": "ML"}
-    }
-]
-
-# Use the custom local model
-db.write_documents(documents_without_vectors, embedding="custom_local")
-```
-
-#### Checking Supported Embeddings
-
-```python
-# Get list of supported embedding models for the database
+# Check supported embeddings
 supported = db.supported_embeddings()
 print(f"Supported embeddings: {supported}")
-```
 
-### Environment Variables for Embeddings
-
-For OpenAI embedding models, set the following environment variable:
-```bash
-export OPENAI_API_KEY="your-openai-api-key"
+# Write documents with specific embedding
+db.write_documents(documents, embedding="text-embedding-3-small")
 ```
 
 ## CLI Tool
@@ -186,6 +115,8 @@ go build -o maestro-k src/*.go
 
 ### Basic Usage
 
+The CLI provides concise error output by default and detailed verbose output when needed. For comprehensive CLI usage examples and detailed command reference, see [cli/README.md](cli/README.md).
+
 ```bash
 # List vector databases (using plural form)
 ./maestro-k list vector-dbs
@@ -201,44 +132,9 @@ go build -o maestro-k src/*.go
 
 # Query documents using natural language
 ./maestro-k query my-database "What is the main topic of the documents?"
-./maestro-k query vdb my-database "Find information about API endpoints" --doc-limit 10
-
-# Retrieve collection information
-./maestro-k retrieve collection my-database
-./maestro-k retrieve col my-database my-collection
-
-# Retrieve document information
-./maestro-k retrieve document my-database my-collection my-document
-./maestro-k retrieve doc my-database my-collection my-document
-
-# Get collection information (alternative command)
-./maestro-k get collection my-database
-./maestro-k get col my-database my-collection
-
-# Get document information (alternative command)
-./maestro-k get document my-database my-collection my-document
-./maestro-k get doc my-database my-collection my-document
 
 # Create vector database from YAML
 ./maestro-k create vector-db config.yaml
-
-# Create collection in vector database
-./maestro-k create collection my-database my-collection
-
-# Create document in collection
-./maestro-k create document my-database my-collection my-doc --file-name=document.txt
-
-# Write document (alias for create document)
-./maestro-k write document my-database my-collection my-doc --file-name=document.txt
-
-# Delete vector database
-./maestro-k delete vector-db my-db
-
-# Delete collection
-./maestro-k delete collection my-database my-collection
-
-# Delete document
-./maestro-k delete document my-database my-collection my-document
 
 # Validate YAML configuration
 ./maestro-k validate config.yaml
@@ -246,42 +142,7 @@ go build -o maestro-k src/*.go
 
 ### Configuration
 
-The CLI supports multiple configuration methods:
-
-```bash
-# Environment variable
-export MAESTRO_KNOWLEDGE_MCP_SERVER_URI="http://localhost:8030"
-
-# Command-line flag
-./maestro-k list vector-dbs --mcp-server-uri="http://localhost:8030"
-
-# .env file
-echo "MAESTRO_KNOWLEDGE_MCP_SERVER_URI=http://localhost:8030" > .env
-```
-
-### Environment Variable Substitution
-
-The CLI supports environment variable substitution in YAML files using the `{{ENV_VAR_NAME}}` syntax:
-
-```yaml
-apiVersion: maestro/v1alpha1
-kind: VectorDatabase
-metadata:
-  name: my-weaviate-db
-spec:
-  type: weaviate
-  uri: {{WEAVIATE_URL}}
-  collection_name: my_collection
-  embedding: text-embedding-3-small
-  mode: remote
-```
-
-When you run `./maestro-k create vector-db config.yaml`, the CLI will:
-1. Load environment variables from `.env` file (if present)
-2. Replace `{{WEAVIATE_URL}}` with the actual value from the environment
-3. Process the YAML file with the substituted values
-
-For more details, see [cli/README.md](cli/README.md).
+The CLI supports multiple configuration methods including environment variables, command-line flags, and `.env` files. For detailed configuration options and environment variable substitution examples, see [cli/README.md](cli/README.md).
 
 ## MCP Server
 
@@ -296,12 +157,28 @@ The project includes a Model Context Protocol (MCP) server that exposes vector d
 # Stop the MCP server
 ./stop.sh
 
-# Check server status
+# Check server status with detailed information
 ./stop.sh status
 
 # Restart the server
 ./stop.sh restart
+
+# Restart HTTP server specifically
+./stop.sh restart-http
+
+# Clean up stale files
+./stop.sh cleanup
 ```
+
+### MCP Server Features
+
+The MCP server includes enhanced process management with:
+
+- **✅ Visual status indicators** - Green checkmarks and red X marks for clear status display
+- **📄 PID file management** - Automatic cleanup of stale process IDs
+- **🌐 Port monitoring** - Real-time port availability checking
+- **🔄 Graceful restarts** - Proper process cleanup and restart sequencing
+- **🧹 Automatic cleanup** - Removal of stale files and processes
 
 ### MCP Configuration
 
@@ -323,22 +200,13 @@ Add the following to your MCP client configuration:
 
 ### Available MCP Tools
 
-- **create_vector_database_tool**: Create a new vector database instance
-- **setup_database**: Set up a vector database with specified embedding
-- **get_supported_embeddings**: Get list of supported embedding models
-- **list_collections**: List all collections in a vector database
-- **list_documents_in_collection**: List documents from a specific collection
-- **write_document**: Write a single document with specified embedding strategy
-- **write_documents**: Write multiple documents with specified embedding strategy
-- **list_documents**: List documents from the database
-- **count_documents**: Get document count
-- **query**: Query documents using natural language with semantic search
-- **delete_document**: Delete a single document
-- **delete_documents**: Delete multiple documents
-- **delete_collection**: Delete an entire collection
-- **cleanup**: Clean up resources for a specific database
-- **get_database_info**: Get database information including supported embeddings
-- **list_databases**: List all available vector database instances
+The MCP server provides comprehensive tools for database management, document operations, and querying. For detailed tool descriptions and usage examples, see [src/maestro_mcp/README.md](src/maestro_mcp/README.md).
+
+**Key Tool Categories:**
+- **Database Management**: Create, setup, and manage vector databases
+- **Document Operations**: Write, list, and delete documents with flexible embedding strategies
+- **Query Functionality**: Natural language querying with semantic search
+- **Collection Management**: List and manage collections across databases
 
 ### Multi-Database Support
 
@@ -373,11 +241,8 @@ The project includes several utility scripts for development and testing:
 
 # Testing
 ./test.sh [COMMAND]          # Run tests with options: cli, mcp, all, help
-./test.sh cli                # Run only CLI tests (Go-based)
-./test.sh mcp                # Run only MCP server tests (Python-based)
-./test.sh all                # Run all tests (CLI + MCP + Integration)
-./test.sh help               # Show test command help
 ./test-integration.sh        # Run CLI integration tests
+./tools/e2e.sh all          # Run end-to-end tests
 
 # CLI tool
 cd cli && ./build.sh         # Build the CLI tool
@@ -397,26 +262,18 @@ cd cli && ./build.sh         # Build the CLI tool
 # Run comprehensive test suite (recommended before PR)
 ./tools/lint.sh && ./test.sh all
 
-# Or run individual test files
-python -m pytest tests/
+# Run integration and end-to-end tests
+./test-integration.sh        # CLI integration tests
+./tools/e2e.sh all          # Complete e2e workflows
 
-# Run YAML schema validation tests
-pytest tests/test_vector_database_yamls.py -v
-
-# Run integration tests
-./test-integration.sh
-
-# Run end-to-end tests
-./tools/e2e.sh help                    # Show e2e test options
-./tools/e2e.sh fast                    # Run fast e2e workflow
-./tools/e2e.sh complete                # Run complete e2e workflow with error testing
-./tools/e2e.sh query                   # Run query e2e workflow
-./tools/e2e.sh all                     # Run all workflows (fast, complete, and query)
+# Monitor logs in real-time
+./tools/tail-logs.sh status  # Show service status
+./tools/tail-logs.sh all     # Tail all service logs
 ```
 
 ## Project Structure
 
-```
+```text
 maestro-knowledge/
 ├── src/                     # Source code
 │   ├── db/                  # Vector database implementations
@@ -440,7 +297,8 @@ maestro-knowledge/
 ├── tools/                   # Development tools
 │   ├── lint.sh              # Code linting and formatting
 │   ├── e2e.sh               # End-to-end testing script
-│   └── test-integration.sh  # Integration tests
+│   ├── test-integration.sh  # Integration tests
+│   └── tail-logs.sh        # Real-time log monitoring script
 ├── test.sh                  # Test runner script (CLI, MCP, Integration)
 ├── tests/                   # Test suite
 │   ├── test_vector_db_*.py  # Vector database tests
@@ -468,6 +326,7 @@ maestro-knowledge/
 - `VECTOR_DB_TYPE`: Default vector database type (defaults to "weaviate")
 - `OPENAI_API_KEY`: Required for OpenAI embedding models
 - `MAESTRO_KNOWLEDGE_MCP_SERVER_URI`: MCP server URI for CLI tool
+- `MILVUS_URI`: Milvus connection URI. **Important**: Do not use quotes around the URI value in your `.env` file (e.g., `MILVUS_URI=http://localhost:19530` instead of `MILVUS_URI="http://localhost:19530"`).
 - Database-specific environment variables for Weaviate and Milvus connections
 
 ## Contributing
@@ -493,11 +352,39 @@ For a complete development workflow that tests everything end-to-end:
 ```
 
 This workflow:
+
 1. Starts the MCP server
 2. Runs the fast end-to-end test suite
 3. Stops the MCP server
 
 This is useful for quickly validating that your changes work correctly in a real environment.
+
+### Log Monitoring
+
+The project includes comprehensive log monitoring capabilities:
+
+```bash
+# Show service status with visual indicators
+./tools/tail-logs.sh status
+
+# Monitor all logs in real-time
+./tools/tail-logs.sh all
+
+# Monitor specific service logs
+./tools/tail-logs.sh mcp    # MCP server logs
+./tools/tail-logs.sh cli    # CLI logs
+
+# View recent logs
+./tools/tail-logs.sh recent
+```
+
+**Log Monitoring Features:**
+- **📡 Real-time tailing** - Monitor logs as they're generated
+- **✅ Visual status indicators** - Clear service status with checkmarks and X marks
+- **🌐 Port monitoring** - Check service availability on ports
+- **📄 Log file management** - Automatic detection and size tracking
+- **🔍 System integration** - macOS system log monitoring for debugging
+- **🎯 Service-specific monitoring** - Tail individual service logs or all at once
 
 ## License
 

@@ -41,9 +41,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv pip install -r requirements.txt
-        uv pip install "weaviate-client[agents]"
-        uv pip install -r requirements-test.txt
+        uv sync
 
     - name: Run tests
       run: |
@@ -93,9 +91,7 @@ jobs:
 
     - name: Install dependencies with optional packages
       run: |
-        uv pip install -r requirements.txt
-        uv pip install "weaviate-client[agents]"
-        uv pip install -r requirements-test.txt
+        uv sync
 
     - name: Run tests with all dependencies
       run: |
@@ -145,8 +141,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv pip install -r requirements.txt
-        uv pip install ruff
+        uv sync
 
     - name: Run linting
       run: |
@@ -187,8 +182,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv pip install -r requirements.txt
-        uv pip install bandit safety
+        uv sync
 
     - name: Run security checks
       run: |

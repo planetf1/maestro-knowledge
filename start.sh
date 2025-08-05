@@ -43,10 +43,36 @@ print_info() {
     echo -e "${PURPLE}[INFO]${NC} $1"
 }
 
+# Function to check if a port is in use and kill the process
+check_port() {
+    local port=$1
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
+        echo "Port $port is already in use. Killing existing process..."
+        lsof -ti :$port | xargs kill -9 2>/dev/null
+        sleep 1
+    fi
+}
+
+# Function to cleanup on error
+cleanup() {
+    echo "❌ Error occurred. Cleaning up..."
+    if [ -f "$PID_FILE" ]; then
+        local pid=$(cat "$PID_FILE")
+        if [ "$pid" != "ready" ] && [ ! -z "$pid" ]; then
+            kill $pid 2>/dev/null
+        fi
+        rm -f "$PID_FILE"
+    fi
+    exit 1
+}
+
 # Check if server is already running
 check_running() {
     if [ -f "$PID_FILE" ]; then
         local pid=$(cat "$PID_FILE")
+        if [ "$pid" = "ready" ]; then
+            return 1  # Not a running HTTP server
+        fi
         if ps -p "$pid" > /dev/null 2>&1; then
             return 0  # Server is running
         else
@@ -74,30 +100,12 @@ check_port_available() {
     return 0  # Port is available
 }
 
-# Kill processes using the specified port
-kill_port_processes() {
-    local port=$1
-    print_warning "Port $port is already in use. Attempting to kill existing processes..."
-    
-    if command -v lsof > /dev/null 2>&1; then
-        local pids=$(lsof -ti :$port 2>/dev/null)
-        if [ -n "$pids" ]; then
-            for pid in $pids; do
-                print_status "Killing process $pid using port $port"
-                kill "$pid" 2>/dev/null || kill -9 "$pid" 2>/dev/null || true
-            done
-            sleep 2
-            return 0
-        fi
-    fi
-    return 1
-}
-
 # Parse command line arguments
 parse_args() {
     MODE="http"
     HOST="$DEFAULT_HOST"
     PORT="$DEFAULT_PORT"
+    TAIL="false"
     
     while [[ $# -gt 0 ]]; do
         case $1 in
@@ -115,6 +123,10 @@ parse_args() {
                 ;;
             --stdio)
                 MODE="stdio"
+                shift
+                ;;
+            --tail)
+                TAIL="true"
                 shift
                 ;;
             -h|--help)
@@ -183,19 +195,8 @@ start_http_server() {
     print_status "Host: $HOST"
     print_status "Port: $PORT"
     
-    # Check if port is available
-    if ! check_port_available "$PORT"; then
-        print_warning "Port $PORT is already in use"
-        if ! kill_port_processes "$PORT"; then
-            print_error "Failed to free port $PORT. Please manually stop the process using this port."
-            return 1
-        fi
-        # Check again after killing processes
-        if ! check_port_available "$PORT"; then
-            print_error "Port $PORT is still in use after cleanup attempt"
-            return 1
-        fi
-    fi
+    # Check if port is available and kill if needed
+    check_port $PORT
     
     # Load .env file if it exists
     if [ -f "$SCRIPT_DIR/.env" ]; then
@@ -295,8 +296,20 @@ main() {
         exit 1
     fi
     
+    # Set up error handling
+    trap cleanup ERR
+    
     start_server
-    exit $?
+    exit_status=$?
+
+    if [[ $exit_status == 0 && $TAIL == "true" ]]; then
+      tail -f mcp_server.log &
+      tail_pid=$!
+      trap 'kill $tail_pid; exit' INT
+      wait $tail_pid
+    fi
+
+    exit $exit_status
 }
 
 # Run main function
