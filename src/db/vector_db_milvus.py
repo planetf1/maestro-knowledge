@@ -673,7 +673,9 @@ class MilvusVectorDatabase(VectorDatabase):
             warnings.warn(f"Failed to query Milvus: {e}")
             return f"Error querying database: {str(e)}"
 
-    def _search_documents(self, query: str, limit: int = 5, collection_name: str = None) -> List[Dict[str, Any]]:
+    def _search_documents(
+        self, query: str, limit: int = 5, collection_name: str = None
+    ) -> List[Dict[str, Any]]:
         """
         Search for documents using vector similarity search.
 
