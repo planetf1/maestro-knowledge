@@ -630,7 +630,7 @@ class MilvusVectorDatabase(VectorDatabase):
         # You would implement your own search logic here
         return self
 
-    def query(self, query: str, limit: int = 5) -> str:
+    def query(self, query: str, limit: int = 5, collection_name: str = None) -> str:
         """
         Query the vector database using Milvus vector similarity search.
 
@@ -643,7 +643,7 @@ class MilvusVectorDatabase(VectorDatabase):
         """
         try:
             # Perform vector similarity search
-            documents = self._search_documents(query, limit)
+            documents = self._search_documents(query, limit, collection_name)
 
             if not documents:
                 return f"No relevant documents found for query: '{query}'"
@@ -673,7 +673,7 @@ class MilvusVectorDatabase(VectorDatabase):
             warnings.warn(f"Failed to query Milvus: {e}")
             return f"Error querying database: {str(e)}"
 
-    def _search_documents(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
+    def _search_documents(self, query: str, limit: int = 5, collection_name: str = None) -> List[Dict[str, Any]]:
         """
         Search for documents using vector similarity search.
 
@@ -697,7 +697,7 @@ class MilvusVectorDatabase(VectorDatabase):
 
             # Perform vector similarity search
             results = self.client.search(
-                self.collection_name,
+                collection_name or self.collection_name,
                 data=[query_vector],
                 anns_field="vector",
                 param={"metric_type": "COSINE", "params": {"nprobe": 10}},
