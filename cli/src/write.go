@@ -8,20 +8,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var writeCmd = &cobra.Command{
-	Use:   "write",
-	Short: "Write vector database resources",
-	Long: `Write vector database resources.
-	
-Usage:
-  maestro-k write document VDB_NAME COLLECTION_NAME DOC_NAME --file-name=FILE_NAME [options]
-  maestro-k write document VDB_NAME COLLECTION_NAME DOC_NAME --doc-file-name=FILE_NAME [options]
-
-Examples:
-  maestro-k write document my-database my-collection my-doc --file-name=document.txt
-  maestro-k write document my-database my-collection my-doc --file-name=document.txt --embed=text-embedding-3-small`,
-}
-
 var writeDocumentCmd = &cobra.Command{
 	Use:   "document VDB_NAME COLLECTION_NAME DOC_NAME",
 	Short: "Write a document to a collection of a vector database",

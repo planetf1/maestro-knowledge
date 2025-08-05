@@ -116,25 +116,28 @@ print(f"Found {len(docs)} documents")
 
 # CLI Tool - Go Implementation
 
-## Commands (Plural Forms)
+## Commands (Resource-Based Structure)
 ```bash
 # List databases
-maestro-k list vector-dbs
+maestro-k vectordb list
 
 # List embeddings
-maestro-k list embeds my-database
+maestro-k embedding list --vdb=my-database
 
 # List collections
-maestro-k list cols my-database
+maestro-k collection list --vdb=my-database
 
 # List documents
-maestro-k list docs my-database my-collection
+maestro-k document list --vdb=my-database --collection=my-collection
 
 # Create database from YAML
-maestro-k create vector-db config.yaml
+maestro-k vectordb create config.yaml
 
-# Delete database
-maestro-k delete vector-db my-db
+# Delete database (with confirmation prompt)
+maestro-k vectordb delete my-db
+
+# Delete database without confirmation
+maestro-k vectordb delete my-db --force
 
 # Validate YAML config
 maestro-k validate config.yaml
@@ -147,6 +150,7 @@ maestro-k validate config.yaml
 - **Verbose/silent** output modes
 - **Environment variable** support
 - **MCP server** integration
+- **Safety features** with confirmation prompts and `--force` flag
 
 ---
 
@@ -174,7 +178,7 @@ MILVUS_URI=localhost:19530
 WEAVIATE_URL=https://your-cluster.weaviate.network
 
 # CLI automatically substitutes {{ENV_VAR_NAME}}
-./maestro-k create vector-db config.yaml
+./maestro-k vectordb create config.yaml
 ```
 
 ---
@@ -236,16 +240,19 @@ write_document(db_name="project_b", ...)
 
 ## Quality Tools
 - **Ruff** - Python linting and formatting
-- **Go fmt** - Go formatting
+- **staticcheck** - Go unused code detection and quality analysis
+- **golangci-lint** - Advanced Go linting with multiple analyzers
+- **go fmt/vet** - Go formatting and static analysis
 - **Pytest** - Python testing
-- **GitHub Actions** - CI/CD
+- **GitHub Actions** - CI/CD with quality gates
 
 ## Pre-PR Test Suite
 ```bash
-./tools/lint.sh && ./test.sh all && ./test-integration.sh
+./tools/lint.sh && cd cli && ./lint.sh && cd .. && ./test.sh all && ./test-integration.sh
 ```
 This comprehensive sequence ensures:
-- Code quality and formatting
+- Python code quality and formatting
+- Go code quality (unused code detection, formatting, static analysis)
 - All unit tests pass (CLI + MCP)
 - Integration tests pass
 - CLI tool integration works
@@ -264,7 +271,8 @@ maestro-knowledge/
 ├── cli/                   # Go CLI tool
 │   ├── src/              # Go source (plural commands)
 │   ├── tests/            # CLI tests
-│   └── examples/         # CLI examples
+│   ├── examples/         # CLI examples
+│   └── lint.sh           # Go linting and code quality
 ├── tests/                # Python tests
 ├── examples/             # Usage examples
 ├── schemas/              # YAML schemas
@@ -320,7 +328,7 @@ uv sync
 ```bash
 cd cli
 go build -o maestro-k src/*.go
-./maestro-k list vector-dbs --help
+./maestro-k vectordb list --help
 ```
 
 ## Environment Setup
@@ -361,9 +369,10 @@ uv run pytest
 # Go CLI
 cd cli
 go test ./...
+./lint.sh  # Run Go linting
 
 # Comprehensive testing (before PR)
-./tools/lint.sh && ./test.sh all
+./tools/lint.sh && cd cli && ./lint.sh && cd .. && ./test.sh all
 ```
 
 ## Guidelines
@@ -375,6 +384,8 @@ go test ./...
 - **Integration testing** with CLI tool
 - **Plural commands** for CLI list operations
 - **Multi-database** testing
+- **Code quality** - No unused code, consistent formatting
+- **Linting** - All linting checks must pass (Python + Go)
 
 ---
 

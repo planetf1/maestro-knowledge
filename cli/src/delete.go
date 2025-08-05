@@ -1,10 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strings"
-
-	"github.com/spf13/cobra"
 )
 
 // CollectionNotFoundError is a custom error type for collection not found errors
@@ -28,176 +28,37 @@ func (e *DocumentNotFoundError) Error() string {
 	return fmt.Sprintf("Document '%s' not found in collection '%s' of vector database '%s'", e.DocumentName, e.CollectionName, e.VDBName)
 }
 
-var deleteCmd = &cobra.Command{
-	Use:   "delete (vector-database | vector-db | vdb) NAME | delete (collection | vdb-col | col) VDB_NAME COLLECTION_NAME | delete (document | vdb-doc | doc) VDB_NAME COLLECTION_NAME DOC_NAME",
-	Short: "Delete vector database resources",
-	Long: `Delete vector database resources by name.
-	
-Usage:
-  maestro-k delete vector-database NAME [options]
-  maestro-k delete vector-db NAME [options]
-  maestro-k delete vdb NAME [options]
-  maestro-k delete collection VDB_NAME COLLECTION_NAME [options]
-  maestro-k delete vdb-col VDB_NAME COLLECTION_NAME [options]
-  maestro-k delete col VDB_NAME COLLECTION_NAME [options]
-  maestro-k delete document VDB_NAME COLLECTION_NAME DOC_NAME [options]
-  maestro-k delete vdb-doc VDB_NAME COLLECTION_NAME DOC_NAME [options]
-  maestro-k delete doc VDB_NAME COLLECTION_NAME DOC_NAME [options]
+// confirmDestructiveOperation prompts the user for confirmation before performing a destructive operation
+func confirmDestructiveOperation(operation, resourceName string) error {
+	// Skip confirmation if --force flag is used
+	if force {
+		return nil
+	}
 
-Examples:
-  maestro-k delete vector-db my-milvus-db
-  maestro-k delete vdb my-weaviate-db
-  maestro-k delete collection my-milvus-db my-collection
-  maestro-k delete col my-weaviate-db my-collection
-  maestro-k delete document my-milvus-db my-collection my-document
-  maestro-k delete doc my-weaviate-db my-collection my-document`,
-	Args: cobra.RangeArgs(2, 4),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// Suppress usage for all errors except usage errors
-		cmd.SilenceUsage = true
+	// Skip confirmation in dry-run mode
+	if dryRun {
+		return nil
+	}
 
-		resourceType := args[0]
+	// Skip confirmation in silent mode
+	if silent {
+		return nil
+	}
 
-		// Handle vector database deletion (2 args)
-		if len(args) == 2 {
-			if resourceType == "vector-database" || resourceType == "vector-db" || resourceType == "vdb" {
-				name := args[1]
-				return deleteVectorDatabase(name)
-			}
-			// Check if it's a collection resource type that needs 3 args
-			if resourceType == "collection" || resourceType == "vdb-col" || resourceType == "col" {
-				return fmt.Errorf("collection deletion requires both VDB_NAME and COLLECTION_NAME. Usage: maestro-k delete %s VDB_NAME COLLECTION_NAME", resourceType)
-			}
-			// Check if it's a document resource type that needs 4 args
-			if resourceType == "document" || resourceType == "vdb-doc" || resourceType == "doc" {
-				return fmt.Errorf("document deletion requires VDB_NAME, COLLECTION_NAME, and DOC_NAME. Usage: maestro-k delete %s VDB_NAME COLLECTION_NAME DOC_NAME", resourceType)
-			}
-			return fmt.Errorf("unsupported resource type: %s. Use 'vector-database', 'vector-db', 'vdb', 'collection', 'vdb-col', 'col', 'document', 'vdb-doc', or 'doc'", resourceType)
-		}
+	fmt.Printf("⚠️  Are you sure you want to %s '%s'? This action cannot be undone. [y/N]: ", operation, resourceName)
 
-		// Handle collection deletion (3 args)
-		if len(args) == 3 {
-			if resourceType == "collection" || resourceType == "vdb-col" || resourceType == "col" {
-				vdbName := args[1]
-				collectionName := args[2]
-				err := deleteCollection(vdbName, collectionName)
-				// Suppress usage for collection not found errors
-				if _, ok := err.(*CollectionNotFoundError); ok {
-					cmd.SilenceUsage = true
-				}
-				return err
-			}
-			// Check if it's a document resource type that needs 4 args
-			if resourceType == "document" || resourceType == "vdb-doc" || resourceType == "doc" {
-				return fmt.Errorf("document deletion requires VDB_NAME, COLLECTION_NAME, and DOC_NAME. Usage: maestro-k delete %s VDB_NAME COLLECTION_NAME DOC_NAME", resourceType)
-			}
-			return fmt.Errorf("unsupported resource type: %s. Use 'collection', 'vdb-col', 'col', 'document', 'vdb-doc', or 'doc'", resourceType)
-		}
+	reader := bufio.NewReader(os.Stdin)
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("failed to read user input: %w", err)
+	}
 
-		// Handle document deletion (4 args)
-		if len(args) == 4 {
-			if resourceType == "document" || resourceType == "vdb-doc" || resourceType == "doc" {
-				vdbName := args[1]
-				collectionName := args[2]
-				docName := args[3]
-				err := deleteDocument(vdbName, collectionName, docName)
-				// Suppress usage for document not found errors
-				if _, ok := err.(*DocumentNotFoundError); ok {
-					cmd.SilenceUsage = true
-				}
-				return err
-			}
-			return fmt.Errorf("unsupported resource type: %s. Use 'document', 'vdb-doc', or 'doc'", resourceType)
-		}
+	response = strings.TrimSpace(strings.ToLower(response))
+	if response != "y" && response != "yes" {
+		return fmt.Errorf("operation cancelled by user")
+	}
 
-		return fmt.Errorf("invalid number of arguments")
-	},
-}
-
-var delCmd = &cobra.Command{
-	Use:   "del (vector-database | vector-db | vdb) NAME | del (collection | vdb-col | col) VDB_NAME COLLECTION_NAME | del (document | vdb-doc | doc) VDB_NAME COLLECTION_NAME DOC_NAME",
-	Short: "Delete vector database resources (alias for delete)",
-	Long: `Delete vector database resources by name (alias for delete command).
-	
-Usage:
-  maestro-k del vector-database NAME [options]
-  maestro-k del vector-db NAME [options]
-  maestro-k del vdb NAME [options]
-  maestro-k del collection VDB_NAME COLLECTION_NAME [options]
-  maestro-k del vdb-col VDB_NAME COLLECTION_NAME [options]
-  maestro-k del col VDB_NAME COLLECTION_NAME [options]
-  maestro-k del document VDB_NAME COLLECTION_NAME DOC_NAME [options]
-  maestro-k del vdb-doc VDB_NAME COLLECTION_NAME DOC_NAME [options]
-  maestro-k del doc VDB_NAME COLLECTION_NAME DOC_NAME [options]
-
-Examples:
-  maestro-k del vector-db my-milvus-db
-  maestro-k del vdb my-weaviate-db
-  maestro-k del collection my-milvus-db my-collection
-  maestro-k del col my-weaviate-db my-collection
-  maestro-k del document my-milvus-db my-collection my-document
-  maestro-k del doc my-weaviate-db my-collection my-document`,
-	Args: cobra.RangeArgs(2, 4),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// Suppress usage for all errors except usage errors
-		cmd.SilenceUsage = true
-
-		resourceType := args[0]
-
-		// Handle vector database deletion (2 args)
-		if len(args) == 2 {
-			if resourceType == "vector-database" || resourceType == "vector-db" || resourceType == "vdb" {
-				name := args[1]
-				return deleteVectorDatabase(name)
-			}
-			// Check if it's a collection resource type that needs 3 args
-			if resourceType == "collection" || resourceType == "vdb-col" || resourceType == "col" {
-				return fmt.Errorf("collection deletion requires both VDB_NAME and COLLECTION_NAME. Usage: maestro-k del %s VDB_NAME COLLECTION_NAME", resourceType)
-			}
-			// Check if it's a document resource type that needs 4 args
-			if resourceType == "document" || resourceType == "vdb-doc" || resourceType == "doc" {
-				return fmt.Errorf("document deletion requires VDB_NAME, COLLECTION_NAME, and DOC_NAME. Usage: maestro-k del %s VDB_NAME COLLECTION_NAME DOC_NAME", resourceType)
-			}
-			return fmt.Errorf("unsupported resource type: %s. Use 'vector-database', 'vector-db', 'vdb', 'collection', 'vdb-col', 'col', 'document', 'vdb-doc', or 'doc'", resourceType)
-		}
-
-		// Handle collection deletion (3 args)
-		if len(args) == 3 {
-			if resourceType == "collection" || resourceType == "vdb-col" || resourceType == "col" {
-				vdbName := args[1]
-				collectionName := args[2]
-				err := deleteCollection(vdbName, collectionName)
-				// Suppress usage for collection not found errors
-				if _, ok := err.(*CollectionNotFoundError); ok {
-					cmd.SilenceUsage = true
-				}
-				return err
-			}
-			// Check if it's a document resource type that needs 4 args
-			if resourceType == "document" || resourceType == "vdb-doc" || resourceType == "doc" {
-				return fmt.Errorf("document deletion requires VDB_NAME, COLLECTION_NAME, and DOC_NAME. Usage: maestro-k del %s VDB_NAME COLLECTION_NAME DOC_NAME", resourceType)
-			}
-			return fmt.Errorf("unsupported resource type: %s. Use 'collection', 'vdb-col', 'col', 'document', 'vdb-doc', or 'doc'", resourceType)
-		}
-
-		// Handle document deletion (4 args)
-		if len(args) == 4 {
-			if resourceType == "document" || resourceType == "vdb-doc" || resourceType == "doc" {
-				vdbName := args[1]
-				collectionName := args[2]
-				docName := args[3]
-				err := deleteDocument(vdbName, collectionName, docName)
-				// Suppress usage for document not found errors
-				if _, ok := err.(*DocumentNotFoundError); ok {
-					cmd.SilenceUsage = true
-				}
-				return err
-			}
-			return fmt.Errorf("unsupported resource type: %s. Use 'document', 'vdb-doc', or 'doc'", resourceType)
-		}
-
-		return fmt.Errorf("invalid number of arguments")
-	},
+	return nil
 }
 
 func deleteVectorDatabase(name string) error {
@@ -215,6 +76,11 @@ func deleteVectorDatabase(name string) error {
 	// Validate the name
 	if name == "" {
 		return fmt.Errorf("vector database name is required")
+	}
+
+	// Request confirmation for destructive operation
+	if err := confirmDestructiveOperation("delete", fmt.Sprintf("vector database '%s'", name)); err != nil {
+		return err
 	}
 
 	// Perform the deletion
@@ -247,6 +113,11 @@ func deleteCollection(vdbName, collectionName string) error {
 	}
 	if collectionName == "" {
 		return fmt.Errorf("collection name is required")
+	}
+
+	// Request confirmation for destructive operation
+	if err := confirmDestructiveOperation("delete", fmt.Sprintf("collection '%s' from vector database '%s'", collectionName, vdbName)); err != nil {
+		return err
 	}
 
 	// Perform the deletion
@@ -282,6 +153,11 @@ func deleteDocument(vdbName, collectionName, docName string) error {
 	}
 	if docName == "" {
 		return fmt.Errorf("document name is required")
+	}
+
+	// Request confirmation for destructive operation
+	if err := confirmDestructiveOperation("delete", fmt.Sprintf("document '%s' from collection '%s' in vector database '%s'", docName, collectionName, vdbName)); err != nil {
+		return err
 	}
 
 	// Perform the deletion

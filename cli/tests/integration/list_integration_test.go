@@ -11,7 +11,7 @@ import (
 )
 
 func TestListVectorDatabaseWithRealServer(t *testing.T) {
-	cmd := exec.Command("../../maestro-k", "list", "vector-dbs")
+	cmd := exec.Command("../../maestro-k", "vectordb", "list")
 	cmd.Env = append(os.Environ(), "MAESTRO_K_TEST_MODE=true")
 	output, err := cmd.CombinedOutput()
 
@@ -84,7 +84,7 @@ func TestListVectorDatabaseURLNormalization(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Test URL normalization by running the CLI and checking the verbose output
 			// Use a very short timeout to make it fast
-			cmd := exec.Command("../../maestro-k", "list", "vector-dbs", "--mcp-server-uri", tc.url, "--verbose")
+			cmd := exec.Command("../../maestro-k", "vectordb", "list", "--mcp-server-uri", tc.url, "--verbose")
 			cmd.Env = append(os.Environ(), "MAESTRO_KNOWLEDGE_MCP_SERVER_URI=", "MAESTRO_K_TEST_MODE=true")
 
 			// Set a very short timeout for the test

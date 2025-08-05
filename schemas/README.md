@@ -85,7 +85,7 @@ The CLI tool automatically validates YAML files when creating vector databases:
 ./maestro-k validate config.yaml
 
 # Create vector database with validation
-./maestro-k create vector-db config.yaml
+./maestro-k vectordb create config.yaml
 ```
 
 ### Using the Schema Directly

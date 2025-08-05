@@ -7,7 +7,7 @@ import (
 
 // TestCreateCollection tests the create collection command
 func TestCreateCollection(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "create", "collection", "test-db", "test-collection", "--dry-run")
+	cmd := exec.Command("../maestro-k", "collection", "create", "--name=test-collection", "--vdb=test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -22,7 +22,7 @@ func TestCreateCollection(t *testing.T) {
 
 // TestCreateCollectionWithEmbedding tests the create collection command with custom embedding
 func TestCreateCollectionWithEmbedding(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "create", "collection", "test-db", "test-collection", "--embedding=text-embedding-3-small", "--dry-run")
+	cmd := exec.Command("../maestro-k", "collection", "create", "--name=test-collection", "--vdb=test-db", "--embedding=text-embedding-3-small", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -37,7 +37,7 @@ func TestCreateCollectionWithEmbedding(t *testing.T) {
 
 // TestCreateCollectionWithVerbose tests the create collection command with verbose output
 func TestCreateCollectionWithVerbose(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "create", "collection", "test-db", "test-collection", "--verbose", "--dry-run")
+	cmd := exec.Command("../maestro-k", "collection", "create", "--name=test-collection", "--vdb=test-db", "--verbose", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -55,7 +55,7 @@ func TestCreateCollectionWithVerbose(t *testing.T) {
 
 // TestCreateCollectionWithSilent tests the create collection command with silent output
 func TestCreateCollectionWithSilent(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "create", "collection", "test-db", "test-collection", "--silent", "--dry-run")
+	cmd := exec.Command("../maestro-k", "collection", "create", "--name=test-collection", "--vdb=test-db", "--silent", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -68,58 +68,58 @@ func TestCreateCollectionWithSilent(t *testing.T) {
 	}
 }
 
-// TestCreateCollectionWithColAlias tests the create collection command using the 'col' alias
+// TestCreateCollectionWithColAlias tests the create collection command using the collection command
 func TestCreateCollectionWithColAlias(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "create", "col", "test-db", "test-collection", "--dry-run")
+	cmd := exec.Command("../maestro-k", "collection", "create", "--name=test-collection", "--vdb=test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		t.Fatalf("Create collection command failed with col alias: %v, output: %s", err, string(output))
+		t.Fatalf("Create collection command failed: %v, output: %s", err, string(output))
 	}
 
 	outputStr := string(output)
 	if !contains(outputStr, "[DRY RUN] Would create collection 'test-collection' in vector database 'test-db'") {
-		t.Errorf("Should show dry run message with col alias, got: %s", outputStr)
+		t.Errorf("Should show dry run message, got: %s", outputStr)
 	}
 }
 
-// TestCreateCollectionWithVdbColAlias tests the create collection command using the 'vdb-col' alias
+// TestCreateCollectionWithVdbColAlias tests the create collection command using the collection command
 func TestCreateCollectionWithVdbColAlias(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "create", "vdb-col", "test-db", "test-collection", "--dry-run")
+	cmd := exec.Command("../maestro-k", "collection", "create", "--name=test-collection", "--vdb=test-db", "--dry-run")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		t.Fatalf("Create collection command failed with vdb-col alias: %v, output: %s", err, string(output))
+		t.Fatalf("Create collection command failed: %v, output: %s", err, string(output))
 	}
 
 	outputStr := string(output)
 	if !contains(outputStr, "[DRY RUN] Would create collection 'test-collection' in vector database 'test-db'") {
-		t.Errorf("Should show dry run message with vdb-col alias, got: %s", outputStr)
+		t.Errorf("Should show dry run message, got: %s", outputStr)
 	}
 }
 
 // TestCreateCollectionWithInvalidArgs tests the create collection command with invalid arguments
 func TestCreateCollectionWithInvalidArgs(t *testing.T) {
-	// Test with missing arguments
-	cmd := exec.Command("../maestro-k", "create", "collection", "test-db")
+	// Test with missing --name flag
+	cmd := exec.Command("../maestro-k", "collection", "create", "--vdb=test-db")
 	output, err := cmd.CombinedOutput()
 
 	if err == nil {
-		t.Errorf("Create collection command should fail with missing arguments, got: %s", string(output))
+		t.Errorf("Create collection command should fail with missing --name flag, got: %s", string(output))
 	}
 
-	// Test with too many arguments
-	cmd = exec.Command("../maestro-k", "create", "collection", "test-db", "test-collection", "extra-arg")
+	// Test with missing --vdb flag
+	cmd = exec.Command("../maestro-k", "collection", "create", "--name=test-collection")
 	output, err = cmd.CombinedOutput()
 
 	if err == nil {
-		t.Errorf("Create collection command should fail with too many arguments, got: %s", string(output))
+		t.Errorf("Create collection command should fail with missing --vdb flag, got: %s", string(output))
 	}
 }
 
 // TestCreateCollectionHelp tests the create collection help output
 func TestCreateCollectionHelp(t *testing.T) {
-	cmd := exec.Command("../maestro-k", "create", "collection", "--help")
+	cmd := exec.Command("../maestro-k", "collection", "create", "--help")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -127,10 +127,10 @@ func TestCreateCollectionHelp(t *testing.T) {
 	}
 
 	outputStr := string(output)
-	if !contains(outputStr, "Create a collection in a vector database") {
+	if !contains(outputStr, "Create a collection") {
 		t.Errorf("Should show help message for collection creation, got: %s", outputStr)
 	}
-	if !contains(outputStr, "--embedding string") {
-		t.Errorf("Should show embedding flag in help, got: %s", outputStr)
+	if !contains(outputStr, "--name string") {
+		t.Errorf("Should show name flag in help, got: %s", outputStr)
 	}
 }

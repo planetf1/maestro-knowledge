@@ -22,7 +22,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.21'
+          go-version: '1.23'
           cache: true
           
       - name: Build CLI
@@ -94,4 +94,30 @@ jobs:
           ls -lh maestro-k
           file maestro-k
           echo "CLI version:"
-          ./maestro-k --version 
+          ./maestro-k --version
+
+  lint:
+    name: Lint CLI Code
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+          cache: true
+          
+      - name: Install linting tools
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.54.2
+          
+      - name: Run CLI linting
+        working-directory: ./cli
+        run: |
+          echo "Running CLI linting checks..."
+          ./lint.sh
+          echo "All linting checks passed!" 
