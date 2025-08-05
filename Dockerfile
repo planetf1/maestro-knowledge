@@ -17,9 +17,10 @@ RUN uv sync
 RUN chmod +x ./start.sh
 RUN chmod -R 777 /app
 
-RUN chown -R 1000:100 /app &&\
-    mkdir -p /app/cache && chown 1000:100 /app/cache
+RUN chown -R 1000:1000 /app &&\
+    mkdir -p /app/cache && chown 1000:1000 /app/cache
 
-USER 1000:100
+EXPOSE 8030
+USER 1000:1000
 
 ENTRYPOINT ["uv", "run", "./start.sh", "--host", "0.0.0.0", "--tail"]
