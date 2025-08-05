@@ -2,6 +2,7 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 WORKDIR /app
 
 ENV PYTHONPATH=/app
+ENV UV_CACHE_DIR=/app/cache
 
 COPY ./src /app/src
 COPY pyproject.toml /app
@@ -14,7 +15,8 @@ RUN uv sync
 
 RUN chmod +x ./start.sh
 
-RUN chown -R 1000:1000 /app
+RUN chown -R 1000:1000 /app &&\
+  mkdir -p /app/cache && chown 1000:1000 /app/cache
 
 EXPOSE 8030
 USER 1000:1000
