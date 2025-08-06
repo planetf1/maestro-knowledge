@@ -256,7 +256,7 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def query(self, query: str, limit: int = 5) -> str:
+    def query(self, query: str, limit: int = 5, collection_name: str = None) -> str:
         """
         Query the vector database using the default query agent.
 
