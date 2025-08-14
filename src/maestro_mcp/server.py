@@ -6,7 +6,7 @@ import json
 import logging
 import sys
 import os
-from typing import Any, Dict, List, Coroutine
+from typing import Any, Dict, List
 
 from fastmcp import FastMCP
 from fastmcp.tools.tool import ToolResult
@@ -204,6 +204,7 @@ class QueryInput(BaseModel):
     collection_name: str = Field(
         default=None, description="Optional collection name to search in"
     )
+
 
 class SearchInput(BaseModel):
     db_name: str = Field(..., description="Name of the vector database instance")

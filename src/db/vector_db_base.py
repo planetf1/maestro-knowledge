@@ -271,7 +271,9 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def search(self, query: str, limit: int = 5, collection_name: str = None) -> list[dict]:
+    def search(
+        self, query: str, limit: int = 5, collection_name: str = None
+    ) -> list[dict]:
         """
         Search for documents using vector similarity search.
 
