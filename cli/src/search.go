@@ -7,8 +7,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-
-
 var searchCmd = &cobra.Command{
 	Use:   "search",
 	Short: "Search documents using natural language",
@@ -16,8 +14,8 @@ var searchCmd = &cobra.Command{
 
 This command allows you to ask questions about documents stored in a vector database.
 The query agent will search through the documents and return relevant documents.`,
-	Example: `  maestro-k query "What is the main topic of the documents?" --vdb=my-vdb
-  maestro-k query "Find information about API endpoints" --vdb=my-vdb --doc-limit 10`,
+	Example: `  maestro-k search "What is the main topic of the documents?" --vdb=my-vdb
+  maestro-k search "Find information about API endpoints" --vdb=my-vdb --doc-limit 10`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		query := args[0]
@@ -56,7 +54,7 @@ func searchVectorDatabase(dbName, query, collectionName string) error {
 	}
 
 	if verbose {
-		fmt.Println("Querying vector database...")
+		fmt.Println("Searching vector database...")
 	}
 
 	if dryRun {

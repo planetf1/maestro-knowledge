@@ -695,16 +695,16 @@ func (c *MCPClient) Search(dbName, query string, limit int, collectionName strin
 		return "", fmt.Errorf("no response from MCP server")
 	}
 
-	resultStr, ok := response.Result.(string)
-	if !ok {
-        prettyJSON, err := json.MarshalIndent(response.Result, "", "  ")
-        if err != nil {
-            return "", fmt.Errorf("unexpected response type from MCP server")
-        }
-		return string(prettyJSON), nil
+	prettyJSON, err := json.MarshalIndent(response.Result, "", "  ")
+	if err != nil {
+		resultStr, ok := response.Result.(string)
+		if !ok {
+			return resultStr, nil
+		}
+		return "", fmt.Errorf("unexpected response type from MCP server")
 	}
 
-	return resultStr, nil
+	return string(prettyJSON), nil
 }
 
 // Close closes the MCP client
