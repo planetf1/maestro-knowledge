@@ -39,11 +39,16 @@ print_help() {
     echo "  all         Run all tests (CLI + MCP + Integration)"
     echo "  help        Show this help message"
     echo ""
+    echo "Environment variables:"
+    echo "  MAESTRO_K_SKIP_INTEGRATION=true  Skip integration tests even when running 'all'"
+    echo "  SKIP_INTEGRATION=true            Alias for MAESTRO_K_SKIP_INTEGRATION"
+    echo ""
     echo "Examples:"
     echo "  ./test.sh cli         # Run only CLI tests"
     echo "  ./test.sh mcp         # Run only MCP server tests"
     echo "  ./test.sh integration # Run only integration tests"
     echo "  ./test.sh all         # Run all tests"
+    echo "  MAESTRO_K_SKIP_INTEGRATION=true ./test.sh all  # Run all but skip integration"
     echo "  ./test.sh             # Run MCP tests (default)"
     echo ""
     echo "Test Categories:"
@@ -98,6 +103,15 @@ case "${1:-mcp}" in
         exit 1
         ;;
 esac
+
+# Allow skipping integration tests via environment variable toggles
+if [ "${MAESTRO_K_SKIP_INTEGRATION}" = "true" ] || [ "${MAESTRO_K_SKIP_INTEGRATION}" = "1" ] || \
+   [ "${SKIP_INTEGRATION}" = "true" ] || [ "${SKIP_INTEGRATION}" = "1" ]; then
+    if [ "${RUN_INTEGRATION_TESTS}" = true ]; then
+        print_warning "Skipping integration tests due to MAESTRO_K_SKIP_INTEGRATION/SKIP_INTEGRATION env var"
+    fi
+    RUN_INTEGRATION_TESTS=false
+fi
 
 # Run CLI tests if requested
 if [ "$RUN_CLI_TESTS" = true ]; then

@@ -18,8 +18,8 @@ Usage:
   maestro-k write document VDB_NAME COLLECTION_NAME DOC_NAME --doc-file-name=FILE_NAME [options]
 
 Examples:
-  maestro-k write document my-database my-collection my-doc --file-name=document.txt
-  maestro-k write document my-database my-collection my-doc --file-name=document.txt --embed=text-embedding-3-small`,
+	maestro-k write document my-database my-collection my-doc --file-name=document.txt
+	# NOTE: --embed is deprecated and ignored; embedding is per collection`,
 	Args: cobra.ExactArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Suppress usage for all errors except usage errors
@@ -41,8 +41,8 @@ Usage:
   maestro-k write vdb-doc VDB_NAME COLLECTION_NAME DOC_NAME --file-name=FILE_NAME [options]
 
 Examples:
-  maestro-k write vdb-doc my-database my-collection my-doc --file-name=document.txt
-  maestro-k write vdb-doc my-database my-collection my-doc --file-name=document.txt --embed=text-embedding-3-small`,
+	maestro-k write vdb-doc my-database my-collection my-doc --file-name=document.txt
+	# NOTE: --embed is deprecated and ignored; embedding is per collection`,
 	Args: cobra.ExactArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Suppress usage for all errors except usage errors
@@ -64,8 +64,8 @@ Usage:
   maestro-k write doc VDB_NAME COLLECTION_NAME DOC_NAME --file-name=FILE_NAME [options]
 
 Examples:
-  maestro-k write doc my-database my-collection my-doc --file-name=document.txt
-  maestro-k write doc my-database my-collection my-doc --file-name=document.txt --embed=text-embedding-3-small`,
+	maestro-k write doc my-database my-collection my-doc --file-name=document.txt
+	# NOTE: --embed is deprecated and ignored; embedding is per collection`,
 	Args: cobra.ExactArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Suppress usage for all errors except usage errors
@@ -98,7 +98,8 @@ func init() {
 	for _, cmd := range commands {
 		cmd.Flags().StringVar(&writeDocumentFileName, "file-name", "", "File name containing the document content")
 		cmd.Flags().StringVar(&writeDocumentFileName, "doc-file-name", "", "File name containing the document content (alias for file-name)")
-		cmd.Flags().StringVar(&writeDocumentEmbedding, "embed", "default", "Embedding model to use for the document")
+		// DEPRECATED: embedding per document is ignored; kept temporarily for compatibility
+		cmd.Flags().StringVar(&writeDocumentEmbedding, "embed", "default", "(DEPRECATED) Embedding model for the document (ignored; embedding is per collection)")
 	}
 }
 
@@ -120,7 +121,7 @@ func writeDocument(vdbName, collectionName, docName string) error {
 
 	if dryRun {
 		if !silent {
-			fmt.Printf("[DRY RUN] Would write document '%s' to collection '%s' of vector database '%s' with embedding '%s' from file '%s'\n", docName, collectionName, vdbName, writeDocumentEmbedding, fileName)
+			fmt.Printf("[DRY RUN] Would write document '%s' to collection '%s' of vector database '%s' from file '%s'\n", docName, collectionName, vdbName, fileName)
 		}
 		return nil
 	}
@@ -163,16 +164,9 @@ func writeDocument(vdbName, collectionName, docName string) error {
 		return fmt.Errorf("collection '%s' does not exist in vector database '%s'. Please create it first", collectionName, vdbName)
 	}
 
-	// Validate embedding if specified
-	if writeDocumentEmbedding != "default" {
-		embeddingsResult, err := client.GetSupportedEmbeddings(vdbName)
-		if err != nil {
-			return fmt.Errorf("failed to get supported embeddings: %w", err)
-		}
-
-		if !strings.Contains(strings.ToLower(embeddingsResult), strings.ToLower(writeDocumentEmbedding)) {
-			return fmt.Errorf("embedding '%s' is not supported by vector database '%s'", writeDocumentEmbedding, vdbName)
-		}
+	// Deprecated: warn if user passed a non-default embedding for document writes
+	if writeDocumentEmbedding != "default" && !silent {
+		fmt.Printf("Warning: --embed is deprecated and ignored on writes; embedding is configured per collection.\n")
 	}
 
 	// Check if document already exists (simple check by listing documents)
@@ -206,7 +200,7 @@ func writeDocument(vdbName, collectionName, docName string) error {
 	}
 
 	if !silent {
-		fmt.Printf("✅ Document '%s' written successfully to collection '%s' of vector database '%s' with embedding '%s'\n", docName, collectionName, vdbName, writeDocumentEmbedding)
+		fmt.Printf("✅ Document '%s' written successfully to collection '%s' of vector database '%s'\n", docName, collectionName, vdbName)
 	}
 
 	if verbose {

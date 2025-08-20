@@ -504,6 +504,37 @@ func (c *MCPClient) CreateCollection(dbName, collectionName, embedding string) e
 	return nil
 }
 
+// CreateCollectionWithChunking calls the create_collection tool on the MCP server and includes optional chunking config
+func (c *MCPClient) CreateCollectionWithChunking(dbName, collectionName, embedding string, chunkingConfig map[string]interface{}) error {
+	input := map[string]interface{}{
+		"db_name":         dbName,
+		"collection_name": collectionName,
+		"embedding":       embedding,
+	}
+	if chunkingConfig != nil {
+		input["chunking_config"] = chunkingConfig
+	}
+
+	params := map[string]interface{}{
+		"input": input,
+	}
+
+	response, err := c.callMCPServer("create_collection", params)
+	if err != nil {
+		return err
+	}
+
+	if response.Error != nil {
+		return fmt.Errorf("MCP server error: %s", response.Error.Message)
+	}
+
+	if response.Result == nil {
+		return fmt.Errorf("no response from MCP server")
+	}
+
+	return nil
+}
+
 // DeleteCollection calls the delete_collection tool on the MCP server
 func (c *MCPClient) DeleteCollection(dbName, collectionName string) error {
 	params := map[string]interface{}{

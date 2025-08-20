@@ -3,7 +3,7 @@
 
 import warnings
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 # Suppress Pydantic deprecation warnings from dependencies
 warnings.filterwarnings(
@@ -44,13 +44,19 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def setup(self, embedding: str = "default", collection_name: str = None):
+    def setup(
+        self,
+        embedding: str = "default",
+        collection_name: str = None,
+        chunking_config: Dict[str, Any] = None,
+    ):
         """
         Set up the database and create collections if they don't exist.
 
         Args:
-            embedding: Embedding model to use for the collection
+            embedding: Embedding model to use for the collection (name or config, backend-specific)
             collection_name: Name of the collection to set up (optional)
+            chunking_config: Configuration for the chunking strategy.
         """
         pass
 
@@ -67,9 +73,6 @@ class VectorDatabase(ABC):
         Args:
             documents: List of documents with 'url', 'text', and 'metadata' fields.
                        For Milvus, documents may also include a 'vector' field.
-            embedding: Embedding strategy to use. Options:
-                      - "default": Use database's default embedding strategy
-                      - Specific model name: Use the specified embedding model
             collection_name: Name of the collection to write to (optional)
         """
         pass
@@ -87,9 +90,6 @@ class VectorDatabase(ABC):
             documents: List of documents with 'url', 'text', and 'metadata' fields.
                        For Milvus, documents may also include a 'vector' field.
             collection_name: Name of the collection to write to
-            embedding: Embedding strategy to use. Options:
-                      - "default": Use database's default embedding strategy
-                      - Specific model name: Use the specified embedding model
         """
         return self.write_documents(documents, embedding, collection_name)
 
@@ -105,7 +105,6 @@ class VectorDatabase(ABC):
         Args:
             document: Document with 'url', 'text', and 'metadata' fields.
                      For Milvus, document may also include a 'vector' field.
-            embedding: Embedding strategy to use (see write_documents for options)
             collection_name: Name of the collection to write to (optional)
         """
         return self.write_documents([document], embedding, collection_name)
@@ -291,3 +290,66 @@ class VectorDatabase(ABC):
     def cleanup(self):
         """Clean up resources and close connections."""
         pass
+
+    def get_document_chunks(
+        self, doc_id: str, collection_name: str = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Retrieve all chunks for a specific document.
+
+        Default implementation returns an empty list. Backends that support
+        chunking should override this method to return the actual chunks.
+
+        Args:
+            doc_id: The ID of the document.
+            collection_name: Name of the collection to search in.
+
+        Returns:
+            A list of document chunks.
+        """
+        return []
+
+    def reassemble_document(self, chunks: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Reassemble a document from its chunks.
+
+        Args:
+            chunks: A list of document chunks.
+
+        Returns:
+            The reassembled document.
+        """
+        if not chunks:
+            return None
+
+        # Sort chunks by sequence number. If chunk metadata is missing or invalid,
+        # we cannot reliably reassemble the document.
+        try:
+            sorted_chunks = sorted(
+                chunks, key=lambda x: x.get("metadata", {}).get("chunk_sequence_number")
+            )
+        except Exception:
+            return None
+
+        # Reassemble text
+        full_text = "".join(chunk["text"] for chunk in sorted_chunks)
+
+        # Create the reassembled document
+        reassembled_doc = sorted_chunks[0].copy()
+        reassembled_doc["text"] = full_text
+
+        # Clean up chunk-specific metadata
+        for key in [
+            "chunk_sequence_number",
+            "total_chunks",
+            "offset_start",
+            "offset_end",
+            "chunk_size",
+        ]:
+            if key in reassembled_doc.get("metadata", {}):
+                try:
+                    del reassembled_doc["metadata"][key]
+                except Exception:
+                    pass
+
+        return reassembled_doc

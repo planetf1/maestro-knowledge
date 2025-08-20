@@ -4,16 +4,17 @@
 import asyncio
 import json
 import logging
-import sys
 import os
+import sys
 from typing import Any, Dict, List
 
 from fastmcp import FastMCP
 from fastmcp.tools.tool import ToolResult
 from pydantic import BaseModel, Field
 
-from ..db.vector_db_factory import create_vector_database
+from ..chunking import ChunkingConfig
 from ..db.vector_db_base import VectorDatabase
+from ..db.vector_db_factory import create_vector_database
 
 
 # Load environment variables from .env file
@@ -84,7 +85,11 @@ class WriteDocumentsInput(BaseModel):
     documents: List[Dict[str, Any]] = Field(
         ..., description="List of documents to write"
     )
-    embedding: str = Field(default="default", description="Embedding strategy to use")
+    # TODO(deprecate): embedding at write-time is deprecated and ignored; embedding is per-collection
+    embedding: str = Field(
+        default="default",
+        description="(DEPRECATED) Embedding strategy to use; ignored at write time",
+    )
 
 
 class WriteDocumentInput(BaseModel):
@@ -97,7 +102,11 @@ class WriteDocumentInput(BaseModel):
     vector: List[float] = Field(
         default=None, description="Pre-computed vector embedding (optional, for Milvus)"
     )
-    embedding: str = Field(default="default", description="Embedding strategy to use")
+    # TODO(deprecate): embedding at write-time is deprecated and ignored; embedding is per-collection
+    embedding: str = Field(
+        default="default",
+        description="(DEPRECATED) Embedding strategy to use; ignored at write time",
+    )
 
 
 class WriteDocumentToCollectionInput(BaseModel):
@@ -112,7 +121,11 @@ class WriteDocumentToCollectionInput(BaseModel):
     vector: List[float] = Field(
         default=None, description="Pre-computed vector embedding (optional, for Milvus)"
     )
-    embedding: str = Field(default="default", description="Embedding strategy to use")
+    # TODO(deprecate): embedding at write-time is deprecated and ignored; embedding is per-collection
+    embedding: str = Field(
+        default="default",
+        description="(DEPRECATED) Embedding strategy to use; ignored at write time",
+    )
 
 
 class ListDocumentsInput(BaseModel):
@@ -194,6 +207,10 @@ class CreateCollectionInput(BaseModel):
     collection_name: str = Field(..., description="Name of the collection to create")
     embedding: str = Field(
         default="default", description="Embedding model to use for the collection"
+    )
+    chunking_config: Dict[str, Any] = Field(
+        default=None,
+        description="Optional chunking configuration for the collection. Example: {'strategy':'Sentence','parameters':{'chunk_size':256,'overlap':1}}",
     )
 
 
@@ -285,16 +302,106 @@ def create_mcp_server() -> FastMCP:
         return f"Supported embeddings for {db.db_type} vector database '{input.db_name}': {json.dumps(embeddings, indent=2)}"
 
     @app.tool()
-    async def write_documents(input: WriteDocumentsInput) -> str:
-        """Write documents to a vector database with specified embedding strategy."""
-        db = get_database_by_name(input.db_name)
-        db.write_documents(input.documents, embedding=input.embedding)
+    async def get_supported_chunking_strategies() -> str:
+        """Return the supported chunking strategies and their parameters."""
+        # Keep this in sync with src/chunking.py defaults
+        strategies = [
+            {
+                "name": "None",
+                "parameters": {},
+                "description": "No chunking; the entire document is a single chunk.",
+                "defaults": {},
+            },
+            {
+                "name": "Fixed",
+                "parameters": {
+                    "chunk_size": "int > 0",
+                    "overlap": "int >= 0",
+                },
+                "description": "Fixed-size windows with optional overlap.",
+                "defaults": {"chunk_size": 512, "overlap": 0},
+            },
+            {
+                "name": "Sentence",
+                "parameters": {
+                    "chunk_size": "int > 0",
+                    "overlap": "int >= 0",
+                },
+                "description": "Sentence-aware packing up to chunk_size with optional overlap; long sentences are split.",
+                "defaults": {"chunk_size": 512, "overlap": 0},
+            },
+        ]
+        defaults_behavior = {
+            "chunk_text_default_strategy": ChunkingConfig().strategy,
+            "default_params_when_strategy_set": {"chunk_size": 512, "overlap": 0}
+        }
+        return json.dumps({"strategies": strategies, "notes": defaults_behavior}, indent=2)
 
-        return f"Successfully wrote {len(input.documents)} documents to vector database '{input.db_name}' using embedding '{input.embedding}'"
+    @app.tool()
+    async def write_documents(input: WriteDocumentsInput) -> str:
+        """Write documents to a vector database. Embedding at write-time is deprecated; collection embedding is used. Returns JSON with stats and collection info."""
+        db = get_database_by_name(input.db_name)
+        # Deprecation: ignore per-document embedding; use collection embedding
+        if input.embedding and input.embedding != "default":
+            logger.warning(
+                "Deprecation: embedding specified at write_documents is ignored; embedding is configured per collection."
+            )
+        # Use the database's current collection embedding where applicable
+        coll_info = None
+        try:
+            # Best effort: fetch current collection info to get embedding
+            coll_info = db.get_collection_info()
+        except Exception:
+            pass
+        collection_embedding = (coll_info or {}).get("embedding", "default")
+        stats = None
+        try:
+            stats = db.write_documents(input.documents, embedding=collection_embedding)
+        except Exception as e:
+            # surface error in JSON result
+            result = {
+                "status": "error",
+                "message": f"Failed to write documents: {str(e)}",
+            }
+            return json.dumps(result, indent=2)
+
+        # Refresh collection info after write
+        post_info = None
+        try:
+            post_info = db.get_collection_info()
+        except Exception:
+            post_info = None
+
+        # Build a sample query suggestion without executing a search (avoid network/API calls here)
+        sample_query = "What is this collection about?"
+        try:
+            # Take first non-empty document text and use first few words as query
+            for d in input.documents:
+                t = (d or {}).get("text") or ""
+                if t:
+                    words = t.strip().split()
+                    if words:
+                        sample_query = " ".join(words[:8])
+                        break
+        except Exception:
+            pass
+
+        result = {
+            "status": "ok",
+            "message": f"Wrote {len(input.documents)} document(s)",
+            "write_stats": stats,
+            "collection_info": post_info,
+            "sample_query_suggestion": {
+                "query": sample_query,
+                "limit": 3,
+                "collection": (post_info or {}).get("name"),
+            },
+        }
+        return json.dumps(result, indent=2, default=str)
 
     @app.tool()
     async def write_document(input: WriteDocumentInput) -> str:
-        """Write a single document to a vector database with specified embedding strategy."""
+        """Write a single document to a vector database. Embedding at write-time is deprecated; collection embedding is used. Returns JSON with stats and collection info."""
         db = get_database_by_name(input.db_name)
         document = {
             "url": input.url,
@@ -306,15 +413,57 @@ def create_mcp_server() -> FastMCP:
         if input.vector is not None:
             document["vector"] = input.vector
 
-        db.write_document(document, embedding=input.embedding)
+        # Deprecation: ignore per-document embedding; use collection embedding
+        if input.embedding and input.embedding != "default":
+            logger.warning(
+                "Deprecation: embedding specified at write_document is ignored; embedding is configured per collection."
+            )
+        coll_info = None
+        try:
+            coll_info = db.get_collection_info()
+        except Exception:
+            pass
+        collection_embedding = (coll_info or {}).get("embedding", "default")
+        stats = None
+        try:
+            stats = db.write_document(document, embedding=collection_embedding)
+        except Exception as e:
+            return json.dumps(
+                {
+                    "status": "error",
+                    "message": f"Failed to write document: {str(e)}",
+                },
+                indent=2,
+            )
 
-        return f"Successfully wrote document '{input.url}' to vector database '{input.db_name}' using embedding '{input.embedding}'"
+        # Post-write info and suggestion
+        post_info = None
+        try:
+            post_info = db.get_collection_info()
+        except Exception:
+            post_info = None
+        sample_query = " ".join(((input.text or "").strip().split())[:8]) or "What is this about?"
+        return json.dumps(
+            {
+                "status": "ok",
+                "message": "Wrote 1 document",
+                "write_stats": stats,
+                "collection_info": post_info,
+                "sample_query_suggestion": {
+                    "query": sample_query,
+                    "limit": 3,
+                    "collection": (post_info or {}).get("name"),
+                },
+            },
+            indent=2,
+            default=str,
+        )
 
     @app.tool()
     async def write_document_to_collection(
         input: WriteDocumentToCollectionInput,
     ) -> str:
-        """Write a single document to a specific collection in a vector database with specified embedding strategy."""
+        """Write a single document to a specific collection. Embedding at write-time is deprecated; collection embedding is used. Returns JSON with stats and collection info."""
         db = get_database_by_name(input.db_name)
 
         # Check if the collection exists
@@ -339,12 +488,54 @@ def create_mcp_server() -> FastMCP:
         if input.vector is not None:
             document["vector"] = input.vector
 
+        # Deprecation: ignore per-document embedding; use target collection embedding
+        if input.embedding and input.embedding != "default":
+            logger.warning(
+                "Deprecation: embedding specified at write_document_to_collection is ignored; embedding is configured per collection."
+            )
+        collection_embedding = "default"
+        try:
+            info = db.get_collection_info(input.collection_name)
+            collection_embedding = info.get("embedding", "default")
+        except Exception:
+            pass
         # Use the new write_documents_to_collection method
-        db.write_documents_to_collection(
-            [document], input.collection_name, embedding=input.embedding
-        )
+        stats = None
+        try:
+            stats = db.write_documents_to_collection(
+                [document], input.collection_name, embedding=collection_embedding
+            )
+        except Exception as e:
+            return json.dumps(
+                {
+                    "status": "error",
+                    "message": f"Failed to write document to collection: {str(e)}",
+                },
+                indent=2,
+            )
 
-        return f"Successfully wrote document '{input.doc_name}' to collection '{input.collection_name}' in vector database '{input.db_name}' using embedding '{input.embedding}'"
+        # Post-write info and suggestion
+        post_info = None
+        try:
+            post_info = db.get_collection_info(input.collection_name)
+        except Exception:
+            post_info = None
+        sample_query = " ".join(((input.text or "").strip().split())[:8]) or "What is this about?"
+        return json.dumps(
+            {
+                "status": "ok",
+                "message": f"Wrote 1 document to collection '{input.collection_name}'",
+                "write_stats": stats,
+                "collection_info": post_info,
+                "sample_query_suggestion": {
+                    "query": sample_query,
+                    "limit": 3,
+                    "collection": input.collection_name,
+                },
+            },
+            indent=2,
+            default=str,
+        )
 
     @app.tool()
     async def list_documents(input: ListDocumentsInput) -> str:
@@ -536,20 +727,16 @@ def create_mcp_server() -> FastMCP:
 
     @app.tool()
     async def get_collection_info(input: GetCollectionInfoInput) -> str:
-        """Get information about a specific collection in a vector database."""
+        """Get information about a collection in a vector database."""
         db = get_database_by_name(input.db_name)
-
-        # Check if the collection exists
-        collections = db.list_collections()
-        if input.collection_name not in collections:
-            raise ValueError(
-                f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
-            )
-
-        # Get collection information using the new method
+        # Always delegate to the backend which can surface metadata even if
+        # the collection doesn't exist (including chunking config and errors)
         info = db.get_collection_info(input.collection_name)
 
-        return f"Collection information for '{info['name']}' in vector database '{input.db_name}':\n{json.dumps(info, indent=2)}"
+        return (
+            f"Collection information for '{info.get('name')}' in vector database "
+            f"'{input.db_name}':\n{json.dumps(info, indent=2)}"
+        )
 
     @app.tool()
     async def create_collection(input: CreateCollectionInput) -> str:
@@ -571,7 +758,16 @@ def create_mcp_server() -> FastMCP:
                 if hasattr(db, "setup"):
                     # Get the number of parameters in the setup method
                     param_count = len(db.setup.__code__.co_varnames)
-                    if param_count > 2:  # self, embedding, collection_name
+                    # Try to call setup with embedding and chunking_config where supported
+                    if (
+                        param_count > 3
+                    ):  # self, embedding, collection_name, chunking_config
+                        db.setup(
+                            embedding=input.embedding,
+                            collection_name=input.collection_name,
+                            chunking_config=input.chunking_config,
+                        )
+                    elif param_count > 2:  # self, embedding, collection_name
                         db.setup(
                             embedding=input.embedding,
                             collection_name=input.collection_name,
@@ -583,6 +779,8 @@ def create_mcp_server() -> FastMCP:
                 else:
                     db.setup()
 
+                # NOTE: Embedding is configured per-collection at creation time.
+                # TODO(deprecate): Remove write-time embedding parameters from write tools in a future release.
                 return f"Successfully created collection '{input.collection_name}' in vector database '{input.db_name}' with embedding '{input.embedding}'"
             finally:
                 # Restore the original collection name

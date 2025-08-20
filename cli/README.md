@@ -9,6 +9,8 @@ A command-line interface for interacting with the Maestro Knowledge MCP server w
 - **List collections**: List all collections in a specific vector database
 - **List documents**: List documents in a specific collection of a vector database
 - **Query documents**: Query documents using natural language with semantic search
+- **Pluggable document chunking**: Configure per-collection chunking (None, Fixed with size/overlap, Sentence)
+   - Discover supported strategies with `maestro-k chunking list`
 - **Create vector databases**: Create vector databases from YAML configuration files
 - **Delete vector databases**: Delete vector databases by name
 - **Validate configurations**: Validate YAML configuration files
@@ -102,6 +104,16 @@ go build -o maestro-k src/*.go
 
 # Validate YAML configuration
 ./maestro-k validate config.yaml
+
+# Create collection with chunking
+./maestro-k create collection my-database my-collection \
+   --embedding=text-embedding-3-small \
+   --chunking-strategy=Sentence \
+   --chunk-size=512 \
+   --chunk-overlap=32
+
+# List supported chunking strategies
+./maestro-k chunking list
 ```
 
 ### Enhanced UX Features
@@ -289,6 +301,27 @@ Override the MCP server URI via command-line flag:
 - `WEAVIATE_API_KEY`: Weaviate API key for Weaviate backend
 - `WEAVIATE_URL`: Weaviate cluster URL
 - `OPENAI_API_KEY`: OpenAI API key for embeddings
+
+### Collection chunking flags
+
+The create-collection commands support configuring chunking at creation time:
+
+- `--chunking-strategy` (default: `None`) — one of: `None`, `Fixed`, `Sentence`
+- `--chunk-size` — chunk size in characters (default 512 when strategy != None)
+- `--chunk-overlap` — overlap in characters (default 0)
+
+Examples:
+
+```bash
+# Sentence-aware chunking
+./maestro-k create collection mydb mycoll --chunking-strategy=Sentence --chunk-size=400 --chunk-overlap=20
+
+# Fixed-size chunking with overlap
+./maestro-k create col mydb mycoll2 --chunking-strategy=Fixed --chunk-size=512 --chunk-overlap=32
+
+# No chunking (store full document as a single chunk)
+./maestro-k create vdb-col mydb mycoll3 --chunking-strategy=None
+```
 
 ### Environment Variable Substitution in YAML Files
 
@@ -509,9 +542,6 @@ The CLI provides resource-based create commands for vector databases, collection
 # Create document from file
 ./maestro-k document create --name=my-doc --file=document.txt --vdb=my-database --collection=my-collection
 
-# Create document with specific embedding
-./maestro-k document create --name=my-doc --file=document.txt --vdb=my-database --collection=my-collection --embed=text-embedding-3-small
-
 # Create document with dry-run mode
 ./maestro-k document create --name=my-doc --file=document.txt --vdb=my-database --collection=my-collection --dry-run
 ```
@@ -524,15 +554,14 @@ The `write` command is an alias for creating documents:
 # Write document from file
 ./maestro-k write document my-database my-collection my-doc --file-name=document.txt
 
-# Write document with specific embedding
-./maestro-k write document my-database my-collection my-doc --file-name=document.txt --embed=text-embedding-3-small
-
 # Write document using short aliases
 ./maestro-k write doc my-database my-collection my-doc --file-name=document.txt
 ./maestro-k write vdb-doc my-database my-collection my-doc --file-name=document.txt
 
 # Write document with dry-run mode
 ./maestro-k write document my-database my-collection my-doc --file-name=document.txt --dry-run
+
+Note: --embed on write is deprecated and ignored; embedding is configured per collection when the collection is created.
 ```
 
 ### Confirmation Prompts for Destructive Operations
@@ -677,11 +706,8 @@ The `query` command allows you to search documents using natural language querie
 The `retrieve` command retrieves information about collections and documents:
 
 ```bash
-# Retrieve collection information (uses default collection if not specified)
-./maestro-k retrieve collection my-database
-
-# Retrieve specific collection information
-./maestro-k retrieve collection my-database my-collection
+# Show collection information (embedding and chunking)
+./maestro-k collection info --vdb=my-database --name=my-collection
 
 # Retrieve using short aliases
 ./maestro-k retrieve col my-database
@@ -716,6 +742,7 @@ The `retrieve` command retrieves information about collections and documents:
 - Document count
 - Database type
 - Embedding information
+- Chunking configuration (strategy and parameters)
 - Additional metadata
 
 Example:
@@ -724,7 +751,11 @@ Collection information for 'my-collection' in vector database 'my-database': {
   "name": "my-collection",
   "document_count": 15,
   "db_type": "weaviate",
-  "embedding": "text2vec-weaviate",
+   "embedding": "text2vec-weaviate",
+   "chunking": {
+      "strategy": "Sentence",
+      "parameters": { "chunk_size": 512, "overlap": 32 }
+   },
   "metadata": {
     "description": "My test collection",
     "vectorizer": "text2vec-weaviate",

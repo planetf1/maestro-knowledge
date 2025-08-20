@@ -175,6 +175,23 @@ func (cp *CompletionProvider) CompleteEmbeddings(partial string) ([]CompletionIt
 	return completions, nil
 }
 
+// CompleteChunkingStrategies provides completion for chunking strategy values
+func (cp *CompletionProvider) CompleteChunkingStrategies(partial string) ([]CompletionItem, error) {
+	strategies := []string{"None", "Fixed", "Sentence"}
+
+	var completions []CompletionItem
+	for _, s := range strategies {
+		if strings.HasPrefix(strings.ToLower(s), strings.ToLower(partial)) {
+			completions = append(completions, CompletionItem{
+				Text:        s,
+				Description: "Chunking strategy",
+				Type:        "chunking",
+			})
+		}
+	}
+	return completions, nil
+}
+
 // CompleteCommands provides completion for command names
 func (cp *CompletionProvider) CompleteCommands(partial string) ([]CompletionItem, error) {
 	commands := []string{
@@ -182,6 +199,8 @@ func (cp *CompletionProvider) CompleteCommands(partial string) ([]CompletionItem
 		"collection", "coll",
 		"document", "doc",
 		"embedding", "embed",
+		"chunking", "chunks",
+		"status",
 		"query",
 		"validate",
 	}
@@ -208,10 +227,12 @@ func (cp *CompletionProvider) CompleteSubcommands(command, partial string) ([]Co
 	case "vectordb", "vdb":
 		subcommands = []string{"list", "create", "delete"}
 	case "collection", "coll":
-		subcommands = []string{"list", "create", "delete"}
+		subcommands = []string{"list", "info", "create", "delete"}
 	case "document", "doc":
 		subcommands = []string{"list", "create", "delete"}
 	case "embedding", "embed":
+		subcommands = []string{"list"}
+	case "chunking", "chunks":
 		subcommands = []string{"list"}
 	default:
 		return nil, nil
@@ -237,6 +258,7 @@ func (cp *CompletionProvider) CompleteFlags(partial string) ([]CompletionItem, e
 		"--vdb", "--collection", "--name", "--file", "--embedding",
 		"--verbose", "--silent", "--dry-run", "--force",
 		"--mcp-server-uri", "--doc-limit",
+		"--chunking-strategy", "--chunk-size", "--chunk-overlap",
 		"-h", "--help", "--version",
 	}
 
@@ -311,6 +333,8 @@ func GetCompletionsForContext(args []string, currentWord string) ([]CompletionIt
 			return provider.CompleteFiles(currentWord)
 		case "--embedding":
 			return provider.CompleteEmbeddings(currentWord)
+		case "--chunking-strategy":
+			return provider.CompleteChunkingStrategies(currentWord)
 		}
 	}
 
