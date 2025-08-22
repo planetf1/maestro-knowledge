@@ -143,14 +143,27 @@ class TestMilvusVectorDatabase:
 
         db = MilvusVectorDatabase("ChunkCol")
         # Configure collection chunking
-        chunk_cfg = {"strategy": "Fixed", "parameters": {"chunk_size": 16, "overlap": 0}}
+        chunk_cfg = {
+            "strategy": "Fixed",
+            "parameters": {"chunk_size": 16, "overlap": 0},
+        }
         # Also set embedding to avoid openai dependency by mocking _generate_embedding
-        db.setup(embedding="text-embedding-ada-002", collection_name="ChunkCol", chunking_config=chunk_cfg)
+        db.setup(
+            embedding="text-embedding-ada-002",
+            collection_name="ChunkCol",
+            chunking_config=chunk_cfg,
+        )
 
         # Mock embed generation
-        with patch.object(db, "_generate_embedding", return_value=[0.0] * (db.dimension or 1536)):
+        with patch.object(
+            db, "_generate_embedding", return_value=[0.0] * (db.dimension or 1536)
+        ):
             documents = [
-                {"url": "u", "text": "abcdefghijklmnopqrstuvwxyz", "metadata": {"doc_name": "doc1"}}
+                {
+                    "url": "u",
+                    "text": "abcdefghijklmnopqrstuvwxyz",
+                    "metadata": {"doc_name": "doc1"},
+                }
             ]
             db.write_documents(documents, embedding="default")
 
@@ -196,7 +209,10 @@ class TestMilvusVectorDatabase:
             db.setup(
                 embedding="custom_local",
                 collection_name="CfgCol",
-                chunking_config={"strategy": "Fixed", "parameters": {"chunk_size": 512, "overlap": 0}},
+                chunking_config={
+                    "strategy": "Fixed",
+                    "parameters": {"chunk_size": 512, "overlap": 0},
+                },
             )
             info = db.get_collection_info("CfgCol")
 
@@ -204,8 +220,6 @@ class TestMilvusVectorDatabase:
         cfg = ed.get("config", {})
         assert cfg.get("url") == "http://localhost:11434/v1"
         assert cfg.get("model") == "nomic-embed-text"
-
-    
 
     @patch("pymilvus.MilvusClient")
     def test_write_documents_unsupported_embedding(self, mock_milvus_client):

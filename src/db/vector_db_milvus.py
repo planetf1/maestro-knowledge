@@ -339,8 +339,8 @@ class MilvusVectorDatabase(VectorDatabase):
             collection_name if collection_name is not None else self.collection_name
         )
 
-    # TODO(embedding): Per-write 'embedding' is deprecated; prefer collection-level embedding set in setup().
-    #                  In a future release, remove the per-write parameter or make it a no-op.
+        # TODO(embedding): Per-write 'embedding' is deprecated; prefer collection-level embedding set in setup().
+        #                  In a future release, remove the per-write parameter or make it a no-op.
         # Determine effective embedding model: prefer collection-level embedding if set
         all_supported = self.supported_embeddings()
         if embedding not in all_supported:
@@ -837,13 +837,21 @@ class MilvusVectorDatabase(VectorDatabase):
                         for field in fields:
                             # field may be dict or object
                             fname = (
-                                field.get("name") if isinstance(field, dict) else getattr(field, "name", None)
+                                field.get("name")
+                                if isinstance(field, dict)
+                                else getattr(field, "name", None)
                             )
                             if fname == "vector":
                                 params = (
-                                    field.get("params", {}) if isinstance(field, dict) else getattr(field, "params", {})
+                                    field.get("params", {})
+                                    if isinstance(field, dict)
+                                    else getattr(field, "params", {})
                                 )
-                                dim_val = params.get("dim") if isinstance(params, dict) else getattr(params, "dim", "unknown")
+                                dim_val = (
+                                    params.get("dim")
+                                    if isinstance(params, dict)
+                                    else getattr(params, "dim", "unknown")
+                                )
                                 embedding_info = f"vector_dim_{dim_val}"
                                 break
                 except Exception:
@@ -866,10 +874,22 @@ class MilvusVectorDatabase(VectorDatabase):
                     fields = getattr(collection_info, "fields")
                 if fields:
                     for field in fields:
-                        fname = field.get("name") if isinstance(field, dict) else getattr(field, "name", None)
+                        fname = (
+                            field.get("name")
+                            if isinstance(field, dict)
+                            else getattr(field, "name", None)
+                        )
                         if fname == "vector":
-                            params = field.get("params", {}) if isinstance(field, dict) else getattr(field, "params", {})
-                            dim_from_schema = params.get("dim") if isinstance(params, dict) else getattr(params, "dim", None)
+                            params = (
+                                field.get("params", {})
+                                if isinstance(field, dict)
+                                else getattr(field, "params", {})
+                            )
+                            dim_from_schema = (
+                                params.get("dim")
+                                if isinstance(params, dict)
+                                else getattr(params, "dim", None)
+                            )
                             break
             except Exception:
                 dim_from_schema = None
@@ -911,7 +931,9 @@ class MilvusVectorDatabase(VectorDatabase):
                     created_time = getattr(collection_info, "created_time", None)
                     description = getattr(collection_info, "description", None)
                     fields_list = getattr(collection_info, "fields", []) or []
-                fields_count = len(fields_list) if isinstance(fields_list, (list, tuple)) else 0
+                fields_count = (
+                    len(fields_list) if isinstance(fields_list, (list, tuple)) else 0
+                )
             except Exception:
                 collection_id = None
                 created_time = None
@@ -1132,7 +1154,9 @@ class MilvusVectorDatabase(VectorDatabase):
                 except Exception:
                     logger = logging.getLogger(__name__)
                     try:
-                        logger.warning(f"Milvus client.search raised unexpected error: {e}")
+                        logger.warning(
+                            f"Milvus client.search raised unexpected error: {e}"
+                        )
                     except Exception:
                         pass
                     results = None
@@ -1184,7 +1208,10 @@ class MilvusVectorDatabase(VectorDatabase):
                                 score = float(getattr(hit_obj, "score"))
                             elif getattr(hit_obj, "distance", None) is not None:
                                 score = float(getattr(hit_obj, "distance"))
-                            elif isinstance(entity, dict) and entity.get("score") is not None:
+                            elif (
+                                isinstance(entity, dict)
+                                and entity.get("score") is not None
+                            ):
                                 score = float(entity.get("score"))
                         except Exception:
                             score = None
@@ -1193,7 +1220,11 @@ class MilvusVectorDatabase(VectorDatabase):
                         try:
                             metadata = json.loads(hit_obj.get("metadata", "{}"))
                         except Exception:
-                            metadata = hit_obj.get("metadata") if hit_obj.get("metadata") else {}
+                            metadata = (
+                                hit_obj.get("metadata")
+                                if hit_obj.get("metadata")
+                                else {}
+                            )
                         doc_id = hit_obj.get("id")
                         url = hit_obj.get("url", "")
                         text = hit_obj.get("text", "")
@@ -1232,7 +1263,9 @@ class MilvusVectorDatabase(VectorDatabase):
                         "score": score,
                         # Explicit diagnostic marker so clients can tell vector vs keyword
                         "_search_mode": "vector",
-                        "_query_vector_len": len(query_vector) if query_vector is not None else None,
+                        "_query_vector_len": len(query_vector)
+                        if query_vector is not None
+                        else None,
                     }
                     return doc
                 except Exception:
