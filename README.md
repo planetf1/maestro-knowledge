@@ -319,7 +319,7 @@ maestro-knowledge/
 │   │   ├── server.py        # Main MCP server
 │   │   ├── mcp_config.json  # MCP client configuration
 │   │   └── README.md        # MCP server documentation
-│   ├── chunking.py          # Pluggable document chunking utilities
+│   ├── chunking/           # Pluggable document chunking package
 │   └── vector_db.py         # Main module exports
 ├── cli/                     # Go CLI tool
 │   ├── src/                 # Go source code

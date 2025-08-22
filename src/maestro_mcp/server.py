@@ -402,7 +402,7 @@ def create_mcp_server() -> FastMCP:
     @app.tool()
     async def get_supported_chunking_strategies() -> str:
         """Return the supported chunking strategies and their parameters."""
-        # Keep this in sync with src/chunking.py defaults
+    # Keep this in sync with the src/chunking/ package defaults
         strategies = [
             {
                 "name": "None",
