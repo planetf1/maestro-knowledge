@@ -81,8 +81,12 @@ def resync_vector_databases() -> List[str]:
                             # try to set dimension if available
                             try:
                                 db.dimension = emb_details.get("vector_size")
-                                db._collections_metadata[coll] = db._collections_metadata.get(coll, {})
-                                db._collections_metadata[coll]["vector_size"] = db.dimension
+                                db._collections_metadata[coll] = (
+                                    db._collections_metadata.get(coll, {})
+                                )
+                                db._collections_metadata[coll]["vector_size"] = (
+                                    db.dimension
+                                )
                             except Exception:
                                 pass
                         else:
@@ -93,11 +97,20 @@ def resync_vector_databases() -> List[str]:
                                 if env_url and env_vs:
                                     try:
                                         vs_int = int(env_vs)
-                                        if info.get("embedding_details", {}).get("vector_size") == vs_int:
+                                        if (
+                                            info.get("embedding_details", {}).get(
+                                                "vector_size"
+                                            )
+                                            == vs_int
+                                        ):
                                             db.embedding_model = "custom_local"
                                             db.dimension = vs_int
-                                            db._collections_metadata[coll] = db._collections_metadata.get(coll, {})
-                                            db._collections_metadata[coll]["vector_size"] = db.dimension
+                                            db._collections_metadata[coll] = (
+                                                db._collections_metadata.get(coll, {})
+                                            )
+                                            db._collections_metadata[coll][
+                                                "vector_size"
+                                            ] = db.dimension
                                     except Exception:
                                         pass
                             except Exception:
@@ -110,14 +123,15 @@ def resync_vector_databases() -> List[str]:
                     vector_databases[coll] = db
                     added.append(coll)
                 except Exception as e:
-                    logger.warning(f"Failed to register collection '{coll}' during resync: {e}")
+                    logger.warning(
+                        f"Failed to register collection '{coll}' during resync: {e}"
+                    )
     except Exception as e:
         logger.warning(f"Resync helper failed: {e}")
 
     if added:
         logger.info(f"Resynced and registered Milvus collections: {added}")
     return added
-
 
 
 def get_database_by_name(db_name: str) -> VectorDatabase:
@@ -317,7 +331,8 @@ class DiagnoseSearchInput(BaseModel):
         default=None, description="Optional collection name to search in"
     )
     include_query_vector: bool = Field(
-        default=True, description="Whether to attempt to compute and return the query embedding"
+        default=True,
+        description="Whether to attempt to compute and return the query embedding",
     )
 
 
@@ -422,9 +437,11 @@ def create_mcp_server() -> FastMCP:
         ]
         defaults_behavior = {
             "chunk_text_default_strategy": ChunkingConfig().strategy,
-            "default_params_when_strategy_set": {"chunk_size": 512, "overlap": 0}
+            "default_params_when_strategy_set": {"chunk_size": 512, "overlap": 0},
         }
-        return json.dumps({"strategies": strategies, "notes": defaults_behavior}, indent=2)
+        return json.dumps(
+            {"strategies": strategies, "notes": defaults_behavior}, indent=2
+        )
 
     @app.tool()
     async def write_documents(input: WriteDocumentsInput) -> str:
@@ -531,7 +548,9 @@ def create_mcp_server() -> FastMCP:
             post_info = db.get_collection_info()
         except Exception:
             post_info = None
-        sample_query = " ".join(((input.text or "").strip().split())[:8]) or "What is this about?"
+        sample_query = (
+            " ".join(((input.text or "").strip().split())[:8]) or "What is this about?"
+        )
         return json.dumps(
             {
                 "status": "ok",
@@ -609,7 +628,9 @@ def create_mcp_server() -> FastMCP:
             post_info = db.get_collection_info(input.collection_name)
         except Exception:
             post_info = None
-        sample_query = " ".join(((input.text or "").strip().split())[:8]) or "What is this about?"
+        sample_query = (
+            " ".join(((input.text or "").strip().split())[:8]) or "What is this about?"
+        )
         return json.dumps(
             {
                 "status": "ok",
@@ -930,10 +951,14 @@ def create_mcp_server() -> FastMCP:
             if input.include_query_vector:
                 try:
                     if hasattr(db, "_generate_embedding"):
-                        qvec = db._generate_embedding(input.query, db.embedding_model or "default")
+                        qvec = db._generate_embedding(
+                            input.query, db.embedding_model or "default"
+                        )
                         qvec_len = len(qvec) if qvec is not None else None
                     else:
-                        notes.append("Backend does not expose embedding generation method")
+                        notes.append(
+                            "Backend does not expose embedding generation method"
+                        )
                 except Exception as e:
                     notes.append(f"Failed to generate query embedding: {e}")
 
@@ -944,7 +969,11 @@ def create_mcp_server() -> FastMCP:
 
             # Run the search and collect raw results
             try:
-                raw_results = db.search(input.query, limit=input.limit, collection_name=input.collection_name)
+                raw_results = db.search(
+                    input.query,
+                    limit=input.limit,
+                    collection_name=input.collection_name,
+                )
             except Exception as e:
                 raw_results = {"error": str(e)}
                 notes.append(f"Search threw exception: {e}")
@@ -964,7 +993,11 @@ def create_mcp_server() -> FastMCP:
                     else:
                         iterable = raw_results
                         # If nested (list-of-lists), flatten one level
-                        if isinstance(raw_results, list) and raw_results and isinstance(raw_results[0], list):
+                        if (
+                            isinstance(raw_results, list)
+                            and raw_results
+                            and isinstance(raw_results[0], list)
+                        ):
                             iterable = [hit for sub in raw_results for hit in sub]
 
                         for hit in iterable:
@@ -977,7 +1010,13 @@ def create_mcp_server() -> FastMCP:
                                     h = {}
                                     try:
                                         # hit may have 'metadata', 'text', 'url', 'id', 'score'
-                                        for attr in ("id", "url", "text", "metadata", "score"):
+                                        for attr in (
+                                            "id",
+                                            "url",
+                                            "text",
+                                            "metadata",
+                                            "score",
+                                        ):
                                             if hasattr(hit, attr):
                                                 h[attr] = getattr(hit, attr)
                                     except Exception:
@@ -987,7 +1026,9 @@ def create_mcp_server() -> FastMCP:
                                 # Ensure metadata is a dict (may be JSON string)
                                 try:
                                     if isinstance(h.get("metadata"), str):
-                                        h["metadata"] = json.loads(h.get("metadata") or "{}")
+                                        h["metadata"] = json.loads(
+                                            h.get("metadata") or "{}"
+                                        )
                                 except Exception:
                                     # leave as original if parsing fails
                                     pass
@@ -1000,7 +1041,9 @@ def create_mcp_server() -> FastMCP:
                                     # assume 'vector' when db.search returned from a vector backend.
                                     h["_search_mode"] = "vector"
                                 if "_query_vector_len" not in h:
-                                    h["_query_vector_len"] = diagnostics.get("query_vector_len")
+                                    h["_query_vector_len"] = diagnostics.get(
+                                        "query_vector_len"
+                                    )
 
                                 normalized_hits.append(h)
                             except Exception:

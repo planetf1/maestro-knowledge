@@ -272,7 +272,9 @@ class WeaviateVectorDatabase(VectorDatabase):
                         if chunking_conf:
                             new_meta["chunking"] = {
                                 "strategy": (chunking_conf or {}).get("strategy"),
-                                "parameters": (chunking_conf or {}).get("parameters", {}),
+                                "parameters": (chunking_conf or {}).get(
+                                    "parameters", {}
+                                ),
                             }
                     except Exception:
                         pass

@@ -36,4 +36,3 @@ def test_resync_vector_databases_registers_collections(monkeypatch):
     # Ensure that the vector_databases dict has entries for the collections
     assert "coll_a" in server.vector_databases
     assert "coll_b" in server.vector_databases
-

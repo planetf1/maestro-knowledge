@@ -22,7 +22,6 @@ class ChunkingConfig:
             self.parameters = {}
 
 
-
 # Strategy : None
 # Returns the entire input text as a single chunk. Also default for compatibility
 def _none_chunk(text: str, **_kwargs) -> List[Dict[str, object]]:
@@ -36,7 +35,6 @@ def _none_chunk(text: str, **_kwargs) -> List[Dict[str, object]]:
             "total": 1,
         }
     ]
-
 
 
 # Fixed Strategy
@@ -88,7 +86,6 @@ def _split_sentences(text: str) -> List[Tuple[int, int]]:
     if not sentences and text:
         sentences = [(0, len(text))]
     return sentences
-
 
 
 # Sentence splitting
@@ -203,7 +200,7 @@ def _sentence_chunk(
     return chunks
 
 
-# Add more strategies here as needed 
+# Add more strategies here as needed
 _STRATEGIES: Dict[str, Callable[..., List[Dict[str, object]]]] = {
     "None": _none_chunk,
     "Fixed": _fixed_chunk,
