@@ -6,6 +6,7 @@ A modular vector database interface supporting multiple backends (Weaviate, Milv
 
 - **Multi-backend support**: Weaviate and Milvus vector databases
 - **Flexible embedding strategies**: Support for pre-computed vectors and multiple embedding models
+- **Pluggable document chunking**: None (default), Fixed (size/overlap), Sentence-aware
 - **Unified API**: Consistent interface across different vector database implementations
 - **Factory pattern**: Easy creation and switching between database types
 - **MCP Server**: Model Context Protocol server for AI agent integration with multi-database support
@@ -85,6 +86,7 @@ db.cleanup()
 The project includes a Go-based CLI tool for managing vector databases through the MCP server. For comprehensive CLI usage, installation, and examples, see [cli/README.md](cli/README.md).
 
 **Quick CLI Examples:**
+ 
 ```bash
 # Build and use the CLI
 cd cli && go build -o maestro-k src/*.go
@@ -97,6 +99,9 @@ cd cli && go build -o maestro-k src/*.go
 
 # Query documents
 ./maestro-k query "What is the main topic?" --vdb=my-database
+
+# Resync any Milvus collections into the MCP server's in-memory registry (use after server restart)
+./maestro-k resync-databases
 ```
 
 ### MCP Server
@@ -113,6 +118,10 @@ The project includes a Model Context Protocol (MCP) server that exposes vector d
 
 # Check server status
 ./stop.sh status
+
+# Manual resync tool (available as an MCP tool and through the CLI `resync-databases` command):
+# After restarting the MCP server, run the resync to register existing Milvus collections:
+# ./maestro-k resync-databases
 ```
 
 ## Embedding Strategies
@@ -133,6 +142,7 @@ supported = db.supported_embeddings()
 print(f"Supported embeddings: {supported}")
 
 # Write documents with specific embedding
+(Deprecated) Embedding is configured per collection. Any per-document embedding specified in writes is ignored.
 db.write_documents(documents, embedding="text-embedding-3-small")
 ```
 
@@ -171,6 +181,9 @@ cd cli && ./build.sh         # Build the CLI tool
 ```bash
 # Run all tests (CLI + MCP + Integration)
 ./test.sh all
+
+# Skip external integration when no server is available
+MAESTRO_K_SKIP_INTEGRATION=true ./test.sh all
 
 # Run specific test suites
 ./test.sh cli                # Run only CLI tests
@@ -237,6 +250,7 @@ maestro-knowledge/
 │   │   ├── server.py        # Main MCP server
 │   │   ├── mcp_config.json  # MCP client configuration
 │   │   └── README.md        # MCP server documentation
+│   ├── chunking.py          # Pluggable document chunking utilities
 │   └── vector_db.py         # Main module exports
 ├── cli/                     # Go CLI tool
 │   ├── src/                 # Go source code
@@ -280,6 +294,7 @@ maestro-knowledge/
 - `VECTOR_DB_TYPE`: Default vector database type (defaults to "weaviate")
 - `OPENAI_API_KEY`: Required for OpenAI embedding models
 - `MAESTRO_KNOWLEDGE_MCP_SERVER_URI`: MCP server URI for CLI tool
+- `MAESTRO_K_SKIP_INTEGRATION`: If true/1, skips integration tests in `./test.sh all`
 - `MILVUS_URI`: Milvus connection URI. **Important**: Do not use quotes around the URI value in your `.env` file (e.g., `MILVUS_URI=http://localhost:19530` instead of `MILVUS_URI="http://localhost:19530"`).
 - Database-specific environment variables for Weaviate and Milvus connections
 

@@ -21,10 +21,11 @@ warnings.filterwarnings(
 # Suppress external package deprecation warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-import sys
 import os
+import sys
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -341,6 +342,40 @@ class TestWeaviateVectorDatabase:
             mock_client.collections.create.assert_called_once()
             assert mock_batch.add_object.call_count == 1
 
+    # per-document embedding isn't consistent with vector search - removed (api kept for compatibility)
+    def test_write_documents_ignores_per_write_embedding_with_warning(self):
+        """When collection embedding is set, per-write embedding should be ignored and warn (Weaviate)."""
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
+            mock_client = MagicMock()
+            mock_collection = MagicMock()
+            mock_batch = MagicMock()
+            mock_batch_context = MagicMock()
+
+            mock_client.collections.exists.return_value = True
+            mock_client.collections.get.return_value = mock_collection
+            mock_collection.batch.dynamic.return_value = mock_batch_context
+            mock_batch_context.__enter__.return_value = mock_batch
+            mock_connect.return_value = mock_client
+
+            db = WeaviateVectorDatabase()
+            # Simulate prior setup setting embedding model
+            db.embedding_model = "text-embedding-3-small"
+
+            docs = [{"url": "u", "text": "abc", "metadata": {}}]
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                db.write_documents(docs, embedding="text-embedding-ada-002")
+                assert any("per-collection" in str(x.message) for x in w)
+
     def test_write_documents_unsupported_embedding(self):
         """Test writing documents with unsupported embedding."""
         with (
@@ -627,6 +662,53 @@ class TestWeaviateVectorDatabase:
 
             assert db.db_type == "weaviate"
 
+    def test_get_collection_info_includes_chunking(self):
+        """get_collection_info should include chunking config set at setup time."""
+        with (
+            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch.dict(
+                os.environ,
+                {
+                    "WEAVIATE_API_KEY": "test-key",
+                    "WEAVIATE_URL": "https://test.weaviate.network",
+                },
+            ),
+        ):
+            # Mock client and collection
+            mock_client = MagicMock()
+            mock_connect.return_value = mock_client
+            mock_collection = MagicMock()
+            mock_client.collections.exists.return_value = True
+            mock_client.collections.get.return_value = mock_collection
+            # config.get returns an object with attributes used in code
+            mock_cfg = MagicMock()
+            mock_cfg.description = "Test collection"
+            mock_cfg.vectorizer = "text2vec-openai"
+            mock_cfg.properties = []
+            mock_cfg.module_config = {}
+            mock_collection.config.get.return_value = mock_cfg
+
+            db = WeaviateVectorDatabase()
+            chunk_cfg = {
+                "strategy": "Fixed",
+                "parameters": {"chunk_size": 512, "overlap": 0},
+            }
+            db.setup(
+                embedding="text-embedding-3-small",
+                collection_name="InfoCol",
+                chunking_config=chunk_cfg,
+            )
+
+            info = db.get_collection_info("InfoCol")
+            assert info["name"] == "InfoCol"
+            assert info["db_type"] == "weaviate"
+            assert info.get("chunking") == chunk_cfg
+            # embedding may be stored as we set in setup
+            assert info.get("embedding") in (
+                "text-embedding-3-small",
+                "text2vec-openai",
+            )
+
     def test_get_document_success(self):
         """Test successfully getting a document by name."""
         with (
@@ -643,19 +725,34 @@ class TestWeaviateVectorDatabase:
             mock_collection = MagicMock()
             mock_result = MagicMock()
 
-            # Create mock object with matching doc_name
-            mock_object = MagicMock()
-            mock_object.uuid = "doc123"
-            mock_object.properties = {
+            # Create mock objects representing two chunks for the same document
+            mock_object1 = MagicMock()
+            mock_object1.uuid = "chunk1"
+            mock_object1.properties = {
                 "url": "test_url",
-                "text": "test content",
+                "text": "Hello ",
                 "metadata": {
                     "doc_name": "test_doc",
                     "collection_name": "test_collection",
+                    "chunk_sequence_number": 1,
+                    "total_chunks": 2,
                 },
             }
 
-            mock_result.objects = [mock_object]
+            mock_object2 = MagicMock()
+            mock_object2.uuid = "chunk2"
+            mock_object2.properties = {
+                "url": "test_url",
+                "text": "World",
+                "metadata": {
+                    "doc_name": "test_doc",
+                    "collection_name": "test_collection",
+                    "chunk_sequence_number": 2,
+                    "total_chunks": 2,
+                },
+            }
+
+            mock_result.objects = [mock_object1, mock_object2]
             mock_collection.query.fetch_objects.return_value = mock_result
             mock_client.collections.exists.return_value = True
             mock_client.collections.get.return_value = mock_collection
@@ -664,9 +761,9 @@ class TestWeaviateVectorDatabase:
             db = WeaviateVectorDatabase()
             result = db.get_document("test_doc", "test_collection")
 
-            assert result["id"] == "doc123"
+            assert result["id"] in ("chunk1", "chunk2")
             assert result["url"] == "test_url"
-            assert result["text"] == "test content"
+            assert result["text"] == "Hello World"
             assert result["metadata"]["doc_name"] == "test_doc"
             assert result["metadata"]["collection_name"] == "test_collection"
 

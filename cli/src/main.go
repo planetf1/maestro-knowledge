@@ -120,8 +120,11 @@ A command-line interface for working with Maestro Knowledge configurations.`,
 	rootCmd.AddCommand(collectionCmd)
 	rootCmd.AddCommand(documentCmd)
 	rootCmd.AddCommand(embeddingCmd)
+	rootCmd.AddCommand(chunkingCmd)
 	rootCmd.AddCommand(queryCmd)
 	rootCmd.AddCommand(searchCmd)
+	rootCmd.AddCommand(diagnoseSearchCmd)
+	rootCmd.AddCommand(resyncCmd)
 	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(statusCmd)
 
@@ -134,6 +137,7 @@ A command-line interface for working with Maestro Knowledge configurations.`,
 	vdbCmd.AddCommand(vdbDeleteCmd)
 
 	collectionCmd.AddCommand(collectionListCmd)
+	collectionCmd.AddCommand(collectionInfoCmd)
 	collectionCmd.AddCommand(collectionCreateCmd)
 	collectionCmd.AddCommand(collectionDeleteCmd)
 
@@ -142,6 +146,9 @@ A command-line interface for working with Maestro Knowledge configurations.`,
 	documentCmd.AddCommand(documentDeleteCmd)
 
 	embeddingCmd.AddCommand(embeddingListCmd)
+
+	// Chunking
+	chunkingCmd.AddCommand(chunkingListCmd)
 
 	// Add contextual help to commands
 	addContextualHelp()

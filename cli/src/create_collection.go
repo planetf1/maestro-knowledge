@@ -72,9 +72,12 @@ Examples:
 	},
 }
 
-// Flags for collection creation
+// Flags for collection creation - consistent chunking/embedding within a collection
 var (
-	collectionEmbedding string
+	collectionEmbedding     string
+	collectionChunkStrategy string
+	collectionChunkSize     int
+	collectionChunkOverlap  int
 )
 
 func init() {
@@ -82,6 +85,9 @@ func init() {
 	commands := []*cobra.Command{createCollectionCmd, createVdbColCmd, createColCmd}
 	for _, cmd := range commands {
 		cmd.Flags().StringVar(&collectionEmbedding, "embedding", "default", "Embedding model to use for the collection")
+		cmd.Flags().StringVar(&collectionChunkStrategy, "chunking-strategy", "None", "Chunking strategy to use for the collection (None, Fixed, Sentence)")
+		cmd.Flags().IntVar(&collectionChunkSize, "chunk-size", 0, "Chunk size in characters (optional, defaults to 512 when strategy != None)")
+		cmd.Flags().IntVar(&collectionChunkOverlap, "chunk-overlap", 0, "Chunk overlap in characters (optional)")
 	}
 }
 
@@ -133,7 +139,23 @@ func createCollection(vdbName, collectionName string) error {
 				createErr = fmt.Errorf("MCP server could not be reached at %s. Please ensure the server is running and accessible", serverURI)
 			}
 		}()
-		createErr = client.CreateCollection(vdbName, collectionName, collectionEmbedding)
+		// Build chunking config if provided
+		var chunkCfg map[string]interface{} = nil
+		if collectionChunkStrategy != "None" {
+			params := map[string]interface{}{}
+			if collectionChunkSize > 0 {
+				params["chunk_size"] = collectionChunkSize
+			}
+			if collectionChunkOverlap > 0 {
+				params["overlap"] = collectionChunkOverlap
+			}
+			chunkCfg = map[string]interface{}{
+				"strategy":   collectionChunkStrategy,
+				"parameters": params,
+			}
+		}
+
+		createErr = client.CreateCollectionWithChunking(vdbName, collectionName, collectionEmbedding, chunkCfg)
 	}()
 
 	if createErr != nil {
