@@ -21,7 +21,6 @@ The query agent will search through the documents and return relevant documents.
 		query := args[0]
 		vdbName, _ := cmd.Flags().GetString("vdb")
 		collectionName, _ := cmd.Flags().GetString("collection")
-		diagnose, _ := cmd.Flags().GetBool("diagnose")
 
 		// Validate inputs
 		if strings.TrimSpace(query) == "" {
@@ -42,11 +41,11 @@ The query agent will search through the documents and return relevant documents.
 			collectionName = "Test_collection_lowercase" // Default collection
 		}
 
-		return searchVectorDatabase(vdbName, query, collectionName, diagnose)
+		return searchVectorDatabase(vdbName, query, collectionName)
 	},
 }
 
-func searchVectorDatabase(dbName, query, collectionName string, diagnose bool) error {
+func searchVectorDatabase(dbName, query, collectionName string) error {
 	// Initialize progress indicator
 	var progress *ProgressIndicator
 	if ShouldShowProgress() {
@@ -98,12 +97,7 @@ func searchVectorDatabase(dbName, query, collectionName string, diagnose bool) e
 	}
 
 	// Call the search method
-	var result string
-	if diagnose {
-		result, err = client.DiagnoseSearch(dbName, query, docLimit, collectionName)
-	} else {
-		result, err = client.Search(dbName, query, docLimit, collectionName)
-	}
+	result, err := client.Search(dbName, query, docLimit, collectionName)
 	if err != nil {
 		if progress != nil {
 			progress.StopWithError("Search failed")
@@ -124,5 +118,4 @@ func init() {
 	searchCmd.Flags().String("vdb", "", "Vector database name")
 	searchCmd.Flags().String("collection", "", "Collection name to search in")
 	searchCmd.Flags().IntVarP(&docLimit, "doc-limit", "d", 5, "Maximum number of documents to consider")
-	searchCmd.Flags().Bool("diagnose", false, "Run a diagnostic search that returns embeddings and raw results")
 }
