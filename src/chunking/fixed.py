@@ -1,0 +1,43 @@
+"""Fixed-size chunking strategy with optional overlap."""
+
+from typing import Dict, List
+
+
+def fixed_chunk(
+    text: str, chunk_size: int = 512, overlap: int = 0
+) -> List[Dict[str, object]]:
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be > 0")
+    if overlap < 0:
+        raise ValueError("overlap must be >= 0")
+
+    step = max(1, chunk_size - overlap)
+    chunks: List[Dict[str, object]] = []
+    length = len(text)
+    seq = 0
+    for start in range(0, length, step):
+        end = min(start + chunk_size, length)
+        piece = text[start:end]
+        chunks.append(
+            {
+                "text": piece,
+                "offset_start": start,
+                "offset_end": end,
+                "chunk_size": len(piece),
+                "sequence": seq,
+                "total": 0,  # filled in later
+            }
+        )
+        seq += 1
+
+    total = len(chunks)
+    for c in chunks:
+        c["total"] = total
+
+    return chunks
+
+
+# Register
+from .common import register_strategy
+
+register_strategy("Fixed", fixed_chunk)
