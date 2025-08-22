@@ -123,7 +123,6 @@ A command-line interface for working with Maestro Knowledge configurations.`,
 	rootCmd.AddCommand(chunkingCmd)
 	rootCmd.AddCommand(queryCmd)
 	rootCmd.AddCommand(searchCmd)
-	rootCmd.AddCommand(diagnoseSearchCmd)
 	rootCmd.AddCommand(resyncCmd)
 	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(statusCmd)

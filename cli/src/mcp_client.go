@@ -738,46 +738,6 @@ func (c *MCPClient) Search(dbName, query string, limit int, collectionName strin
 	return string(prettyJSON), nil
 }
 
-// DiagnoseSearch calls the diagnose_search tool on the MCP server
-func (c *MCPClient) DiagnoseSearch(dbName, query string, limit int, collectionName string) (string, error) {
-	params := map[string]interface{}{
-		"input": map[string]interface{}{
-			"db_name":         dbName,
-			"query":           query,
-			"limit":           limit,
-			"collection_name": collectionName,
-		},
-	}
-
-	response, err := c.callMCPServer("diagnose_search", params)
-	if err != nil {
-		return "", err
-	}
-
-	// Check for error in response
-	if response.Error != nil {
-		return "", fmt.Errorf("MCP server error: %s", response.Error.Message)
-	}
-
-	// The response should contain diagnostic info; support both string and structured results
-	if response.Result == nil {
-		return "", fmt.Errorf("no response from MCP server")
-	}
-
-	// If the server returned a string, return it directly
-	if resultStr, ok := response.Result.(string); ok {
-		return resultStr, nil
-	}
-
-	// Otherwise, try to marshal the structured result into pretty JSON
-	prettyJSON, err := json.MarshalIndent(response.Result, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("unexpected response type from MCP server")
-	}
-
-	return string(prettyJSON), nil
-}
-
 // ResyncDatabases calls the resync_databases tool on the MCP server
 func (c *MCPClient) ResyncDatabases() (string, error) {
 	// No params required
