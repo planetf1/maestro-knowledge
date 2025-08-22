@@ -64,6 +64,35 @@ var collectionCmd = &cobra.Command{
   maestro-k collection delete my-collection --vdb=my-vdb`,
 }
 
+var collectionInfoCmd = &cobra.Command{
+	Use:     "info",
+	Short:   "Show collection info",
+	Long:    `Show detailed information about a collection including document count, embedding, and chunking configuration.`,
+	Example: `  maestro-k collection info --vdb=my-vdb --name=my-collection`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		vdbName, _ := cmd.Flags().GetString("vdb")
+		collectionName, _ := cmd.Flags().GetString("name")
+
+		// Interactive selection if missing
+		if vdbName == "" {
+			var err error
+			vdbName, err = PromptForVectorDatabase(vdbName)
+			if err != nil {
+				return fmt.Errorf("failed to select vector database: %w", err)
+			}
+		}
+		if collectionName == "" {
+			var err error
+			collectionName, err = PromptForCollection(vdbName, collectionName)
+			if err != nil {
+				return fmt.Errorf("failed to select collection: %w", err)
+			}
+		}
+
+		return showCollectionInfo(vdbName, collectionName)
+	},
+}
+
 var collectionListCmd = &cobra.Command{
 	Use:     "list",
 	Short:   "List collections",
@@ -298,12 +327,33 @@ var statusCmd = &cobra.Command{
 	},
 }
 
+// Chunking Commands
+var chunkingCmd = &cobra.Command{
+	Use:     "chunking",
+	Short:   "Manage chunking strategies",
+	Long:    `Discover and manage document chunking strategies.`,
+	Aliases: []string{"chunks"},
+	Example: `  maestro-k chunking list`,
+}
+
+var chunkingListCmd = &cobra.Command{
+	Use:     "list",
+	Short:   "List supported chunking strategies",
+	Long:    `List supported document chunking strategies and default parameters.`,
+	Example: `  maestro-k chunking list`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return listChunkingStrategies()
+	},
+}
+
 func init() {
 	// Add flags to collection commands
 	collectionListCmd.Flags().String("vdb", "", "Vector database name")
 	collectionCreateCmd.Flags().String("vdb", "", "Vector database name")
 	collectionCreateCmd.Flags().String("name", "", "Collection name")
 	collectionDeleteCmd.Flags().String("vdb", "", "Vector database name")
+	collectionInfoCmd.Flags().String("vdb", "", "Vector database name")
+	collectionInfoCmd.Flags().String("name", "", "Collection name")
 
 	// Add flags to document commands
 	documentListCmd.Flags().String("vdb", "", "Vector database name")

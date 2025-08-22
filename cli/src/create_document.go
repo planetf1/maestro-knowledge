@@ -18,8 +18,8 @@ Usage:
   maestro-k create document VDB_NAME COLLECTION_NAME DOC_NAME --doc-file-name=FILE_NAME [options]
 
 Examples:
-  maestro-k create document my-database my-collection my-doc --file-name=document.txt
-  maestro-k create document my-database my-collection my-doc --file-name=document.txt --embed=text-embedding-3-small`,
+	maestro-k create document my-database my-collection my-doc --file-name=document.txt
+	# NOTE: --embed is deprecated and ignored; embedding is per collection`,
 	Args: cobra.ExactArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Suppress usage for all errors except usage errors
@@ -41,8 +41,8 @@ Usage:
   maestro-k create vdb-doc VDB_NAME COLLECTION_NAME DOC_NAME --file-name=FILE_NAME [options]
 
 Examples:
-  maestro-k create vdb-doc my-database my-collection my-doc --file-name=document.txt
-  maestro-k create vdb-doc my-database my-collection my-doc --file-name=document.txt --embed=text-embedding-3-small`,
+	maestro-k create vdb-doc my-database my-collection my-doc --file-name=document.txt
+	# NOTE: --embed is deprecated and ignored; embedding is per collection`,
 	Args: cobra.ExactArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Suppress usage for all errors except usage errors
@@ -64,8 +64,8 @@ Usage:
   maestro-k create doc VDB_NAME COLLECTION_NAME DOC_NAME --file-name=FILE_NAME [options]
 
 Examples:
-  maestro-k create doc my-database my-collection my-doc --file-name=document.txt
-  maestro-k create doc my-database my-collection my-doc --file-name=document.txt --embed=text-embedding-3-small`,
+	maestro-k create doc my-database my-collection my-doc --file-name=document.txt
+	# NOTE: --embed is deprecated and ignored; embedding is per collection`,
 	Args: cobra.ExactArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Suppress usage for all errors except usage errors
@@ -98,7 +98,8 @@ func init() {
 	for _, cmd := range commands {
 		cmd.Flags().StringVar(&documentFileName, "file-name", "", "File name containing the document content")
 		cmd.Flags().StringVar(&documentFileName, "doc-file-name", "", "File name containing the document content (alias for file-name)")
-		cmd.Flags().StringVar(&documentEmbedding, "embed", "default", "Embedding model to use for the document")
+		// DEPRECATED: embedding per document is ignored; kept temporarily for compatibility
+		cmd.Flags().StringVar(&documentEmbedding, "embed", "default", "(DEPRECATED) Embedding model for the document (ignored; embedding is per collection)")
 	}
 }
 
@@ -129,7 +130,7 @@ func createDocument(vdbName, collectionName, docName string) error {
 
 	if dryRun {
 		if !silent {
-			fmt.Printf("[DRY RUN] Would create document '%s' in collection '%s' of vector database '%s' with embedding '%s' from file '%s'\n", docName, collectionName, vdbName, documentEmbedding, fileName)
+			fmt.Printf("[DRY RUN] Would create document '%s' in collection '%s' of vector database '%s' from file '%s'\n", docName, collectionName, vdbName, fileName)
 		}
 		if progress != nil {
 			progress.Stop("Dry run completed")
@@ -205,26 +206,9 @@ func createDocument(vdbName, collectionName, docName string) error {
 		return fmt.Errorf("collection '%s' does not exist in vector database '%s'. Please create it first", collectionName, vdbName)
 	}
 
-	// Validate embedding if specified
-	if documentEmbedding != "default" {
-		if progress != nil {
-			progress.Update("Validating embedding...")
-		}
-
-		embeddingsResult, err := client.GetSupportedEmbeddings(vdbName)
-		if err != nil {
-			if progress != nil {
-				progress.StopWithError("Failed to get embeddings")
-			}
-			return fmt.Errorf("failed to get supported embeddings: %w", err)
-		}
-
-		if !strings.Contains(strings.ToLower(embeddingsResult), strings.ToLower(documentEmbedding)) {
-			if progress != nil {
-				progress.StopWithError("Embedding not supported")
-			}
-			return fmt.Errorf("embedding '%s' is not supported by vector database '%s'", documentEmbedding, vdbName)
-		}
+	// Deprecated: warn if user passed a non-default embedding for document creation
+	if documentEmbedding != "default" && !silent {
+		fmt.Printf("Warning: --embed is deprecated and ignored on document creation; embedding is configured per collection.\n")
 	}
 
 	if progress != nil {

@@ -445,3 +445,36 @@ func TestListDocumentsHelp(t *testing.T) {
 		t.Errorf("Expected help to mention --vdb flag, got: %s", outputStr)
 	}
 }
+
+func TestListChunkingStrategiesDryRun(t *testing.T) {
+	// Use dry-run mode since we don't have a real MCP server running
+	cmd := exec.Command("../maestro-k", "chunking", "list", "--dry-run")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("Chunking list command failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "[DRY RUN] Would list chunking strategies") {
+		t.Errorf("Expected dry-run message, got: %s", outputStr)
+	}
+}
+
+func TestListChunkingStrategiesVerbose(t *testing.T) {
+	// Use dry-run mode since we don't have a real MCP server running
+	cmd := exec.Command("../maestro-k", "chunking", "list", "--verbose", "--dry-run")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("Chunking list command with verbose failed: %v, output: %s", err, string(output))
+	}
+
+	outputStr := string(output)
+	if !strings.Contains(outputStr, "Listing supported chunking strategies") {
+		t.Errorf("Expected verbose message, got: %s", outputStr)
+	}
+	if !strings.Contains(outputStr, "[DRY RUN] Would list chunking strategies") {
+		t.Errorf("Expected dry-run message, got: %s", outputStr)
+	}
+}

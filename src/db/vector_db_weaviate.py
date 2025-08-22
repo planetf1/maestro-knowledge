@@ -3,7 +3,7 @@
 
 import json
 import warnings
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 # Suppress Pydantic deprecation warnings from dependencies
 warnings.filterwarnings(
@@ -17,6 +17,8 @@ warnings.filterwarnings(
     category=DeprecationWarning,
     message=".*Support for class-based `config`.*",
 )
+
+from src.chunking import ChunkingConfig, chunk_text
 
 from .vector_db_base import VectorDatabase
 
@@ -54,6 +56,7 @@ class WeaviateVectorDatabase(VectorDatabase):
     def _create_client(self):
         """Create the Weaviate client."""
         import os
+
         import weaviate
         from weaviate.auth import Auth
 
@@ -124,7 +127,12 @@ class WeaviateVectorDatabase(VectorDatabase):
 
         return vectorizer_mapping[embedding]
 
-    def setup(self, embedding: str = "default", collection_name: str = None):
+    def setup(
+        self,
+        embedding: str = "default",
+        collection_name: str = None,
+        chunking_config: Dict[str, Any] = None,
+    ):
         """
         Set up Weaviate collection if it doesn't exist.
 
@@ -132,7 +140,7 @@ class WeaviateVectorDatabase(VectorDatabase):
             embedding: Embedding model to use for the collection
             collection_name: Name of the collection to set up (defaults to self.collection_name)
         """
-        from weaviate.classes.config import Property, DataType
+        from weaviate.classes.config import DataType, Property
 
         # Use the specified collection name or fall back to the default
         target_collection = (
@@ -141,6 +149,15 @@ class WeaviateVectorDatabase(VectorDatabase):
 
         # Store the embedding model
         self.embedding_model = embedding
+
+        # Track collection metadata including chunking
+        if not hasattr(self, "_collections_metadata"):
+            self._collections_metadata = {}
+        target_meta = {
+            "embedding": embedding,
+            "chunking": chunking_config or {"strategy": "None", "parameters": {}},
+        }
+        self._collections_metadata[target_collection] = target_meta
 
         if not self.client.collections.exists(target_collection):
             vectorizer_config = self._get_vectorizer_config(embedding)
@@ -167,6 +184,14 @@ class WeaviateVectorDatabase(VectorDatabase):
                     ),
                 ],
             )
+            # Optionally store meta in client if supported
+            try:
+                if hasattr(self.client.collections, "set_metadata"):
+                    self.client.collections.set_metadata(
+                        target_collection, self._collections_metadata[target_collection]
+                    )
+            except Exception:
+                pass
 
     def write_documents(
         self,
@@ -174,6 +199,8 @@ class WeaviateVectorDatabase(VectorDatabase):
         embedding: str = "default",
         collection_name: str = None,
     ):
+        # TODO(embedding): Per-write 'embedding' parameter is deprecated. Collection-level embedding
+        #                  set via setup() should be used. This parameter will be removed or ignored in a future release.
         """
         Write documents to Weaviate.
 
@@ -189,7 +216,7 @@ class WeaviateVectorDatabase(VectorDatabase):
             collection_name if collection_name is not None else self.collection_name
         )
 
-        # Validate embedding parameter
+        # Validate embedding parameter but prefer collection-level embedding
         if embedding not in self.supported_embeddings():
             raise ValueError(
                 f"Unsupported embedding: {embedding}. Supported: {self.supported_embeddings()}"
@@ -199,17 +226,99 @@ class WeaviateVectorDatabase(VectorDatabase):
         if not self.client.collections.exists(target_collection):
             self.setup(embedding, target_collection)
 
+        # If the collection has an embedding set and the caller provided a different one,
+        # ignore the per-write parameter and warn (deprecation path).
+        if self.embedding_model and embedding not in ("default", self.embedding_model):
+            warnings.warn(
+                "Embedding model should be configured per-collection. The per-write 'embedding' parameter is ignored.",
+                stacklevel=2,
+            )
+
         collection = self.client.collections.get(target_collection)
+        # Determine chunking config for this collection
+        coll_meta = getattr(self, "_collections_metadata", {}).get(
+            target_collection, {}
+        )
+        chunking_conf = coll_meta.get("chunking") if coll_meta else None
+
+        # Collect lightweight stats similar to Milvus implementation
+        import time
+
+        stats_per_doc: List[Dict[str, Any]] = []
+        total_chunks = 0
+        build_start = time.perf_counter()
+
         with collection.batch.dynamic() as batch:
-            for doc in documents:
-                metadata_text = json.dumps(doc.get("metadata", {}), ensure_ascii=False)
-                batch.add_object(
-                    properties={
-                        "url": doc.get("url", ""),
-                        "text": doc.get("text", ""),
-                        "metadata": metadata_text,
+            for idx, doc in enumerate(documents):
+                doc_start = time.perf_counter()
+                orig_metadata = dict(doc.get("metadata", {}))
+                text = doc.get("text", "")
+
+                cfg = ChunkingConfig(
+                    strategy=(chunking_conf or {}).get("strategy", "None"),
+                    parameters=(chunking_conf or {}).get("parameters", {}),
+                )
+                chunks = chunk_text(text, cfg)
+
+                per_doc_chunk_count = 0
+                per_doc_char_count = 0
+
+                for chunk in chunks:
+                    new_meta = dict(orig_metadata)
+                    if "doc_name" in orig_metadata:
+                        new_meta["doc_name"] = orig_metadata.get("doc_name")
+                    # include chunking policy for traceability
+                    try:
+                        if chunking_conf:
+                            new_meta["chunking"] = {
+                                "strategy": (chunking_conf or {}).get("strategy"),
+                                "parameters": (chunking_conf or {}).get("parameters", {}),
+                            }
+                    except Exception:
+                        pass
+                    new_meta.update(
+                        {
+                            "chunk_sequence_number": int(chunk["sequence"]),
+                            "total_chunks": int(chunk["total"]),
+                            "offset_start": int(chunk["offset_start"]),
+                            "offset_end": int(chunk["offset_end"]),
+                            "chunk_size": int(chunk["chunk_size"]),
+                        }
+                    )
+                    per_doc_chunk_count += 1
+                    per_doc_char_count += len(chunk.get("text", "") or "")
+
+                    metadata_text = json.dumps(new_meta, ensure_ascii=False)
+                    batch.add_object(
+                        properties={
+                            "url": doc.get("url", ""),
+                            "text": chunk["text"],
+                            "metadata": metadata_text,
+                        }
+                    )
+
+                total_chunks += per_doc_chunk_count
+                stats_per_doc.append(
+                    {
+                        "name": orig_metadata.get("doc_name")
+                        or doc.get("url")
+                        or f"doc_{idx}",
+                        "chunk_count": per_doc_chunk_count,
+                        "char_count": per_doc_char_count,
+                        "duration_ms": int((time.perf_counter() - doc_start) * 1000),
                     }
                 )
+
+        total_duration_ms = int((time.perf_counter() - build_start) * 1000)
+
+        return {
+            "backend": "weaviate",
+            "documents": len(documents),
+            "chunks": total_chunks,
+            "per_document": stats_per_doc,
+            "insert_ms": None,  # not available from client batch API
+            "duration_ms": total_duration_ms,
+        }
 
     def write_documents_to_collection(
         self,
@@ -295,8 +404,6 @@ class WeaviateVectorDatabase(VectorDatabase):
 
             return documents
         except Exception as e:
-            import warnings
-
             warnings.warn(
                 f"Could not list documents from Weaviate collection '{collection_name}': {e}"
             )
@@ -312,8 +419,6 @@ class WeaviateVectorDatabase(VectorDatabase):
             result = collection.query.fetch_objects(limit=10000)
             return len(result.objects)
         except Exception as e:
-            import warnings
-
             warnings.warn(
                 f"Could not get document count for Weaviate collection '{collection_name}': {e}"
             )
@@ -322,51 +427,76 @@ class WeaviateVectorDatabase(VectorDatabase):
     def get_document(
         self, doc_name: str, collection_name: str = None
     ) -> Dict[str, Any]:
-        """Get a specific document by name from a collection in Weaviate."""
+        """Reassemble a document from its chunks by doc_name."""
         target_collection = collection_name or self.collection_name
+        # Ensure collection exists
+        if not self.client.collections.exists(target_collection):
+            raise ValueError(f"Collection '{target_collection}' not found")
 
-        try:
-            # Check if collection exists
-            if not self.client.collections.exists(target_collection):
-                raise ValueError(f"Collection '{target_collection}' not found")
+        # Fetch all objects with metadata containing the doc_name
+        collection = self.client.collections.get(target_collection)
+        result = collection.query.fetch_objects(
+            where=collection.query.filter.by_property("metadata").contains_any(
+                [doc_name]
+            ),
+            limit=10000,
+        )
 
-            # Get the specific collection
-            collection = self.client.collections.get(target_collection)
-
-            # Query for the specific document by doc_name in metadata
-            result = collection.query.fetch_objects(
-                where=collection.query.filter.by_property("metadata").contains_any(
-                    [doc_name]
-                ),
-                limit=1,
-            )
-
-            if not result.objects:
-                raise ValueError(
-                    f"Document '{doc_name}' not found in collection '{target_collection}'"
-                )
-
-            # Find the document with matching doc_name in metadata
-            for obj in result.objects:
-                metadata = obj.properties.get("metadata", {})
-                if isinstance(metadata, dict) and metadata.get("doc_name") == doc_name:
-                    return {
+        chunks = []
+        for obj in result.objects:
+            metadata = obj.properties.get("metadata", {})
+            if isinstance(metadata, str):
+                try:
+                    metadata = json.loads(metadata)
+                except Exception:
+                    metadata = {}
+            if isinstance(metadata, dict) and metadata.get("doc_name") == doc_name:
+                chunks.append(
+                    {
                         "id": obj.uuid,
                         "url": obj.properties.get("url", ""),
                         "text": obj.properties.get("text", ""),
                         "metadata": metadata,
                     }
+                )
 
-            # If we get here, the document wasn't found
+        doc = self.reassemble_document(chunks)
+        if doc is None:
+            # If no chunks or unable to reassemble, raise document-not-found with collection context
             raise ValueError(
                 f"Document '{doc_name}' not found in collection '{target_collection}'"
             )
+        return doc
 
-        except ValueError as e:
-            # Re-raise ValueError as is (these are user-friendly error messages)
-            raise e
-        except Exception as e:
-            raise ValueError(f"Failed to retrieve document '{doc_name}': {e}")
+    def get_document_chunks(
+        self, doc_id: str, collection_name: str = None
+    ) -> List[Dict[str, Any]]:
+        target_collection = collection_name or self.collection_name
+        collection = self.client.collections.get(target_collection)
+        result = collection.query.fetch_objects(
+            where=collection.query.filter.by_property("metadata").contains_any(
+                [doc_id]
+            ),
+            limit=10000,
+        )
+        chunks = []
+        for obj in result.objects:
+            metadata = obj.properties.get("metadata", {})
+            if isinstance(metadata, str):
+                try:
+                    metadata = json.loads(metadata)
+                except Exception:
+                    metadata = {}
+            if isinstance(metadata, dict) and metadata.get("doc_name") == doc_id:
+                chunks.append(
+                    {
+                        "id": obj.uuid,
+                        "url": obj.properties.get("url", ""),
+                        "text": obj.properties.get("text", ""),
+                        "metadata": metadata,
+                    }
+                )
+        return chunks
 
     def count_documents(self) -> int:
         """Get the current count of documents in the collection."""
@@ -403,8 +533,6 @@ class WeaviateVectorDatabase(VectorDatabase):
 
             return collection_names
         except Exception as e:
-            import warnings
-
             warnings.warn(f"Could not list collections from Weaviate: {e}")
             return []
 
@@ -420,6 +548,43 @@ class WeaviateVectorDatabase(VectorDatabase):
                     "document_count": 0,
                     "db_type": "weaviate",
                     "embedding": "unknown",
+                    "chunking": getattr(self, "_collections_metadata", {})
+                    .get(target_collection, {})
+                    .get("chunking"),
+                    "embedding_details": {
+                        "name": self.embedding_model or "unknown",
+                        "vector_size": None,  # unknown from API
+                        "provider": (
+                            "openai"
+                            if (
+                                self.embedding_model
+                                in {
+                                    "text-embedding-ada-002",
+                                    "text-embedding-3-small",
+                                    "text-embedding-3-large",
+                                    "text2vec-openai",
+                                }
+                            )
+                            else (
+                                "weaviate"
+                                if (
+                                    self.embedding_model
+                                    in {"default", "text2vec-weaviate"}
+                                )
+                                else (
+                                    "cohere"
+                                    if self.embedding_model == "text2vec-cohere"
+                                    else (
+                                        "huggingface"
+                                        if self.embedding_model
+                                        == "text2vec-huggingface"
+                                        else "unknown"
+                                    )
+                                )
+                            )
+                        ),
+                        "source": "collection" if self.embedding_model else "unknown",
+                    },
                     "metadata": {"error": "Collection does not exist"},
                 }
 
@@ -467,22 +632,111 @@ class WeaviateVectorDatabase(VectorDatabase):
                 else None,
             }
 
+            # Attempt to include configured chunking metadata if tracked
+            chunking_conf = (
+                getattr(self, "_collections_metadata", {})
+                .get(target_collection, {})
+                .get("chunking")
+            )
+
+            # Build embedding details
+            provider = (
+                "openai"
+                if (
+                    embedding_info
+                    in {
+                        "text-embedding-ada-002",
+                        "text-embedding-3-small",
+                        "text-embedding-3-large",
+                        "text2vec-openai",
+                    }
+                    or self.embedding_model
+                    in {
+                        "text-embedding-ada-002",
+                        "text-embedding-3-small",
+                        "text-embedding-3-large",
+                        "text2vec-openai",
+                    }
+                )
+                else (
+                    "weaviate"
+                    if (
+                        embedding_info in {"default", "text2vec-weaviate"}
+                        or self.embedding_model in {"default", "text2vec-weaviate"}
+                    )
+                    else (
+                        "cohere"
+                        if (
+                            embedding_info == "text2vec-cohere"
+                            or self.embedding_model == "text2vec-cohere"
+                        )
+                        else (
+                            "huggingface"
+                            if (
+                                embedding_info == "text2vec-huggingface"
+                                or self.embedding_model == "text2vec-huggingface"
+                            )
+                            else "unknown"
+                        )
+                    )
+                )
+            )
+
             return {
                 "name": target_collection,
                 "document_count": document_count,
                 "db_type": "weaviate",
                 "embedding": embedding_info,
+                "chunking": chunking_conf,
+                "embedding_details": {
+                    "name": self.embedding_model or embedding_info,
+                    "vector_size": None,  # unknown from Weaviate API
+                    "provider": provider,
+                    "source": "collection" if self.embedding_model else "config",
+                },
                 "metadata": metadata,
             }
         except Exception as e:
-            import warnings
-
             warnings.warn(f"Could not get collection info from Weaviate: {e}")
+            provider = (
+                "openai"
+                if (
+                    self.embedding_model
+                    in {
+                        "text-embedding-ada-002",
+                        "text-embedding-3-small",
+                        "text-embedding-3-large",
+                        "text2vec-openai",
+                    }
+                )
+                else (
+                    "weaviate"
+                    if (self.embedding_model in {"default", "text2vec-weaviate"})
+                    else (
+                        "cohere"
+                        if self.embedding_model == "text2vec-cohere"
+                        else (
+                            "huggingface"
+                            if self.embedding_model == "text2vec-huggingface"
+                            else "unknown"
+                        )
+                    )
+                )
+            )
             return {
                 "name": target_collection,
                 "document_count": 0,
                 "db_type": "weaviate",
                 "embedding": "unknown",
+                "chunking": getattr(self, "_collections_metadata", {})
+                .get(target_collection, {})
+                .get("chunking"),
+                "embedding_details": {
+                    "name": self.embedding_model or "unknown",
+                    "vector_size": None,
+                    "provider": provider,
+                    "source": "collection" if self.embedding_model else "unknown",
+                },
                 "metadata": {"error": str(e)},
             }
 
@@ -495,8 +749,6 @@ class WeaviateVectorDatabase(VectorDatabase):
             try:
                 collection.data.delete_by_id(doc_id)
             except Exception as e:
-                import warnings
-
                 warnings.warn(f"Failed to delete document {doc_id}: {e}")
 
     def delete_collection(self, collection_name: str = None):
@@ -509,8 +761,6 @@ class WeaviateVectorDatabase(VectorDatabase):
                 if target_collection == self.collection_name:
                     self.collection_name = None
         except Exception as e:
-            import warnings
-
             warnings.warn(f"Failed to delete collection {target_collection}: {e}")
 
     def create_query_agent(self):
@@ -552,8 +802,6 @@ class WeaviateVectorDatabase(VectorDatabase):
             return "\n".join(response_parts)
 
         except Exception as e:
-            import warnings
-
             warnings.warn(f"Failed to query Weaviate: {e}")
             return f"Error querying database: {str(e)}"
 
@@ -606,8 +854,6 @@ class WeaviateVectorDatabase(VectorDatabase):
             return documents
 
         except Exception as e:
-            import warnings
-
             warnings.warn(f"Failed to perform vector search for query '{query}': {e}")
             # Fallback to simple keyword matching if vector search fails
             return self._fallback_keyword_search(query, limit, collection_name)
@@ -667,8 +913,6 @@ class WeaviateVectorDatabase(VectorDatabase):
             return []
 
         except Exception as e:
-            import warnings
-
             warnings.warn(f"Fallback keyword search also failed: {e}")
             return []
 
@@ -689,8 +933,6 @@ class WeaviateVectorDatabase(VectorDatabase):
                             pass
             except Exception as e:
                 # Log the error but don't raise it to avoid breaking shutdown
-                import warnings
-
                 warnings.warn(f"Error during Weaviate cleanup: {e}")
             finally:
                 self.client = None

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 )
 
 func listVectorDatabases() error {
@@ -211,6 +213,64 @@ func listCollections(vdbName string) error {
 	return nil
 }
 
+// showCollectionInfo retrieves and displays detailed collection info
+func showCollectionInfo(vdbName, collectionName string) error {
+	if verbose {
+		fmt.Printf("Retrieving info for collection '%s' in vector database '%s'...\n", collectionName, vdbName)
+	}
+
+	if dryRun {
+		fmt.Printf("[DRY RUN] Would retrieve info for collection '%s' in vector database '%s'\n", collectionName, vdbName)
+		return nil
+	}
+
+	serverURI, err := getMCPServerURI(mcpServerURI)
+	if err != nil {
+		return fmt.Errorf("failed to get MCP server URI: %w", err)
+	}
+
+	if verbose {
+		fmt.Printf("Connecting to MCP server at: %s\n", serverURI)
+	}
+
+	client, err := NewMCPClient(serverURI)
+	if err != nil {
+		return fmt.Errorf("failed to create MCP client: %w", err)
+	}
+	defer client.Close()
+
+	// Validate DB exists
+	exists, err := client.DatabaseExists(vdbName)
+	if err != nil {
+		return fmt.Errorf("failed to check if database exists: %w", err)
+	}
+	if !exists {
+		return fmt.Errorf("vector database '%s' does not exist. Please create it first", vdbName)
+	}
+
+	var infoStr string
+	var infoErr error
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				infoErr = fmt.Errorf("MCP server could not be reached at %s. Please ensure the server is running and accessible", serverURI)
+			}
+		}()
+		infoStr, infoErr = client.GetCollectionInfo(vdbName, collectionName)
+	}()
+	if infoErr != nil {
+		return fmt.Errorf("failed to get collection info for '%s': %w", collectionName, infoErr)
+	}
+
+	if !silent {
+		fmt.Println(infoStr)
+	}
+	if verbose {
+		fmt.Printf("Collection info retrieved successfully for '%s' in '%s'\n", collectionName, vdbName)
+	}
+	return nil
+}
+
 func listDocuments(vdbName, collectionName string) error {
 	if verbose {
 		fmt.Printf("Listing documents in collection '%s' for vector database '%s'...\n", collectionName, vdbName)
@@ -276,4 +336,62 @@ func listDocuments(vdbName, collectionName string) error {
 	}
 
 	return nil
+}
+
+// listChunkingStrategies calls the MCP tool to retrieve supported chunking strategies
+func listChunkingStrategies() error {
+	if verbose {
+		fmt.Println("Listing supported chunking strategies...")
+	}
+
+	if dryRun {
+		fmt.Println("[DRY RUN] Would list chunking strategies")
+		return nil
+	}
+
+	// Get MCP server URI
+	serverURI, err := getMCPServerURI(mcpServerURI)
+	if err != nil {
+		return fmt.Errorf("failed to get MCP server URI: %w", err)
+	}
+
+	if verbose {
+		fmt.Printf("Connecting to MCP server at: %s\n", serverURI)
+	}
+
+	// Create MCP client
+	client, err := NewMCPClient(serverURI)
+	if err != nil {
+		return fmt.Errorf("failed to create MCP client: %w", err)
+	}
+	defer client.Close()
+
+	// Use the raw call to the tool (no db context required)
+	resp, err := client.callMCPServer("get_supported_chunking_strategies", nil)
+	if err != nil {
+		return fmt.Errorf("failed to call MCP tool: %w", err)
+	}
+	if resp.Error != nil {
+		return fmt.Errorf("MCP server error: %s", resp.Error.Message)
+	}
+	if resp.Result == nil {
+		return fmt.Errorf("no response from MCP server")
+	}
+
+	// Support both plain string responses and parsed JSON objects
+	if resultStr, ok := resp.Result.(string); ok {
+		fmt.Println(resultStr)
+		return nil
+	}
+
+	// Attempt to pretty-print JSON-like results without HTML escaping
+	// Note: resp.Result may already be a map[string]interface{} or []interface{}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(resp.Result); err == nil {
+		return nil
+	}
+
+	return fmt.Errorf("unexpected response format from MCP server: %T", resp.Result)
 }
