@@ -51,8 +51,15 @@ def resync_vector_databases() -> List[str]:
     """
     added = []
     try:
-        # Import here to avoid optional-dependency import at module load time
-        from ..db.vector_db_milvus import MilvusVectorDatabase
+        # Allow tests to monkeypatch a MilvusVectorDatabase on this module.
+        # If not provided, import the real implementation.
+        import sys
+
+        module = sys.modules[__name__]
+        MilvusVectorDatabase = getattr(module, "MilvusVectorDatabase", None)
+        if MilvusVectorDatabase is None:
+            # Import here to avoid optional-dependency import at module load time
+            from ..db.vector_db_milvus import MilvusVectorDatabase
 
         # Create a temporary Milvus handle to list collections
         temp = MilvusVectorDatabase()
