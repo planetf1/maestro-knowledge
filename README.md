@@ -78,6 +78,75 @@ print(f"Query results: {results}")
 db.cleanup()
 ```
 
+### Weaviate Quick Start
+#### 1. Set Up Weaviate Cloud
+
+Get free account at weaviate.io, create a cluster/credentials and put into .env file in project root.
+
+```bash
+WEAVIATE_API_KEY=your-api-key-here
+WEAVIATE_URL=https://your-cluster-name.weaviate.network
+```
+
+#### 2. Build and Start Services
+```bash
+# Build CLI tool
+cd cli && ./build.sh && cd ..
+
+# Start MCP server
+./start.sh
+```
+
+#### 3. Create Your First Database
+```bash
+# Create config file (my_database.yaml)
+apiVersion: maestro/v1alpha1
+kind: VectorDatabase
+metadata:
+  name: my_first_database
+spec:
+  type: weaviate
+  uri: your-cluster-name.weaviate.network
+  collection_name: my_documents
+  embedding: default
+  mode: remote
+
+# Create the database
+./cli/maestro-k vectordb create my_database.yaml
+
+# Verify creation
+./cli/maestro-k vectordb list
+```
+
+#### 4. Add and Query Documents
+
+As of now, document ingestion process is manual. This will be updated in the future.
+
+```
+#### Create a text file with your content
+echo "Your document content here" > my_doc.txt
+
+# Add document to database
+./cli/maestro-k document create --vdb=my_first_database --collection=My_documents --name=my_doc --file=my_doc.txt
+
+# Query your documents
+./cli/maestro-k query "What is your question?" --vdb=my_first_database --collection=My_documents
+
+# List all documents
+./cli/maestro-k document list --vdb=my_first_database --collection=My_documents
+```
+
+#### 5. Test Your Setup
+```bash
+# Verify everything is working
+./cli/maestro-k vectordb list                    # Should show your database
+./cli/maestro-k collection list --vdb=my_first_database  # Should show collections
+./cli/maestro-k document list --vdb=my_first_database --collection=My_documents  # Should show your documents
+
+# Try a semantic search query
+./cli/maestro-k query "What is machine learning?" --vdb=my_first_database --collection=My_documents
+```
+
 ## Components
 
 ### CLI Tool
