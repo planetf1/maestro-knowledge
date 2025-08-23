@@ -141,6 +141,60 @@ def resync_vector_databases() -> List[str]:
     return added
 
 
+def resync_weaviate_databases() -> List[str]:
+    """Discover Weaviate collections and register them in memory.
+
+    Returns a list of collection names that were registered.
+    Best-effort: skips if Weaviate environment/config is not available.
+    """
+    added: List[str] = []
+    try:
+        # Import lazily to avoid mandatory dependency when Weaviate isn't used
+        from ..db.vector_db_weaviate import WeaviateVectorDatabase
+
+        # Attempt to create a temporary client; this will raise if env is missing
+        temp = WeaviateVectorDatabase()
+        try:
+            collections = temp.list_collections() or []
+        except Exception as e:
+            logger.warning(f"Failed to list Weaviate collections during resync: {e}")
+            return added
+        finally:
+            # Close the temporary connection to avoid resource warnings/leaks
+            try:
+                temp.cleanup()
+            except Exception:
+                pass
+
+        for coll in collections:
+            if coll not in vector_databases:
+                try:
+                    db = WeaviateVectorDatabase(collection_name=coll)
+                    # Best-effort: set embedding info on instance if available
+                    try:
+                        info = db.get_collection_info(coll)
+                        emb_details = (info or {}).get("embedding_details", {})
+                        name = emb_details.get("name")
+                        if name:
+                            db.embedding_model = name
+                    except Exception:
+                        pass
+
+                    vector_databases[coll] = db
+                    added.append(coll)
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to register Weaviate collection '{coll}' during resync: {e}"
+                    )
+    except Exception as e:
+        # Likely missing environment variables or dependency; skip silently but log
+        logger.info(f"Weaviate resync skipped: {e}")
+
+    if added:
+        logger.info(f"Resynced and registered Weaviate collections: {added}")
+    return added
+
+
 def get_database_by_name(db_name: str) -> VectorDatabase:
     """Get a vector database instance by name."""
     if db_name not in vector_databases:
@@ -953,8 +1007,19 @@ def create_mcp_server() -> FastMCP:
     async def resync_databases_tool() -> str:
         """Discover and register Milvus collections into the MCP server's in-memory registry."""
         try:
-            added = resync_vector_databases()
-            return json.dumps({"added": added, "count": len(added)}, indent=2)
+            added_milvus = resync_vector_databases()
+            added_weaviate = resync_weaviate_databases()
+            return json.dumps(
+                {
+                    "milvus": {"added": added_milvus, "count": len(added_milvus)},
+                    "weaviate": {
+                        "added": added_weaviate,
+                        "count": len(added_weaviate),
+                    },
+                    "total_count": len(added_milvus) + len(added_weaviate),
+                },
+                indent=2,
+            )
         except Exception as e:
             logger.exception("Failed to run resync_databases tool")
             return json.dumps({"error": str(e)}, indent=2)
@@ -962,9 +1027,12 @@ def create_mcp_server() -> FastMCP:
     # Attempt an automatic resync on startup so that in-memory registry reflects
     # any pre-existing Milvus collections created outside this process.
     try:
-        added = resync_vector_databases()
-        if added:
-            logger.info(f"Auto-resynced vector databases at startup: {added}")
+        added_m = resync_vector_databases()
+        added_w = resync_weaviate_databases()
+        if added_m or added_w:
+            logger.info(
+                f"Auto-resynced vector databases at startup: milvus={added_m}, weaviate={added_w}"
+            )
     except Exception:
         logger.exception("Error while auto-resyncing vector databases at startup")
 
