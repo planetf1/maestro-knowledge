@@ -1,14 +1,18 @@
 import os
 import sys
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from src.chunking import ChunkingConfig, chunk_text
 
 
 def test_sentence_chunk_simple():
     text = "This is one sentence. This is another! And a third?"
-    cfg = ChunkingConfig(strategy="Sentence", parameters={"chunk_size": 50, "overlap": 0})
+    cfg = ChunkingConfig(
+        strategy="Sentence", parameters={"chunk_size": 50, "overlap": 0}
+    )
     res = chunk_text(text, cfg)
     assert len(res) >= 1
     # ensure sequences are ordered
@@ -18,7 +22,9 @@ def test_sentence_chunk_simple():
 
 def test_sentence_split_long_sentence():
     text = "A" * 1200
-    cfg = ChunkingConfig(strategy="Sentence", parameters={"chunk_size": 500, "overlap": 50})
+    cfg = ChunkingConfig(
+        strategy="Sentence", parameters={"chunk_size": 500, "overlap": 50}
+    )
     res = chunk_text(text, cfg)
     assert len(res) >= 2
     # total should be set on each chunk
@@ -28,7 +34,9 @@ def test_sentence_split_long_sentence():
 def test_sentence_overlap_validation():
     text = "a" * 100
     # overlap > chunk_size should raise for Sentence
-    cfg = ChunkingConfig(strategy="Sentence", parameters={"chunk_size": 10, "overlap": 11})
+    cfg = ChunkingConfig(
+        strategy="Sentence", parameters={"chunk_size": 10, "overlap": 11}
+    )
     try:
         chunk_text(text, cfg)
         assert False, "Expected ValueError for overlap > chunk_size in Sentence"
@@ -36,7 +44,9 @@ def test_sentence_overlap_validation():
         assert "overlap" in str(e)
 
     # negative overlap should raise
-    cfg = ChunkingConfig(strategy="Sentence", parameters={"chunk_size": 10, "overlap": -1})
+    cfg = ChunkingConfig(
+        strategy="Sentence", parameters={"chunk_size": 10, "overlap": -1}
+    )
     try:
         chunk_text(text, cfg)
         assert False, "Expected ValueError for negative overlap in Sentence"
@@ -44,7 +54,9 @@ def test_sentence_overlap_validation():
         assert "overlap" in str(e)
 
     # non-positive chunk size should raise
-    cfg = ChunkingConfig(strategy="Sentence", parameters={"chunk_size": 0, "overlap": 0})
+    cfg = ChunkingConfig(
+        strategy="Sentence", parameters={"chunk_size": 0, "overlap": 0}
+    )
     try:
         chunk_text(text, cfg)
         assert False, "Expected ValueError for chunk_size <= 0 in Sentence"
@@ -52,7 +64,9 @@ def test_sentence_overlap_validation():
         assert "chunk_size" in str(e)
 
     # overlap == chunk_size is allowed and should not hang
-    cfg = ChunkingConfig(strategy="Sentence", parameters={"chunk_size": 10, "overlap": 10})
+    cfg = ChunkingConfig(
+        strategy="Sentence", parameters={"chunk_size": 10, "overlap": 10}
+    )
     res = chunk_text("A" * 25, cfg)
     # Should split into non-overlapping windows with step clamped to chunk_size
     starts = [c["offset_start"] for c in res]
@@ -60,14 +74,18 @@ def test_sentence_overlap_validation():
 
 
 def test_sentence_empty_text_returns_no_chunks():
-    cfg = ChunkingConfig(strategy="Sentence", parameters={"chunk_size": 10, "overlap": 0})
+    cfg = ChunkingConfig(
+        strategy="Sentence", parameters={"chunk_size": 10, "overlap": 0}
+    )
     res = chunk_text("", cfg)
     assert res == []
 
 
 def test_sentence_packs_sentences_and_is_contiguous():
     text = "A. B. C. D. E. F."
-    cfg = ChunkingConfig(strategy="Sentence", parameters={"chunk_size": 5, "overlap": 0})
+    cfg = ChunkingConfig(
+        strategy="Sentence", parameters={"chunk_size": 5, "overlap": 0}
+    )
     res = chunk_text(text, cfg)
     # No chunk exceeds chunk_size
     assert all(len(c["text"]) <= 5 for c in res)
@@ -79,7 +97,9 @@ def test_sentence_packs_sentences_and_is_contiguous():
 def test_sentence_split_long_sentence_with_overlap_windows():
     # One long sentence should be split with the requested overlap
     text = "X" * 30
-    cfg = ChunkingConfig(strategy="Sentence", parameters={"chunk_size": 10, "overlap": 5})
+    cfg = ChunkingConfig(
+        strategy="Sentence", parameters={"chunk_size": 10, "overlap": 5}
+    )
     res = chunk_text(text, cfg)
     starts = [c["offset_start"] for c in res]
     assert starts == [0, 5, 10, 15, 20]
@@ -91,9 +111,13 @@ def test_sentence_split_long_sentence_with_overlap_windows():
 
 
 def test_sentence_mixed_punctuation_and_newlines():
-    text = "One line.\nSecond line!\nThird line? Fourth line without punctuation\nFifth."
+    text = (
+        "One line.\nSecond line!\nThird line? Fourth line without punctuation\nFifth."
+    )
     # Choose a chunk size that packs a couple sentences but not all
-    cfg = ChunkingConfig(strategy="Sentence", parameters={"chunk_size": 30, "overlap": 0})
+    cfg = ChunkingConfig(
+        strategy="Sentence", parameters={"chunk_size": 30, "overlap": 0}
+    )
     res = chunk_text(text, cfg)
     assert len(res) >= 2
     # Chunks are contiguous by offsets
@@ -101,7 +125,9 @@ def test_sentence_mixed_punctuation_and_newlines():
         assert res[i - 1]["offset_end"] == res[i]["offset_start"]
     # Prefer sentence boundaries: at least half of the non-final chunks end at punctuation/newline
     non_final = max(0, len(res) - 1)
-    boundary_count = sum(1 for i in range(len(res) - 1) if res[i]["text"].endswith((".", "!", "?", "\n")))
+    boundary_count = sum(
+        1 for i in range(len(res) - 1) if res[i]["text"].endswith((".", "!", "?", "\n"))
+    )
     assert boundary_count >= (non_final // 2)
 
 
@@ -109,7 +135,9 @@ def test_sentence_exact_fit_boundary():
     # Two sentences exactly fill chunk_size — they should be packed together
     text = "abcd.efg."
     assert len(text) == 9
-    cfg = ChunkingConfig(strategy="Sentence", parameters={"chunk_size": 9, "overlap": 0})
+    cfg = ChunkingConfig(
+        strategy="Sentence", parameters={"chunk_size": 9, "overlap": 0}
+    )
     res = chunk_text(text, cfg)
     assert len(res) == 1
     assert res[0]["text"] == text

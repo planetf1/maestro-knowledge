@@ -1,14 +1,18 @@
 import os
 import sys
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from src.chunking import ChunkingConfig, chunk_text
 
 
 def test_fixed_chunk():
     text = "a" * 1200
-    cfg = ChunkingConfig(strategy="Fixed", parameters={"chunk_size": 500, "overlap": 100})
+    cfg = ChunkingConfig(
+        strategy="Fixed", parameters={"chunk_size": 500, "overlap": 100}
+    )
     res = chunk_text(text, cfg)
     assert len(res) >= 2
     # ensure overlap behavior: step = 400
