@@ -827,21 +827,69 @@ class WeaviateVectorDatabase(VectorDatabase):
             )
             collection = self.client.collections.get(target_collection)
 
-            # Use Weaviate's near_text search for vector similarity
-            result = collection.query.near_text(
-                query=query,
-                limit=limit,
-                include_vector=False,
-            )
+            # Use Weaviate's near_text search for vector similarity and request scoring metadata
+            try:
+                from weaviate.classes.query import MetadataQuery
+
+                metadata_query = MetadataQuery(distance=True, score=True)
+            except (ImportError, AttributeError):
+                # If MetadataQuery isn't available, proceed without explicit scoring
+                metadata_query = None
+
+            if metadata_query is not None:
+                result = collection.query.near_text(
+                    query=query,
+                    limit=limit,
+                    include_vector=False,
+                    return_metadata=metadata_query,
+                )
+            else:
+                result = collection.query.near_text(
+                    query=query,
+                    limit=limit,
+                    include_vector=False,
+                )
 
             documents = []
             for obj in result.objects:
+                # Try to obtain scoring info if the client provided it
+                score_val = None
+                distance_val = None
+                try:
+                    # Newer clients expose score/distance on metadata
+                    if hasattr(obj, "metadata") and obj.metadata is not None:
+                        # Attribute or dict access depending on client version
+                        md = obj.metadata
+                        score_val = getattr(md, "score", None)
+                        if score_val is None and isinstance(md, dict):
+                            score_val = md.get("score")
+                        distance_val = getattr(md, "distance", None)
+                        if distance_val is None and isinstance(md, dict):
+                            distance_val = md.get("distance")
+                except (AttributeError, TypeError, ValueError):
+                    score_val = None
+                    distance_val = None
+
                 doc = {
                     "id": obj.uuid,
                     "url": obj.properties.get("url", ""),
                     "text": obj.properties.get("text", ""),
                     "metadata": obj.properties.get("metadata", "{}"),
                 }
+
+                # Surface score and distance (if available) to consumers like the CLI
+                if score_val is not None:
+                    try:
+                        doc["score"] = float(score_val)
+                    except Exception:
+                        doc["score"] = score_val
+                if distance_val is not None:
+                    try:
+                        doc["distance"] = float(distance_val)
+                    except Exception:
+                        doc["distance"] = distance_val
+                # Mark the search mode for downstream formatting/debugging
+                doc["_search_mode"] = "vector"
 
                 # Try to parse metadata if it's a JSON string
                 try:
