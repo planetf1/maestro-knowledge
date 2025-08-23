@@ -1191,6 +1191,9 @@ class MilvusVectorDatabase(VectorDatabase):
             def _process_hit(hit_obj):
                 # If wrapper returns Hit objects with .entity and .score
                 try:
+                    raw_score = None
+                    raw_distance = None
+                    raw_similarity = None
                     if hasattr(hit_obj, "entity"):
                         entity = hit_obj.entity
                         try:
@@ -1200,21 +1203,21 @@ class MilvusVectorDatabase(VectorDatabase):
                         doc_id = entity.get("id")
                         url = entity.get("url", "")
                         text = entity.get("text", "")
-                        # Try several places for a numeric score/distance
-                        score = None
+                        # Capture potential raw fields
                         try:
-                            # hit_obj may have 'score' attribute
                             if getattr(hit_obj, "score", None) is not None:
-                                score = float(getattr(hit_obj, "score"))
-                            elif getattr(hit_obj, "distance", None) is not None:
-                                score = float(getattr(hit_obj, "distance"))
-                            elif (
-                                isinstance(entity, dict)
-                                and entity.get("score") is not None
-                            ):
-                                score = float(entity.get("score"))
+                                raw_score = getattr(hit_obj, "score")
+                            if getattr(hit_obj, "distance", None) is not None:
+                                raw_distance = getattr(hit_obj, "distance")
+                            if isinstance(entity, dict):
+                                if entity.get("score") is not None:
+                                    raw_score = entity.get("score")
+                                if entity.get("distance") is not None:
+                                    raw_distance = entity.get("distance")
+                                if entity.get("similarity") is not None:
+                                    raw_similarity = entity.get("similarity")
                         except Exception:
-                            score = None
+                            pass
                     elif isinstance(hit_obj, dict):
                         # Flat-dict return shape from some wrappers
                         try:
@@ -1228,45 +1231,80 @@ class MilvusVectorDatabase(VectorDatabase):
                         doc_id = hit_obj.get("id")
                         url = hit_obj.get("url", "")
                         text = hit_obj.get("text", "")
-                        # Some wrappers include a score/distance field under different keys
-                        score = None
-                        try:
-                            if hit_obj.get("score") is not None:
-                                score = float(hit_obj.get("score"))
-                            elif hit_obj.get("distance") is not None:
-                                score = float(hit_obj.get("distance"))
-                            elif hit_obj.get("similarity") is not None:
-                                score = float(hit_obj.get("similarity"))
-                        except Exception:
-                            score = None
+                        # Raw fields under different keys
+                        raw_score = hit_obj.get("score")
+                        raw_distance = hit_obj.get("distance")
+                        raw_similarity = hit_obj.get("similarity")
                     else:
                         # Unknown shape: attempt attribute access defensively
                         metadata = {}
                         doc_id = getattr(hit_obj, "id", None)
                         url = getattr(hit_obj, "url", "")
                         text = getattr(hit_obj, "text", "")
-                        score = None
-                        try:
-                            if getattr(hit_obj, "score", None) is not None:
-                                score = float(getattr(hit_obj, "score"))
-                            elif getattr(hit_obj, "distance", None) is not None:
-                                score = float(getattr(hit_obj, "distance"))
-                        except Exception:
-                            score = None
+                        if getattr(hit_obj, "score", None) is not None:
+                            raw_score = getattr(hit_obj, "score")
+                        if getattr(hit_obj, "distance", None) is not None:
+                            raw_distance = getattr(hit_obj, "distance")
 
                     doc = {
                         "id": doc_id,
                         "url": url,
                         "text": text,
                         "metadata": metadata,
-                        # Ensure we always provide a score field (may be None)
-                        "score": score,
                         # Explicit diagnostic marker so clients can tell vector vs keyword
                         "_search_mode": "vector",
+                        "_metric": "cosine",
                         "_query_vector_len": len(query_vector)
                         if query_vector is not None
                         else None,
                     }
+
+                    # Preserve raw values
+                    try:
+                        if raw_score is not None:
+                            doc["raw_score"] = float(raw_score)
+                    except Exception:
+                        doc["raw_score"] = raw_score
+                    try:
+                        if raw_distance is not None:
+                            doc["raw_distance"] = float(raw_distance)
+                    except Exception:
+                        doc["raw_distance"] = raw_distance
+                    try:
+                        if raw_similarity is not None:
+                            doc["raw_similarity"] = float(raw_similarity)
+                    except Exception:
+                        doc["raw_similarity"] = raw_similarity
+
+                    # Compute normalized similarity [0,1] and distance (assume cosine)
+                    similarity = None
+                    distance = None
+                    try:
+                        if raw_distance is not None:
+                            distance = float(raw_distance)
+                            similarity = max(0.0, min(1.0, 1.0 - distance))
+                        elif raw_similarity is not None:
+                            s = float(raw_similarity)
+                            similarity = max(0.0, min(1.0, s))
+                            distance = 1.0 - similarity
+                        elif raw_score is not None:
+                            s = float(raw_score)
+                            if 0.0 <= s <= 1.000001:
+                                similarity = max(0.0, min(1.0, s))
+                                distance = 1.0 - similarity
+                            elif 1.0 < s <= 2.000001:
+                                distance = s
+                                similarity = max(0.0, min(1.0, 1.0 - s))
+                    except Exception:
+                        pass
+
+                    if distance is not None:
+                        doc["distance"] = distance
+                    if similarity is not None:
+                        doc["similarity"] = similarity
+                        # Maintain 'score' as alias for normalized similarity for client compatibility
+                        doc["score"] = similarity
+
                     return doc
                 except Exception:
                     return None
@@ -1298,6 +1336,13 @@ class MilvusVectorDatabase(VectorDatabase):
                 except Exception:
                     # Give up and return empty
                     return []
+
+            # Add explicit rank 1..N
+            for i, d in enumerate(documents, start=1):
+                try:
+                    d["rank"] = i
+                except Exception:
+                    pass
 
             return documents
 
@@ -1359,7 +1404,14 @@ class MilvusVectorDatabase(VectorDatabase):
                 relevant_docs.sort(key=lambda x: (-x["matches"], -x["text_length"]))
 
                 # Return the top results
-                return [item["doc"] for item in relevant_docs[:limit]]
+                docs = [item["doc"] for item in relevant_docs[:limit]]
+                for i, d in enumerate(docs, start=1):
+                    try:
+                        d["_search_mode"] = "keyword"
+                        d["rank"] = i
+                    except Exception:
+                        pass
+                return docs
 
             return []
 

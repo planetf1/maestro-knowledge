@@ -851,7 +851,7 @@ class WeaviateVectorDatabase(VectorDatabase):
                 )
 
             documents = []
-            for obj in result.objects:
+            for idx, obj in enumerate(result.objects, start=1):
                 # Try to obtain scoring info if the client provided it
                 score_val = None
                 distance_val = None
@@ -877,19 +877,56 @@ class WeaviateVectorDatabase(VectorDatabase):
                     "metadata": obj.properties.get("metadata", "{}"),
                 }
 
-                # Surface score and distance (if available) to consumers like the CLI
+                # Normalized scoring fields
+                # Always mark search mode and metric where known (Weaviate default vectorizer uses cosine)
+                doc["_search_mode"] = "vector"
+                doc["_metric"] = "cosine"
+
+                # Preserve raw scoring fields when identifiable
                 if score_val is not None:
                     try:
-                        doc["score"] = float(score_val)
+                        doc["raw_score"] = float(score_val)
                     except Exception:
-                        doc["score"] = score_val
+                        doc["raw_score"] = score_val
                 if distance_val is not None:
                     try:
-                        doc["distance"] = float(distance_val)
+                        doc["raw_distance"] = float(distance_val)
                     except Exception:
-                        doc["distance"] = distance_val
-                # Mark the search mode for downstream formatting/debugging
-                doc["_search_mode"] = "vector"
+                        doc["raw_distance"] = distance_val
+
+                # Compute normalized similarity [0,1] and distance if possible
+                similarity = None
+                distance = None
+                try:
+                    if distance_val is not None:
+                        distance = float(distance_val)
+                        # For cosine, distance ~ 1 - similarity
+                        similarity = max(0.0, min(1.0, 1.0 - distance))
+                    elif score_val is not None:
+                        s = float(score_val)
+                        if 0.0 <= s <= 1.000001:
+                            # Treat as similarity
+                            similarity = max(0.0, min(1.0, s))
+                            distance = 1.0 - similarity
+                        elif 1.0 < s <= 2.000001:
+                            # Treat as cosine distance
+                            distance = s
+                            similarity = max(0.0, min(1.0, 1.0 - s))
+                        else:
+                            # Unknown scale; leave normalized fields unset
+                            pass
+                except Exception:
+                    pass
+
+                if distance is not None:
+                    doc["distance"] = distance
+                if similarity is not None:
+                    # Provide normalized similarity and keep score as alias for backward compatibility
+                    doc["similarity"] = similarity
+                    doc["score"] = similarity
+
+                # Rank within this result set (1-based)
+                doc["rank"] = idx
 
                 # Try to parse metadata if it's a JSON string
                 try:
@@ -958,7 +995,15 @@ class WeaviateVectorDatabase(VectorDatabase):
                 relevant_docs.sort(key=lambda x: (-x["matches"], -x["text_length"]))
 
                 # Return the top results
-                return [item["doc"] for item in relevant_docs[:limit]]
+                docs = [item["doc"] for item in relevant_docs[:limit]]
+                # Normalize: mark keyword mode and add rank
+                for i, d in enumerate(docs, start=1):
+                    try:
+                        d["_search_mode"] = "keyword"
+                        d["rank"] = i
+                    except Exception:
+                        pass
+                return docs
 
             return []
 
