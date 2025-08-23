@@ -97,8 +97,9 @@ def sentence_chunk(
             if current_text == "":
                 # No in-progress chunk: split this oversized sentence into
                 # fixed-size windows (with optional overlap) directly.
+                step = chunk_size - overlap if chunk_size - overlap > 0 else chunk_size
                 i = 0
-                while i < len(sent):
+                while True:
                     piece = sent[i : i + chunk_size]
                     sstart = start + i
                     send = min(start + i + chunk_size, end)
@@ -113,9 +114,10 @@ def sentence_chunk(
                         }
                     )
                     seq += 1
-                    i += (
-                        chunk_size - overlap if chunk_size - overlap > 0 else chunk_size
-                    )
+                    # Stop when this window reaches the end of the sentence
+                    if i + chunk_size >= len(sent):
+                        break
+                    i += step
                 current_text = ""
             else:
                 # We already have content; flush it as a completed chunk,
@@ -126,13 +128,16 @@ def sentence_chunk(
                 if len(current_text) > chunk_size:
                     # Rare case: even a single sentence placed after a flush
                     # is longer than chunk_size; split it into windows.
+                    step = (
+                        chunk_size - overlap if chunk_size - overlap > 0 else chunk_size
+                    )
                     i = 0
-                    while i < len(current_text):
+                    total_len = len(current_text)
+                    while True:
                         piece = current_text[i : i + chunk_size]
                         sstart = current_start + i
                         send = min(
-                            current_start + i + chunk_size,
-                            current_start + len(current_text),
+                            current_start + i + chunk_size, current_start + total_len
                         )
                         chunks.append(
                             {
@@ -145,11 +150,9 @@ def sentence_chunk(
                             }
                         )
                         seq += 1
-                        i += (
-                            chunk_size - overlap
-                            if chunk_size - overlap > 0
-                            else chunk_size
-                        )
+                        if i + chunk_size >= total_len:
+                            break
+                        i += step
                     current_text = ""
         else:
             current_text += sent
