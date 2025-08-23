@@ -2,7 +2,9 @@ import os
 import sys
 
 # Ensure the project root is on sys.path so tests can import `src.*`
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from src.chunking import ChunkingConfig, chunk_text
 
