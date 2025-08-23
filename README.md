@@ -251,9 +251,6 @@ cd cli && ./build.sh         # Build the CLI tool
 # Run all tests (CLI + MCP + Integration)
 ./test.sh all
 
-# Skip external integration when no server is available
-MAESTRO_K_SKIP_INTEGRATION=true ./test.sh all
-
 # Run specific test suites
 ./test.sh cli                # Run only CLI tests
 ./test.sh mcp                # Run only MCP server tests
@@ -363,7 +360,6 @@ maestro-knowledge/
 - `VECTOR_DB_TYPE`: Default vector database type (defaults to "weaviate")
 - `OPENAI_API_KEY`: Required for OpenAI embedding models
 - `MAESTRO_KNOWLEDGE_MCP_SERVER_URI`: MCP server URI for CLI tool
-- `MAESTRO_K_SKIP_INTEGRATION`: If true/1, skips integration tests in `./test.sh all`
 - `MILVUS_URI`: Milvus connection URI. **Important**: Do not use quotes around the URI value in your `.env` file (e.g., `MILVUS_URI=http://localhost:19530` instead of `MILVUS_URI="http://localhost:19530"`).
 - Database-specific environment variables for Weaviate and Milvus connections
 
