@@ -193,6 +193,29 @@ The project includes a Model Context Protocol (MCP) server that exposes vector d
 # ./maestro-k resync-databases
 ```
 
+### Search and Query Output
+
+- Search returns JSON results suitable for programmatic use.
+- Query returns a human-readable text summary (no JSON flag).
+
+Search result schema (normalized across Weaviate and Milvus):
+
+- id: unique chunk identifier
+- url: source URL
+- text: chunk text
+- metadata:
+    - doc_name: original document name/slug
+    - chunk_sequence_number: 1-based chunk index within the document
+    - total_chunks: total chunks for the document
+    - offset_start / offset_end: character offsets in the original text
+    - chunk_size: size of the chunk in characters
+- similarity: canonical relevance score in [0..1]
+- distance: cosine distance (approximately 1 − similarity); included for convenience
+- rank: 1-based rank in the current result set
+- _metric: similarity metric name (e.g., "cosine")
+- _search_mode: "vector" (vector similarity) or "keyword" (fallback)
+
+
 ## Embedding Strategies
 
 The library supports flexible embedding strategies for both vector databases. For detailed embedding model support and usage examples, see [src/maestro_mcp/README.md](src/maestro_mcp/README.md).
@@ -203,7 +226,7 @@ The library supports flexible embedding strategies for both vector databases. Fo
 - **Milvus**: Supports pre-computed vectors and OpenAI embedding models
 - **Environment Variables**: Set `OPENAI_API_KEY` for OpenAI embedding models
 
-### Basic Usage
+### Embedding Usage
 
 ```python
 # Check supported embeddings
@@ -415,6 +438,7 @@ The project includes comprehensive log monitoring capabilities:
 ```
 
 **Log Monitoring Features:**
+
 - **📡 Real-time tailing** - Monitor logs as they're generated
 - **✅ Visual status indicators** - Clear service status with checkmarks and X marks
 - **🌐 Port monitoring** - Check service availability on ports

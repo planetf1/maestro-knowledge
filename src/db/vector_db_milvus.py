@@ -428,17 +428,7 @@ class MilvusVectorDatabase(VectorDatabase):
                 # Retain original doc_name if present
                 if "doc_name" in orig_metadata:
                     new_meta["doc_name"] = orig_metadata.get("doc_name")
-                # Add chunking policy for traceability in results
-                try:
-                    if chunking_conf:
-                        # Store the effective chunking configuration used
-                        new_meta["chunking"] = {
-                            "strategy": (chunking_conf or {}).get("strategy"),
-                            "parameters": (chunking_conf or {}).get("parameters", {}),
-                        }
-                except Exception:
-                    # If anything goes wrong, don't block write due to metadata
-                    pass
+                # omit chunking policy to reduce per-result duplication in search outputs
                 # Add ordered chunk-specific metadata (start before end)
                 new_meta.update(
                     {
@@ -1250,7 +1240,16 @@ class MilvusVectorDatabase(VectorDatabase):
                         "id": doc_id,
                         "url": url,
                         "text": text,
-                        "metadata": metadata,
+                        # Remove verbose chunking policy from per-result metadata
+                        "metadata": (
+                            {
+                                k: v
+                                for k, v in (metadata or {}).items()
+                                if k != "chunking"
+                            }
+                            if isinstance(metadata, dict)
+                            else metadata
+                        ),
                         # Explicit diagnostic marker so clients can tell vector vs keyword
                         "_search_mode": "vector",
                         "_metric": "cosine",
@@ -1259,22 +1258,7 @@ class MilvusVectorDatabase(VectorDatabase):
                         else None,
                     }
 
-                    # Preserve raw values
-                    try:
-                        if raw_score is not None:
-                            doc["raw_score"] = float(raw_score)
-                    except Exception:
-                        doc["raw_score"] = raw_score
-                    try:
-                        if raw_distance is not None:
-                            doc["raw_distance"] = float(raw_distance)
-                    except Exception:
-                        doc["raw_distance"] = raw_distance
-                    try:
-                        if raw_similarity is not None:
-                            doc["raw_similarity"] = float(raw_similarity)
-                    except Exception:
-                        doc["raw_similarity"] = raw_similarity
+                    # Do not include raw_* values in output; keep normalized view only
 
                     # Compute normalized similarity [0,1] and distance (assume cosine)
                     similarity = None
@@ -1302,8 +1286,6 @@ class MilvusVectorDatabase(VectorDatabase):
                         doc["distance"] = distance
                     if similarity is not None:
                         doc["similarity"] = similarity
-                        # Maintain 'score' as alias for normalized similarity for client compatibility
-                        doc["score"] = similarity
 
                     return doc
                 except Exception:
@@ -1337,10 +1319,15 @@ class MilvusVectorDatabase(VectorDatabase):
                     # Give up and return empty
                     return []
 
-            # Add explicit rank 1..N
+            # Add explicit rank 1..N and normalize metadata keys
             for i, d in enumerate(documents, start=1):
                 try:
                     d["rank"] = i
+                    # Normalize metadata: remove chunking and map old key to new
+                    if isinstance(d.get("metadata"), dict):
+                        md = d["metadata"]
+                        if "chunking" in md:
+                            md.pop("chunking", None)
                 except Exception:
                     pass
 
@@ -1409,6 +1396,12 @@ class MilvusVectorDatabase(VectorDatabase):
                     try:
                         d["_search_mode"] = "keyword"
                         d["rank"] = i
+                        # Also remove chunking policy from metadata in fallback results
+                        if (
+                            isinstance(d.get("metadata"), dict)
+                            and "chunking" in d["metadata"]
+                        ):
+                            d["metadata"].pop("chunking", None)
                     except Exception:
                         pass
                 return docs
