@@ -136,8 +136,8 @@ class TestMilvusVectorDatabase:
                 assert mock_client.insert.called
 
     @patch("pymilvus.MilvusClient")
-    def test_write_documents_includes_chunking_metadata(self, mock_milvus_client):
-        """Write path should attach chunking policy into per-chunk metadata."""
+    def test_write_documents_excludes_chunking_metadata(self, mock_milvus_client):
+        """Write path should NOT attach chunking policy into per-chunk metadata (kept at collection level)."""
         mock_client = MagicMock()
         mock_milvus_client.return_value = mock_client
 
@@ -178,10 +178,9 @@ class TestMilvusVectorDatabase:
         import json as _json
 
         parsed = _json.loads(meta)
-        assert "chunking" in parsed
-        assert parsed["chunking"]["strategy"] == "Fixed"
-        assert parsed["chunking"]["parameters"]["chunk_size"] == 16
-        # still includes prior fields
+        # Per-result chunking metadata has been removed to avoid duplication
+        assert "chunking" not in parsed
+        # Still includes prior fields
         assert "offset_start" in parsed and "offset_end" in parsed
         assert "chunk_sequence_number" in parsed and "total_chunks" in parsed
 

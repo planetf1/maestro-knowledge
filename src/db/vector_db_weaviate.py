@@ -267,17 +267,7 @@ class WeaviateVectorDatabase(VectorDatabase):
                     new_meta = dict(orig_metadata)
                     if "doc_name" in orig_metadata:
                         new_meta["doc_name"] = orig_metadata.get("doc_name")
-                    # include chunking policy for traceability
-                    try:
-                        if chunking_conf:
-                            new_meta["chunking"] = {
-                                "strategy": (chunking_conf or {}).get("strategy"),
-                                "parameters": (chunking_conf or {}).get(
-                                    "parameters", {}
-                                ),
-                            }
-                    except Exception:
-                        pass
+                    # omit chunking policy to reduce per-result duplication
                     new_meta.update(
                         {
                             "chunk_sequence_number": int(chunk["sequence"]),
@@ -882,17 +872,7 @@ class WeaviateVectorDatabase(VectorDatabase):
                 doc["_search_mode"] = "vector"
                 doc["_metric"] = "cosine"
 
-                # Preserve raw scoring fields when identifiable
-                if score_val is not None:
-                    try:
-                        doc["raw_score"] = float(score_val)
-                    except Exception:
-                        doc["raw_score"] = score_val
-                if distance_val is not None:
-                    try:
-                        doc["raw_distance"] = float(distance_val)
-                    except Exception:
-                        doc["raw_distance"] = distance_val
+                # Do not include raw_* fields in output; we keep a normalized view only
 
                 # Compute normalized similarity [0,1] and distance if possible
                 similarity = None
@@ -921,9 +901,8 @@ class WeaviateVectorDatabase(VectorDatabase):
                 if distance is not None:
                     doc["distance"] = distance
                 if similarity is not None:
-                    # Provide normalized similarity and keep score as alias for backward compatibility
+                    # Provide normalized similarity only (single canonical score)
                     doc["similarity"] = similarity
-                    doc["score"] = similarity
 
                 # Rank within this result set (1-based)
                 doc["rank"] = idx
@@ -934,6 +913,18 @@ class WeaviateVectorDatabase(VectorDatabase):
 
                     doc["metadata"] = json.loads(doc["metadata"])
                 except (json.JSONDecodeError, TypeError):
+                    pass
+
+                # Drop verbose chunking policy from per-result metadata to reduce duplication
+                try:
+                    if (
+                        isinstance(doc.get("metadata"), dict)
+                        and "chunking" in doc["metadata"]
+                    ):
+                        doc["metadata"].pop("chunking", None)
+                    # Backward-compat: if old key exists, mirror to new key
+                    # no remapping; keep original key only
+                except Exception:
                     pass
 
                 documents.append(doc)
@@ -1001,6 +992,12 @@ class WeaviateVectorDatabase(VectorDatabase):
                     try:
                         d["_search_mode"] = "keyword"
                         d["rank"] = i
+                        # Also remove chunking policy from metadata in fallback results
+                        if (
+                            isinstance(d.get("metadata"), dict)
+                            and "chunking" in d["metadata"]
+                        ):
+                            d["metadata"].pop("chunking", None)
                     except Exception:
                         pass
                 return docs
