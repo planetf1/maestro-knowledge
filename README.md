@@ -201,7 +201,7 @@ The project includes a Model Context Protocol (MCP) server that exposes vector d
 Search result schema (normalized across Weaviate and Milvus):
 
 - id: unique chunk identifier
-- url: source URL
+- url: source URL or file path
 - text: chunk text
 - metadata:
     - doc_name: original document name/slug
