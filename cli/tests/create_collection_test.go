@@ -133,4 +133,56 @@ func TestCreateCollectionHelp(t *testing.T) {
 	if !contains(outputStr, "--name string") {
 		t.Errorf("Should show name flag in help, got: %s", outputStr)
 	}
+
+	// Ensure chunking flags are shown in help
+	if !contains(outputStr, "--chunking-strategy") {
+		t.Errorf("Help should include --chunking-strategy flag, got: %s", outputStr)
+	}
+	if !contains(outputStr, "--chunk-size") {
+		t.Errorf("Help should include --chunk-size flag, got: %s", outputStr)
+	}
+	if !contains(outputStr, "--chunk-overlap") {
+		t.Errorf("Help should include --chunk-overlap flag, got: %s", outputStr)
+	}
+
+	// Ensure semantic-specific flags are shown in help
+	if !contains(outputStr, "--semantic-model") {
+		t.Errorf("Help should include --semantic-model flag, got: %s", outputStr)
+	}
+	if !contains(outputStr, "--semantic-window-size") {
+		t.Errorf("Help should include --semantic-window-size flag, got: %s", outputStr)
+	}
+	if !contains(outputStr, "--semantic-threshold-percentile") {
+		t.Errorf("Help should include --semantic-threshold-percentile flag, got: %s", outputStr)
+	}
+}
+
+// TestCreateCollectionWithChunkingFlagsDryRun ensures chunking flags are accepted (dry-run)
+func TestCreateCollectionWithChunkingFlagsDryRun(t *testing.T) {
+	cmd := exec.Command("../maestro-k", "collection", "create",
+		"--name=test-collection", "--vdb=test-db",
+		"--chunking-strategy=Sentence", "--chunk-size=512", "--chunk-overlap=64",
+		"--dry-run")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("Create collection with chunking flags failed: %v, output: %s", err, string(output))
+	}
+}
+
+// TestCreateCollectionWithSemanticFlagsDryRun ensures semantic-specific flags are accepted (dry-run)
+func TestCreateCollectionWithSemanticFlagsDryRun(t *testing.T) {
+	cmd := exec.Command("../maestro-k", "collection", "create",
+		"--name=test-collection", "--vdb=test-db",
+		"--chunking-strategy=Semantic",
+		"--chunk-size=768",
+		"--semantic-model=all-MiniLM-L6-v2",
+		"--semantic-window-size=1",
+		"--semantic-threshold-percentile=95",
+		"--dry-run")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		t.Fatalf("Create collection with semantic flags failed: %v, output: %s", err, string(output))
+	}
 }

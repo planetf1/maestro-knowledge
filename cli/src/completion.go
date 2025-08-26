@@ -177,7 +177,7 @@ func (cp *CompletionProvider) CompleteEmbeddings(partial string) ([]CompletionIt
 
 // CompleteChunkingStrategies provides completion for chunking strategy values
 func (cp *CompletionProvider) CompleteChunkingStrategies(partial string) ([]CompletionItem, error) {
-	strategies := []string{"None", "Fixed", "Sentence"}
+	strategies := []string{"None", "Fixed", "Sentence", "Semantic"}
 
 	var completions []CompletionItem
 	for _, s := range strategies {
@@ -259,6 +259,7 @@ func (cp *CompletionProvider) CompleteFlags(partial string) ([]CompletionItem, e
 		"--verbose", "--silent", "--dry-run", "--force",
 		"--mcp-server-uri", "--doc-limit",
 		"--chunking-strategy", "--chunk-size", "--chunk-overlap",
+		"--semantic-model", "--semantic-window-size", "--semantic-threshold-percentile",
 		"-h", "--help", "--version",
 	}
 

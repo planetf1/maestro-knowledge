@@ -380,4 +380,12 @@ func init() {
 
 	// Add flags to collection create command
 	collectionCreateCmd.Flags().StringVar(&collectionEmbedding, "embedding", "default", "Embedding model to use for the collection")
+	// Expose chunking flags here as well (kept in sync with create_collection.go)
+	collectionCreateCmd.Flags().StringVar(&collectionChunkStrategy, "chunking-strategy", "None", "Chunking strategy to use for the collection (None, Fixed, Sentence, Semantic)")
+	collectionCreateCmd.Flags().IntVar(&collectionChunkSize, "chunk-size", 0, "Chunk size in characters (optional; defaults may vary by strategy)")
+	collectionCreateCmd.Flags().IntVar(&collectionChunkOverlap, "chunk-overlap", 0, "Chunk overlap in characters (optional)")
+	// Semantic-specific parameters
+	collectionCreateCmd.Flags().StringVar(&semanticModel, "semantic-model", "", "Semantic chunking model identifier (e.g., all-MiniLM-L6-v2)")
+	collectionCreateCmd.Flags().IntVar(&semanticWindowSize, "semantic-window-size", 0, "Semantic chunking window size (optional)")
+	collectionCreateCmd.Flags().Float64Var(&semanticThresholdPercentile, "semantic-threshold-percentile", 0, "Semantic chunking threshold percentile (0-100, optional)")
 }
