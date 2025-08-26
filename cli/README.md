@@ -474,7 +474,7 @@ Example:
 Found 3 documents in collection 'my-collection' of vector database 'my-database': [
   {
     "id": "doc1",
-      "url": "https://example.com/doc1",
+    "url": "https://example.com/doc1",
     "text": "Document content...",
     "metadata": {
       "source": "web",
