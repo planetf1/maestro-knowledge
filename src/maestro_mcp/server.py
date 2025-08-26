@@ -471,7 +471,7 @@ def create_mcp_server() -> FastMCP:
                     "overlap": "int >= 0",
                 },
                 "description": "Fixed-size windows with optional overlap.",
-                "defaults": {"chunk_size": 1000, "overlap": 0},
+                "defaults": {"chunk_size": 512, "overlap": 0},
             },
             {
                 "name": "Sentence",
@@ -480,7 +480,7 @@ def create_mcp_server() -> FastMCP:
                     "overlap": "int >= 0",
                 },
                 "description": "Sentence-aware packing up to chunk_size with optional overlap; long sentences are split.",
-                "defaults": {"chunk_size": 1000, "overlap": 0},
+                "defaults": {"chunk_size": 512, "overlap": 0},
             },
             {
                 "name": "Semantic",
@@ -493,7 +493,7 @@ def create_mcp_server() -> FastMCP:
                 },
                 "description": "Semantic chunking using sentence embeddings and similarity to create coherent chunks.",
                 "defaults": {
-                    "chunk_size": 1000,
+                    "chunk_size": 768,
                     "overlap": 0,
                     "window_size": 1,
                     "threshold_percentile": 95.0,
@@ -503,7 +503,7 @@ def create_mcp_server() -> FastMCP:
         ]
         defaults_behavior = {
             "chunk_text_default_strategy": ChunkingConfig().strategy,
-            "default_params_when_strategy_set": {"chunk_size": 1000, "overlap": 0},
+            "default_params_when_strategy_set": {"chunk_size": 512, "overlap": 0},
         }
         return json.dumps(
             {"strategies": strategies, "notes": defaults_behavior}, indent=2

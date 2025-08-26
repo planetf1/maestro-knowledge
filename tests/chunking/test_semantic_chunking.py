@@ -1,5 +1,12 @@
 """Tests for semantic chunking strategy."""
 
+import os
+import sys
+
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+
 import pytest
 from src.chunking import ChunkingConfig, chunk_text
 
@@ -188,3 +195,16 @@ def test_semantic_chunk_integration():
     assert isinstance(first_chunk["chunk_size"], int)
     assert isinstance(first_chunk["sequence"], int)
     assert isinstance(first_chunk["total"], int)
+
+
+def test_semantic_chunk_default_chunk_size():
+    """Test that semantic chunking uses 768 as default chunk size."""
+    # Create text that's longer than 512 but shorter than 768
+    text = "This is a test sentence. " * 20
+    cfg = ChunkingConfig(strategy="Semantic", parameters={})
+    result = chunk_text(text, cfg)
+    assert len(result) >= 1
+    assert all(chunk["chunk_size"] <= 768 for chunk in result)
+    cfg = ChunkingConfig(strategy="Semantic", parameters={"chunk_size": 512})
+    result = chunk_text(text, cfg)
+    assert all(chunk["chunk_size"] <= 512 for chunk in result)

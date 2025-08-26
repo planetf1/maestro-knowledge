@@ -232,7 +232,7 @@ def _create_chunks_from_boundaries(
 
 def semantic_chunk(
     text: str,
-    chunk_size: int = 1000,
+    chunk_size: int = 768,
     overlap: int = 0,
     window_size: int = 1,
     threshold_percentile: float = 95,
