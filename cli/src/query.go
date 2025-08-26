@@ -42,7 +42,14 @@ The query agent will search through the documents and provide relevant answers.`
 
 		// Use default collection if not specified
 		if collectionName == "" {
-			collectionName = "Test_collection_lowercase" // Default collection
+			// If dry-run, don't interact; leave empty so downstream prints dry-run and exits
+			if !dryRun {
+				var err error
+				collectionName, err = PromptForCollection(vdbName, collectionName)
+				if err != nil {
+					return fmt.Errorf("failed to select collection: %w", err)
+				}
+			}
 		}
 
 		return queryVectorDatabase(vdbName, query, collectionName)

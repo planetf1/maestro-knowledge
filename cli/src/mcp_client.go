@@ -276,7 +276,7 @@ func (c *MCPClient) CreateVectorDatabase(dbName, dbType, collectionName string) 
 
 	// The response should be a success message
 	if response.Result == nil {
-		return fmt.Errorf("no response from MCP server")
+		return fmt.Errorf("no response from MCP server (check server at %s)", c.baseURL)
 	}
 
 	return nil
@@ -303,7 +303,7 @@ func (c *MCPClient) SetupDatabase(dbName, embedding string) error {
 
 	// The response should be a success message
 	if response.Result == nil {
-		return fmt.Errorf("no response from MCP server")
+		return fmt.Errorf("no response from MCP server (check server at %s)", c.baseURL)
 	}
 
 	return nil
@@ -344,7 +344,7 @@ func (c *MCPClient) DeleteVectorDatabase(dbName string) error {
 
 	// The response should be a success message
 	if response.Result == nil {
-		return fmt.Errorf("no response from MCP server")
+		return fmt.Errorf("no response from MCP server (check server at %s)", c.baseURL)
 	}
 
 	return nil
@@ -370,7 +370,7 @@ func (c *MCPClient) GetSupportedEmbeddings(dbName string) (string, error) {
 
 	// The response should be a string with the embeddings list
 	if response.Result == nil {
-		return "", fmt.Errorf("no response from MCP server")
+		return "", fmt.Errorf("no response from MCP server (check server at %s)", c.baseURL)
 	}
 
 	if resultStr, ok := response.Result.(string); ok {
@@ -400,7 +400,7 @@ func (c *MCPClient) ListCollections(dbName string) (string, error) {
 
 	// The response should be a string with the collections list
 	if response.Result == nil {
-		return "", fmt.Errorf("no response from MCP server")
+		return "", fmt.Errorf("no response from MCP server (check server at %s)", c.baseURL)
 	}
 
 	if resultStr, ok := response.Result.(string); ok {
@@ -435,7 +435,7 @@ func (c *MCPClient) GetCollectionInfo(dbName, collectionName string) (string, er
 
 	// The response should be a string with the collection info
 	if response.Result == nil {
-		return "", fmt.Errorf("no response from MCP server")
+		return "", fmt.Errorf("no response from MCP server (check server at %s)", c.baseURL)
 	}
 
 	if resultStr, ok := response.Result.(string); ok {
@@ -466,7 +466,7 @@ func (c *MCPClient) ListDocumentsInCollection(dbName, collectionName string) (st
 
 	// The response should be a string with the documents list
 	if response.Result == nil {
-		return "", fmt.Errorf("no response from MCP server")
+		return "", fmt.Errorf("no response from MCP server (check server at %s)", c.baseURL)
 	}
 
 	if resultStr, ok := response.Result.(string); ok {
@@ -498,7 +498,7 @@ func (c *MCPClient) CreateCollection(dbName, collectionName, embedding string) e
 
 	// The response should be a success message
 	if response.Result == nil {
-		return fmt.Errorf("no response from MCP server")
+		return fmt.Errorf("no response from MCP server (check server at %s)", c.baseURL)
 	}
 
 	return nil
@@ -529,7 +529,7 @@ func (c *MCPClient) CreateCollectionWithChunking(dbName, collectionName, embeddi
 	}
 
 	if response.Result == nil {
-		return fmt.Errorf("no response from MCP server")
+		return fmt.Errorf("no response from MCP server (check server at %s)", c.baseURL)
 	}
 
 	return nil
@@ -653,7 +653,7 @@ func (c *MCPClient) GetDocument(dbName, collectionName, docName string) (string,
 
 	// The response should be a string with the document information
 	if response.Result == nil {
-		return "", fmt.Errorf("no response from MCP server")
+		return "", fmt.Errorf("no response from MCP server (check server at %s)", c.baseURL)
 	}
 
 	// Convert the result to a string
@@ -688,7 +688,7 @@ func (c *MCPClient) Query(dbName, query string, limit int, collectionName string
 
 	// The response should be a string with the query result
 	if response.Result == nil {
-		return "", fmt.Errorf("no response from MCP server")
+		return "", fmt.Errorf("no response from MCP server (possible causes: missing/invalid collection, empty result, or connection issue at %s)", c.baseURL)
 	}
 
 	// Convert the result to a string
@@ -723,7 +723,7 @@ func (c *MCPClient) Search(dbName, query string, limit int, collectionName strin
 
 	// The response should be a string with the search result
 	if response.Result == nil {
-		return "", fmt.Errorf("no response from MCP server")
+		return "", fmt.Errorf("no response from MCP server (possible causes: missing/invalid collection, empty result, or connection issue at %s)", c.baseURL)
 	}
 
 	prettyJSON, err := json.MarshalIndent(response.Result, "", "  ")

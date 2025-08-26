@@ -87,8 +87,9 @@ go build -o maestro-k src/*.go
 ./maestro-k document list --vdb=my-database --collection=my-collection --verbose
 
 # Query documents using natural language
+# Tip: pass --collection to avoid an interactive prompt
 ./maestro-k query "What is the main topic of the documents?" --vdb=my-database
-./maestro-k query "Find information about API endpoints" --vdb=my-database --doc-limit 10
+./maestro-k query "Find information about API endpoints" --vdb=my-database --collection=my-collection --doc-limit 10
 
 # Create vector database from YAML file
 ./maestro-k vectordb create config.yaml
@@ -129,6 +130,12 @@ go build -o maestro-k src/*.go
 
 # The CLI will prompt you to select a document if not specified
 ./maestro-k document delete --vdb=my-database --collection=my-collection
+
+# Search and query also prompt for a collection when --collection is omitted
+./maestro-k search "example" --vdb=my-database
+./maestro-k query "example" --vdb=my-database
+
+# Note: Prompts are skipped in non-interactive contexts and with --dry-run; pass --collection to avoid prompting
 ```
 
 #### Auto-completion Setup
@@ -445,6 +452,7 @@ Supported embeddings for weaviate vector database 'my-database': [
   "text-embedding-3-large"
 ]
 ```
+- `--collection`: Specific collection to search in (optional; if omitted you'll be prompted interactively unless in --dry-run or non-interactive mode)
 
 **Collections**: When listing collections for a vector database, the output shows:
 - All collections available in the vector database
@@ -641,7 +649,7 @@ The CLI provides resource-based delete commands for vector databases, collection
 The `search` command performs a vector search and returns JSON results suitable for programmatic use.
 
 ```bash
-# Basic search
+# Basic search (prompts for collection if omitted)
 ./maestro-k search "Find information about API endpoints" --vdb=my-database
 
 # Search with specific document limit and collection
@@ -666,7 +674,7 @@ Search output schema (normalized across backends):
 Flags:
 
 - `--doc-limit, -d`: Maximum number of documents to consider (default: 5)
-- `--collection`: Specific collection to search in (optional)
+- `--collection`: Specific collection to search in (optional; if omitted you'll be prompted interactively unless in --dry-run or non-interactive mode)
 
 ### Query Command
 
@@ -701,7 +709,7 @@ The `query` command allows you to search documents using natural language querie
 #### Query Command Flags
 
 - `--doc-limit, -d`: Maximum number of documents to consider (default: 5)
-- `--collection`: Specific collection to search in (optional)
+- `--collection`: Specific collection to search in (optional; if omitted you'll be prompted interactively unless in --dry-run or non-interactive mode)
 - `--dry-run`: Test the command without making changes
 - `--verbose`: Show detailed output
 - `--silent`: Suppress success messages
