@@ -1013,3 +1013,20 @@ go test -v ./tests/...
 ## License
 
 Apache 2.0 License - see the main project LICENSE file for details.
+
+## Semantic Chunking Example
+
+The CLI supports semantic chunking for intelligent document splitting:
+
+```bash
+# Create a collection with semantic chunking
+cli/maestro-k collection create --vdb my-vdb --name my-collection
+
+# Check collection information to see chunking strategy
+cli/maestro-k collection info --vdb "Qiskit_studio_algo" --name "Qiskit_studio_algo"
+
+# Search with semantic chunking to see results
+./cli/maestro-k search "quantum circuit" --vdb qiskit_studio_algo --collection qiskit_studio_algo --doc-limit 1
+```
+
+**Note**: The semantic chunking strategy uses sentence-transformers for chunking decisions, while the collection's own embedding model is used for search operations.

@@ -60,6 +60,20 @@ chunks = chunk_text("Your document text here...", config)
 
 **Note**: Semantic chunking uses sentence-transformers for chunking decisions, but the resulting chunks are embedded using your collection's embedding model (e.g., nomic-embed-text) for search operations.
 
+### Testing Semantic Chunking
+
+You can test the semantic chunking functionality using the CLI:
+
+```bash
+# Check collection information to see chunking strategy
+cli/maestro-k collection info --vdb "Qiskit_studio_algo" --name "Qiskit_studio_algo"
+
+# Search with semantic chunking to see results
+./cli/maestro-k search "quantum circuit" --vdb qiskit_studio_algo --collection qiskit_studio_algo --doc-limit 1
+```
+
+**Note**: The semantic chunking strategy uses sentence-transformers for chunking decisions, while the collection's own embedding model is used for search operations.
+
 ## Quick Start
 
 ### Installation
