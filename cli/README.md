@@ -483,7 +483,7 @@ Found 3 documents in collection 'my-collection' of vector database 'my-database'
   },
   {
     "id": "doc2",
-      "url": "https://example.com/doc2",
+    "url": "https://example.com/doc2",
     "text": "Another document...",
     "metadata": {
       "source": "file",
@@ -755,11 +755,11 @@ Collection information for 'my-collection' in vector database 'my-database':
   "name": "my-collection",
   "document_count": 15,
   "db_type": "weaviate",
-   "embedding": "text2vec-weaviate",
-   "chunking": {
-      "strategy": "Sentence",
-      "parameters": { "chunk_size": 512, "overlap": 32 }
-   },
+  "embedding": "text2vec-weaviate",
+  "chunking": {
+    "strategy": "Sentence",
+    "parameters": { "chunk_size": 512, "overlap": 32 }
+  },
   "metadata": {
     "description": "My test collection",
     "vectorizer": "text2vec-weaviate",
