@@ -78,6 +78,10 @@ var (
 	collectionChunkStrategy string
 	collectionChunkSize     int
 	collectionChunkOverlap  int
+	// Semantic-specific params
+	semanticModel               string
+	semanticWindowSize          int
+	semanticThresholdPercentile float64
 )
 
 func init() {
@@ -85,8 +89,8 @@ func init() {
 	commands := []*cobra.Command{createCollectionCmd, createVdbColCmd, createColCmd}
 	for _, cmd := range commands {
 		cmd.Flags().StringVar(&collectionEmbedding, "embedding", "default", "Embedding model to use for the collection")
-		cmd.Flags().StringVar(&collectionChunkStrategy, "chunking-strategy", "None", "Chunking strategy to use for the collection (None, Fixed, Sentence)")
-		cmd.Flags().IntVar(&collectionChunkSize, "chunk-size", 0, "Chunk size in characters (optional, defaults to 512 when strategy != None)")
+		cmd.Flags().StringVar(&collectionChunkStrategy, "chunking-strategy", "None", "Chunking strategy to use for the collection (None, Fixed, Sentence, Semantic)")
+		cmd.Flags().IntVar(&collectionChunkSize, "chunk-size", 0, "Chunk size in characters (optional; defaults may vary by strategy)")
 		cmd.Flags().IntVar(&collectionChunkOverlap, "chunk-overlap", 0, "Chunk overlap in characters (optional)")
 	}
 }
@@ -148,6 +152,18 @@ func createCollection(vdbName, collectionName string) error {
 			}
 			if collectionChunkOverlap > 0 {
 				params["overlap"] = collectionChunkOverlap
+			}
+			if collectionChunkStrategy == "Semantic" {
+				if semanticWindowSize > 0 {
+					params["window_size"] = semanticWindowSize
+				}
+				if semanticThresholdPercentile > 0 {
+					params["threshold_percentile"] = semanticThresholdPercentile
+				}
+				if semanticModel != "" {
+					// Use 'model_name' to align with server and semantic chunking API
+					params["model_name"] = semanticModel
+				}
 			}
 			chunkCfg = map[string]interface{}{
 				"strategy":   collectionChunkStrategy,

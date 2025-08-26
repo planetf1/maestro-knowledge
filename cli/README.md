@@ -344,6 +344,26 @@ Semantic chunking uses sentence transformers to identify natural break points in
 
 **Note**: Semantic chunking uses sentence-transformers for chunking decisions, but the resulting chunks are embedded using your collection's embedding model (e.g., nomic-embed-text) for search operations.
 
+Additional notes:
+
+- Advanced semantic parameters are fully supported via flags in the CLI in addition to the common ones:
+  - `--semantic-model` (model identifier, e.g., all-MiniLM-L6-v2)
+  - `--semantic-window-size` (integer context window)
+  - `--semantic-threshold-percentile` (0–100 split sensitivity)
+  - Plus common: `--chunk-size`, `--chunk-overlap`
+- Completion: the CLI provides completion for `--chunking-strategy` (includes `Semantic`). The `--semantic-model` value is free-form (no static suggestions); numeric flags disable file completion.
+
+Example with semantic-specific flags:
+
+```bash
+./maestro-k collection create --vdb=my-database --name=my-collection \
+   --chunking-strategy=Semantic \
+   --chunk-size=768 \
+   --semantic-model=all-MiniLM-L6-v2 \
+   --semantic-window-size=1 \
+   --semantic-threshold-percentile=95
+```
+
 ### Environment Variable Substitution in YAML Files
 
 The CLI supports environment variable substitution in YAML files using the `{{ENV_VAR_NAME}}` syntax. This allows you to use environment variables directly in your configuration files:
@@ -368,6 +388,7 @@ When you run `./maestro-k create vector-db config.yaml`, the CLI will:
 3. Process the YAML file with the substituted values
 
 **Features**:
+
 - **Automatic substitution**: All `{{ENV_VAR_NAME}}` placeholders are replaced before YAML parsing
 - **Error handling**: Clear error messages if required environment variables are missing
 - **Verbose logging**: Shows which environment variables are being substituted (when using `--verbose`)
@@ -541,6 +562,7 @@ The CLI provides resource-based create commands for vector databases, collection
 ```
 
 **Supported Override Flags**:
+
 - `--type`: Override database type (milvus, weaviate)
 - `--uri`: Override connection URI
 - `--collection-name`: Override collection name
@@ -558,6 +580,13 @@ The CLI provides resource-based create commands for vector databases, collection
 
 # Create collection with dry-run mode
 ./maestro-k collection create --name=my-collection --vdb=my-database --dry-run
+
+# Create collection with chunking configuration
+./maestro-k collection create --name=my-collection --vdb=my-database \
+   --embedding=text-embedding-3-small \
+   --chunking-strategy=Sentence \
+   --chunk-size=512 \
+   --chunk-overlap=32
 ```
 
 #### Create Document Command

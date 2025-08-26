@@ -154,6 +154,17 @@ func SetupCustomCompletions() {
 		collectionCreateCmd.RegisterFlagCompletionFunc("chunk-overlap", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		})
+
+		// Semantic-specific flags
+		collectionCreateCmd.RegisterFlagCompletionFunc("semantic-model", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		})
+		collectionCreateCmd.RegisterFlagCompletionFunc("semantic-window-size", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		})
+		collectionCreateCmd.RegisterFlagCompletionFunc("semantic-threshold-percentile", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		})
 	}
 
 	// Status --vdb completion using vector database names
