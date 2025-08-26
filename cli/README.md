@@ -353,7 +353,7 @@ The CLI automatically normalizes URLs to ensure they have the correct protocol p
 - **Hostname only**: `localhost` → `http://localhost:8030`
 - **Hostname with port**: `localhost:8030` → `http://localhost:8030`
 - **Full URL**: `http://localhost:8030` → `http://localhost:8030` (unchanged)
-- **HTTPS URL**: `https://example.invalid:9000` → `https://example.invalid:9000` (unchanged)
+- **HTTPS URL**: `https://example.com:9000` → `https://example.com:9000` (unchanged)
 
 This makes it easy to specify server addresses in any format:
 
@@ -361,7 +361,7 @@ This makes it easy to specify server addresses in any format:
 # All of these work the same way:
 ./maestro-k vectordb list --mcp-server-uri="localhost:8030"
 ./maestro-k vectordb list --mcp-server-uri="http://localhost:8030"
-./maestro-k vectordb list --mcp-server-uri="https://example.invalid:9000"
+./maestro-k vectordb list --mcp-server-uri="https://example.com:9000"
 ```
 
 ### Global Flags
@@ -474,7 +474,7 @@ Example:
 Found 3 documents in collection 'my-collection' of vector database 'my-database': [
   {
     "id": "doc1",
-      "url": "https://example.invalid/doc1",
+      "url": "https://example.com/doc1",
     "text": "Document content...",
     "metadata": {
       "source": "web",
@@ -483,7 +483,7 @@ Found 3 documents in collection 'my-collection' of vector database 'my-database'
   },
   {
     "id": "doc2",
-      "url": "https://example.invalid/doc2",
+      "url": "https://example.com/doc2",
     "text": "Another document...",
     "metadata": {
       "source": "file",
@@ -747,8 +747,11 @@ Show collection information (embedding and chunking):
 - Additional metadata
 
 Example:
+
+Collection information for 'my-collection' in vector database 'my-database':
+
 ```json
-Collection information for 'my-collection' in vector database 'my-database': {
+{
   "name": "my-collection",
   "document_count": 15,
   "db_type": "weaviate",

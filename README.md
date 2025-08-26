@@ -190,7 +190,7 @@ The project includes a Model Context Protocol (MCP) server that exposes vector d
 
 # Manual resync tool (available as an MCP tool and through the CLI `resync-databases` command):
 # After restarting the MCP server, run the resync to register existing Milvus collections:
-# ./maestro-k resync-databases
+./maestro-k resync-databases
 ```
 
 ### Search and Query Output

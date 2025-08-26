@@ -1081,6 +1081,7 @@ class MilvusVectorDatabase(VectorDatabase):
         Args:
             query: The search query text
             limit: Maximum number of results to return
+            collection_name: Optional collection name to search in (defaults to self.collection_name)
 
         Returns:
             List of documents sorted by relevance

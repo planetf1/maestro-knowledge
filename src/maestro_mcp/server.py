@@ -977,8 +977,6 @@ def create_mcp_server() -> FastMCP:
             logger.error(error_msg)
             return f"Error: {error_msg}"
 
-    # diagnose_search tool removed per request: diagnostics are no longer supported.
-
     @app.tool()
     async def list_databases() -> str:
         """List all available vector database instances."""
