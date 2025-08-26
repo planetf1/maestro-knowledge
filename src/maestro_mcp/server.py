@@ -503,6 +503,24 @@ def create_mcp_server() -> FastMCP:
                 "description": "Sentence-aware packing up to chunk_size with optional overlap; long sentences are split.",
                 "defaults": {"chunk_size": 512, "overlap": 0},
             },
+            {
+                "name": "Semantic",
+                "parameters": {
+                    "chunk_size": "int > 0",
+                    "overlap": "int >= 0",
+                    "window_size": "int >= 0",
+                    "threshold_percentile": "float 0-100",
+                    "model_name": "string",
+                },
+                "description": "Semantic chunking using sentence embeddings and similarity to create coherent chunks.",
+                "defaults": {
+                    "chunk_size": 768,
+                    "overlap": 0,
+                    "window_size": 1,
+                    "threshold_percentile": 95.0,
+                    "model_name": "all-MiniLM-L6-v2",
+                },
+            },
         ]
         defaults_behavior = {
             "chunk_text_default_strategy": ChunkingConfig().strategy,

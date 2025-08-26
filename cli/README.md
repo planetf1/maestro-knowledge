@@ -9,7 +9,7 @@ A command-line interface for interacting with the Maestro Knowledge MCP server w
 - **List collections**: List all collections in a specific vector database
 - **List documents**: List documents in a specific collection of a vector database
 - **Query documents**: Query documents using natural language with semantic search
-- **Pluggable document chunking**: Configure per-collection chunking (None, Fixed with size/overlap, Sentence)
+- **Pluggable document chunking**: Configure per-collection chunking (None, Fixed with size/overlap, Sentence, Semantic)
    - Discover supported strategies with `maestro-k chunking list`
 - **Create vector databases**: Create vector databases from YAML configuration files
 - **Delete vector databases**: Delete vector databases by name
@@ -316,6 +316,33 @@ Override the MCP server URI via command-line flag:
 ```bash
 ./maestro-k chunking list
 ```
+
+#### Chunking Strategies
+
+**None**: No chunking is performed (default)
+**Fixed**: Split documents into fixed-size chunks with optional overlap
+**Sentence**: Split documents at sentence boundaries with size limits
+**Semantic**: AI-powered chunking that identifies semantic boundaries using sentence embeddings
+
+#### Semantic Chunking Example
+
+Semantic chunking uses sentence transformers to identify natural break points in documents:
+
+```bash
+# Create collection with semantic chunking
+./maestro-k create collection my-database my-collection \
+  --chunking-strategy=Semantic \
+  --chunk-size=768 \
+  --chunk-overlap=0
+
+# The semantic strategy will:
+# - Split text into sentences
+# - Use AI embeddings to find semantic boundaries
+# - Respect the chunk_size limit while preserving meaning
+# - Default to 768 characters (vs 512 for other strategies)
+```
+
+**Note**: Semantic chunking uses sentence-transformers for chunking decisions, but the resulting chunks are embedded using your collection's embedding model (e.g., nomic-embed-text) for search operations.
 
 ### Environment Variable Substitution in YAML Files
 
@@ -986,3 +1013,20 @@ go test -v ./tests/...
 ## License
 
 Apache 2.0 License - see the main project LICENSE file for details.
+
+## Semantic Chunking Example
+
+The CLI supports semantic chunking for intelligent document splitting:
+
+```bash
+# Create a collection with semantic chunking
+cli/maestro-k collection create --vdb my-vdb --name my-collection
+
+# Check collection information to see chunking strategy
+cli/maestro-k collection info --vdb "Qiskit_studio_algo" --name "Qiskit_studio_algo"
+
+# Search with semantic chunking to see results
+./cli/maestro-k search "quantum circuit" --vdb qiskit_studio_algo --collection qiskit_studio_algo --doc-limit 1
+```
+
+**Note**: The semantic chunking strategy uses sentence-transformers for chunking decisions, while the collection's own embedding model is used for search operations.

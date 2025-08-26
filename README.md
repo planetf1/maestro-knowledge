@@ -6,7 +6,7 @@ A modular vector database interface supporting multiple backends (Weaviate, Milv
 
 - **Multi-backend support**: Weaviate and Milvus vector databases
 - **Flexible embedding strategies**: Support for pre-computed vectors and multiple embedding models
-- **Pluggable document chunking**: None (default), Fixed (size/overlap), Sentence-aware
+- **Pluggable document chunking**: None (default), Fixed (size/overlap), Sentence-aware, Semantic (AI-powered)
 - **Unified API**: Consistent interface across different vector database implementations
 - **Factory pattern**: Easy creation and switching between database types
 - **MCP Server**: Model Context Protocol server for AI agent integration with multi-database support
@@ -17,6 +17,62 @@ A modular vector database interface supporting multiple backends (Weaviate, Milv
 - **Metadata support**: Rich metadata handling for documents
 - **Environment variable substitution**: Dynamic configuration with `{{ENV_VAR_NAME}}` syntax
 - **Safety features**: Confirmation prompts for destructive operations with `--force` flag bypass
+
+## Chunking Strategies
+
+Maestro Knowledge supports multiple document chunking strategies to optimize how your documents are split for vector search:
+
+### Available Strategies
+
+- **None**: No chunking performed (default)
+- **Fixed**: Split documents into fixed-size chunks with optional overlap
+- **Sentence**: Split documents at sentence boundaries with size limits  
+- **Semantic**: Identifies semantic boundaries using sentence embeddings
+
+### Semantic Chunking
+
+The semantic chunking strategy uses sentence transformers to intelligently split documents:
+
+```python
+from src.chunking import ChunkingConfig, chunk_text
+
+# Configure semantic chunking
+config = ChunkingConfig(
+    strategy="Semantic",
+    parameters={
+        "chunk_size": 768,      # Default for semantic (vs 512 for others)
+        "overlap": 0,           # Optional overlap between chunks
+        "window_size": 1,       # Context window for similarity calculation
+        "threshold_percentile": 90.0,  # Percentile threshold for splits
+        "model_name": "all-MiniLM-L6-v2"  # Sentence transformer model
+    }
+)
+
+# Chunk your text
+chunks = chunk_text("Your document text here...", config)
+```
+
+**Key Benefits**:
+- Preserves semantic meaning across chunk boundaries
+- Automatically finds natural break points in text
+- Respects size limits while maintaining context
+- Uses 768 character default (optimal for semantic understanding)
+
+**Note**: Semantic chunking uses sentence-transformers for chunking decisions, but the resulting chunks are embedded using your collection's embedding model (e.g., nomic-embed-text) for search operations.
+
+### Testing Semantic Chunking
+
+You can test the semantic chunking functionality using the CLI:
+
+```bash
+# Check collection information to see chunking strategy
+cli/maestro-k collection info --vdb "Qiskit_studio_algo" --name "Qiskit_studio_algo"
+
+# Search with semantic chunking to see results
+./cli/maestro-k search "quantum circuit" --vdb qiskit_studio_algo --collection qiskit_studio_algo --doc-limit 1
+```
+
+**Note**: The semantic chunking strategy uses sentence-transformers for chunking decisions, while the collection's own embedding model is used for search operations.
 
 ## Quick Start
 

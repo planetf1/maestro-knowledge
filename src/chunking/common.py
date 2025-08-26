@@ -47,8 +47,10 @@ def chunk_text(
 
     # apply defaults when strategy is set and parameters missing
     if strategy != "None":
-        # default chunk size 512 and overlap 0
-        params = {"chunk_size": 512, "overlap": 0}
+        if strategy == "Semantic":
+            params = {"chunk_size": 768, "overlap": 0}
+        else:
+            params = {"chunk_size": 512, "overlap": 0}
         params.update(parameters)
     else:
         params = {}
