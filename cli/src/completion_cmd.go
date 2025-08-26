@@ -132,6 +132,44 @@ func SetupCustomCompletions() {
 			}
 			return results, cobra.ShellCompDirectiveDefault
 		})
+
+		// Chunking strategy completion
+		collectionCreateCmd.RegisterFlagCompletionFunc("chunking-strategy", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			provider := NewCompletionProvider()
+			completions, err := provider.CompleteChunkingStrategies(toComplete)
+			if err != nil {
+				return nil, cobra.ShellCompDirectiveError
+			}
+			var results []string
+			for _, completion := range completions {
+				results = append(results, completion.Text)
+			}
+			return results, cobra.ShellCompDirectiveDefault
+		})
+
+		// Chunk size and overlap are numeric; we don't compute values but we can hint directive to file completion disabled
+		collectionCreateCmd.RegisterFlagCompletionFunc("chunk-size", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		})
+		collectionCreateCmd.RegisterFlagCompletionFunc("chunk-overlap", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		})
+	}
+
+	// Status --vdb completion using vector database names
+	if statusCmd != nil {
+		statusCmd.RegisterFlagCompletionFunc("vdb", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			provider := NewCompletionProvider()
+			completions, err := provider.CompleteVectorDatabases(toComplete)
+			if err != nil {
+				return nil, cobra.ShellCompDirectiveError
+			}
+			var results []string
+			for _, completion := range completions {
+				results = append(results, completion.Text)
+			}
+			return results, cobra.ShellCompDirectiveDefault
+		})
 	}
 }
 

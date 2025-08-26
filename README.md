@@ -6,6 +6,7 @@ A modular vector database interface supporting multiple backends (Weaviate, Milv
 
 - **Multi-backend support**: Weaviate and Milvus vector databases
 - **Flexible embedding strategies**: Support for pre-computed vectors and multiple embedding models
+- **Pluggable document chunking**: None (default), Fixed (size/overlap), Sentence-aware
 - **Unified API**: Consistent interface across different vector database implementations
 - **Factory pattern**: Easy creation and switching between database types
 - **MCP Server**: Model Context Protocol server for AI agent integration with multi-database support
@@ -154,6 +155,7 @@ echo "Your document content here" > my_doc.txt
 The project includes a Go-based CLI tool for managing vector databases through the MCP server. For comprehensive CLI usage, installation, and examples, see [cli/README.md](cli/README.md).
 
 **Quick CLI Examples:**
+ 
 ```bash
 # Build and use the CLI
 cd cli && go build -o maestro-k src/*.go
@@ -166,6 +168,9 @@ cd cli && go build -o maestro-k src/*.go
 
 # Query documents
 ./maestro-k query "What is the main topic?" --vdb=my-database
+
+# Resync any Milvus collections into the MCP server's in-memory registry (use after server restart)
+./maestro-k resync-databases
 ```
 
 ### MCP Server
@@ -182,7 +187,34 @@ The project includes a Model Context Protocol (MCP) server that exposes vector d
 
 # Check server status
 ./stop.sh status
+
+# Manual resync tool (available as an MCP tool and through the CLI `resync-databases` command):
+# After restarting the MCP server, run the resync to register existing Milvus collections:
+./maestro-k resync-databases
 ```
+
+### Search and Query Output
+
+- Search returns JSON results suitable for programmatic use.
+- Query returns a human-readable text summary (no JSON flag).
+
+Search result schema (normalized across Weaviate and Milvus):
+
+- id: unique chunk identifier
+- url: source URL or file path
+- text: chunk text
+- metadata:
+    - doc_name: original document name/slug
+    - chunk_sequence_number: 1-based chunk index within the document
+    - total_chunks: total chunks for the document
+    - offset_start / offset_end: character offsets in the original text
+    - chunk_size: size of the chunk in characters
+- similarity: canonical relevance score in [0..1]
+- distance: cosine distance (approximately 1 − similarity); included for convenience
+- rank: 1-based rank in the current result set
+- _metric: similarity metric name (e.g., "cosine")
+- _search_mode: "vector" (vector similarity) or "keyword" (fallback)
+
 
 ## Embedding Strategies
 
@@ -194,7 +226,7 @@ The library supports flexible embedding strategies for both vector databases. Fo
 - **Milvus**: Supports pre-computed vectors and OpenAI embedding models
 - **Environment Variables**: Set `OPENAI_API_KEY` for OpenAI embedding models
 
-### Basic Usage
+### Embedding Usage
 
 ```python
 # Check supported embeddings
@@ -202,6 +234,7 @@ supported = db.supported_embeddings()
 print(f"Supported embeddings: {supported}")
 
 # Write documents with specific embedding
+(Deprecated) Embedding is configured per collection. Any per-document embedding specified in writes is ignored.
 db.write_documents(documents, embedding="text-embedding-3-small")
 ```
 
@@ -306,6 +339,7 @@ maestro-knowledge/
 │   │   ├── server.py        # Main MCP server
 │   │   ├── mcp_config.json  # MCP client configuration
 │   │   └── README.md        # MCP server documentation
+│   ├── chunking/           # Pluggable document chunking package
 │   └── vector_db.py         # Main module exports
 ├── cli/                     # Go CLI tool
 │   ├── src/                 # Go source code
@@ -404,6 +438,7 @@ The project includes comprehensive log monitoring capabilities:
 ```
 
 **Log Monitoring Features:**
+
 - **📡 Real-time tailing** - Monitor logs as they're generated
 - **✅ Visual status indicators** - Clear service status with checkmarks and X marks
 - **🌐 Port monitoring** - Check service availability on ports

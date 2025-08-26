@@ -29,10 +29,11 @@ warnings.filterwarnings(
 # Suppress external package deprecation warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-import sys
 import os
+import sys
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -133,6 +134,91 @@ class TestMilvusVectorDatabase:
             with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
                 db.write_documents(documents, embedding="text-embedding-ada-002")
                 assert mock_client.insert.called
+
+    @patch("pymilvus.MilvusClient")
+    def test_write_documents_excludes_chunking_metadata(self, mock_milvus_client):
+        """Write path should NOT attach chunking policy into per-chunk metadata (kept at collection level)."""
+        mock_client = MagicMock()
+        mock_milvus_client.return_value = mock_client
+
+        db = MilvusVectorDatabase("ChunkCol")
+        # Configure collection chunking
+        chunk_cfg = {
+            "strategy": "Fixed",
+            "parameters": {"chunk_size": 16, "overlap": 0},
+        }
+        # Also set embedding to avoid openai dependency by mocking _generate_embedding
+        db.setup(
+            embedding="text-embedding-ada-002",
+            collection_name="ChunkCol",
+            chunking_config=chunk_cfg,
+        )
+
+        # Mock embed generation
+        with patch.object(
+            db, "_generate_embedding", return_value=[0.0] * (db.dimension or 1536)
+        ):
+            documents = [
+                {
+                    "url": "u",
+                    "text": "abcdefghijklmnopqrstuvwxyz",
+                    "metadata": {"doc_name": "doc1"},
+                }
+            ]
+            db.write_documents(documents, embedding="default")
+
+        # Verify insert was called and metadata contains chunking
+        assert mock_client.insert.called
+        args, kwargs = mock_client.insert.call_args
+        assert args[0] == "ChunkCol"
+        data = args[1]
+        assert isinstance(data, list) and len(data) > 0
+        meta = data[0]["metadata"]
+        # metadata stored as JSON string
+        import json as _json
+
+        parsed = _json.loads(meta)
+        # Per-result chunking metadata has been removed to avoid duplication
+        assert "chunking" not in parsed
+        # Still includes prior fields
+        assert "offset_start" in parsed and "offset_end" in parsed
+        assert "chunk_sequence_number" in parsed and "total_chunks" in parsed
+
+    @patch("pymilvus.MilvusClient")
+    def test_get_collection_info_custom_local_includes_config(self, mock_milvus_client):
+        """For custom_local embedding, collection info should include URL/model config."""
+        mock_client = MagicMock()
+        mock_client.has_collection.return_value = True
+        mock_client.get_collection_stats.return_value = {"row_count": 0}
+        mock_desc = MagicMock()
+        mock_desc.fields = []
+        mock_client.describe_collection.return_value = mock_desc
+        mock_milvus_client.return_value = mock_client
+
+        db = MilvusVectorDatabase("CfgCol")
+        with patch.dict(
+            os.environ,
+            {
+                "CUSTOM_EMBEDDING_URL": "http://localhost:11434/v1",
+                "CUSTOM_EMBEDDING_MODEL": "nomic-embed-text",
+                "CUSTOM_EMBEDDING_VECTORSIZE": "768",
+            },
+            clear=True,
+        ):
+            db.setup(
+                embedding="custom_local",
+                collection_name="CfgCol",
+                chunking_config={
+                    "strategy": "Fixed",
+                    "parameters": {"chunk_size": 512, "overlap": 0},
+                },
+            )
+            info = db.get_collection_info("CfgCol")
+
+        ed = info.get("embedding_details", {})
+        cfg = ed.get("config", {})
+        assert cfg.get("url") == "http://localhost:11434/v1"
+        assert cfg.get("model") == "nomic-embed-text"
 
     @patch("pymilvus.MilvusClient")
     def test_write_documents_unsupported_embedding(self, mock_milvus_client):
@@ -327,6 +413,67 @@ class TestMilvusVectorDatabase:
         db = MilvusVectorDatabase()
         assert db.db_type == "milvus"
 
+    def test_reassemble_document_no_chunks(self):
+        """reassemble_document should return None when given no chunks."""
+        db = MilvusVectorDatabase()
+        assert db.reassemble_document([]) is None
+
+    @patch("pymilvus.MilvusClient")
+    def test_get_collection_info_includes_chunking(self, mock_milvus_client):
+        """get_collection_info should include the chunking config after setup."""
+        mock_client = MagicMock()
+        mock_client.has_collection.return_value = True
+        mock_client.get_collection_stats.return_value = {"row_count": 7}
+        # describe_collection returns an object with attributes used by code
+        mock_desc = MagicMock()
+        mock_desc.fields = []
+        mock_desc.description = "Test collection"
+        mock_client.describe_collection.return_value = mock_desc
+        mock_milvus_client.return_value = mock_client
+
+        db = MilvusVectorDatabase()
+        chunk_cfg = {
+            "strategy": "Fixed",
+            "parameters": {"chunk_size": 512, "overlap": 0},
+        }
+        db.setup(
+            embedding="text-embedding-3-small",
+            collection_name="InfoCol",
+            chunking_config=chunk_cfg,
+        )
+
+        info = db.get_collection_info("InfoCol")
+        assert info["name"] == "InfoCol"
+        assert info["db_type"] == "milvus"
+        assert info["document_count"] == 7
+        # chunking should reflect what we set in setup
+        assert info.get("chunking") == chunk_cfg
+        # embedding should be whatever we set in setup
+        assert info.get("embedding") == "text-embedding-3-small"
+
+    @patch("pymilvus.MilvusClient")
+    def test_get_collection_info_nonexistent_still_returns_chunking_meta(
+        self, mock_milvus_client
+    ):
+        """If collection does not exist, info should still surface stored chunking metadata."""
+        mock_client = MagicMock()
+        mock_client.has_collection.return_value = False
+        mock_milvus_client.return_value = mock_client
+
+        db = MilvusVectorDatabase()
+        chunk_cfg = {"strategy": "Sentence", "parameters": {"max_chars": 500}}
+        # Store metadata via setup
+        db.setup(
+            embedding="default", collection_name="NoSuchCol", chunking_config=chunk_cfg
+        )
+
+        info = db.get_collection_info("NoSuchCol")
+        assert info["name"] == "NoSuchCol"
+        assert info["db_type"] == "milvus"
+        assert info["document_count"] == 0
+        assert info.get("chunking") == chunk_cfg
+        assert info.get("metadata", {}).get("error") == "Collection does not exist"
+
     @patch("pymilvus.MilvusClient")
     def test_get_document_success(self, mock_milvus_client):
         """Test successfully getting a document by name."""
@@ -334,20 +481,26 @@ class TestMilvusVectorDatabase:
         mock_client.has_collection.return_value = True
         mock_client.query.return_value = [
             {
-                "id": "doc123",
+                "id": "chunk1",
                 "url": "test_url",
-                "text": "test content",
-                "metadata": """{"doc_name": "test_doc", "collection_name": "test_collection"}""",
-            }
+                "text": "Hello ",
+                "metadata": """{"doc_name": "test_doc", "collection_name": "test_collection", "chunk_sequence_number": 1, "total_chunks": 2, "offset_start": 0, "offset_end": 6, "chunk_size": 6}""",
+            },
+            {
+                "id": "chunk2",
+                "url": "test_url",
+                "text": "World",
+                "metadata": """{"doc_name": "test_doc", "collection_name": "test_collection", "chunk_sequence_number": 2, "total_chunks": 2, "offset_start": 6, "offset_end": 11, "chunk_size": 5}""",
+            },
         ]
         mock_milvus_client.return_value = mock_client
 
         db = MilvusVectorDatabase()
         result = db.get_document("test_doc", "test_collection")
 
-        assert result["id"] == "doc123"
+        assert result["id"] in ("chunk1", "chunk2")
         assert result["url"] == "test_url"
-        assert result["text"] == "test content"
+        assert result["text"] == "Hello World"
         assert result["metadata"]["doc_name"] == "test_doc"
         assert result["metadata"]["collection_name"] == "test_collection"
 
@@ -356,8 +509,33 @@ class TestMilvusVectorDatabase:
             "test_collection",
             filter='''metadata["doc_name"] == "test_doc"''',
             output_fields=["id", "url", "text", "metadata"],
-            limit=1,
+            limit=10000,
         )
+
+    @patch("pymilvus.MilvusClient")
+    def test_write_documents_ignores_per_write_embedding_with_warning(
+        self, mock_milvus_client
+    ):
+        """When collection embedding is set, per-write embedding should be ignored and warn."""
+        mock_client = MagicMock()
+        mock_milvus_client.return_value = mock_client
+        mock_client.has_collection.return_value = True
+
+        db = MilvusVectorDatabase()
+        # Simulate prior setup setting embedding model and dimension
+        db.embedding_model = "text-embedding-3-small"
+        db.dimension = 1536
+
+        # Patch embedding generator to check which model is used
+        with patch.object(db, "_generate_embedding", return_value=[0.0] * 1536) as gen:
+            docs = [{"url": "u", "text": "abc", "metadata": {}}]
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                db.write_documents(docs, embedding="text-embedding-ada-002")
+                # one warning emitted
+                assert any("per-collection" in str(x.message) for x in w)
+            # Should have used effective (collection) model, not the per-write arg
+            gen.assert_called()
 
     @patch("pymilvus.MilvusClient")
     def test_get_document_collection_not_found(self, mock_milvus_client):

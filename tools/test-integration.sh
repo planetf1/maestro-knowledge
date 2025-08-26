@@ -208,6 +208,9 @@ if [[ "$CREATE_WEAVIATE_OUTPUT" == *"✅ Vector database 'test_remote_weaviate' 
 elif [[ "$CREATE_WEAVIATE_OUTPUT" == *"WEAVIATE_API_KEY is not set"* ]] || [[ "$CREATE_WEAVIATE_OUTPUT" == *"WEAVIATE_URL is not set"* ]] || [[ "$CREATE_WEAVIATE_OUTPUT" == *"Failed to create vector database 'test_remote_weaviate': WEAVIATE_API_KEY is not set"* ]] || [[ "$CREATE_WEAVIATE_OUTPUT" == *"Error: Failed to create vector database 'test_remote_weaviate': WEAVIATE_API_KEY is not set"* ]]; then
     print_warning "Weaviate database creation skipped (missing API key/URL - this is expected in test environment)"
     WEAVIATE_CREATED=false
+elif [[ "$CREATE_WEAVIATE_OUTPUT" == *"Could not connect to Weaviate"* ]] || [[ "$CREATE_WEAVIATE_OUTPUT" == *"Connection to Weaviate failed"* ]]; then
+    print_warning "Weaviate database creation skipped (Weaviate not reachable - expected in test environment)"
+    WEAVIATE_CREATED=false
 else
     print_error "Failed to create Weaviate database for unexpected reason"
     echo "Output: $CREATE_WEAVIATE_OUTPUT"

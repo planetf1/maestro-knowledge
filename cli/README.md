@@ -9,6 +9,8 @@ A command-line interface for interacting with the Maestro Knowledge MCP server w
 - **List collections**: List all collections in a specific vector database
 - **List documents**: List documents in a specific collection of a vector database
 - **Query documents**: Query documents using natural language with semantic search
+- **Pluggable document chunking**: Configure per-collection chunking (None, Fixed with size/overlap, Sentence)
+   - Discover supported strategies with `maestro-k chunking list`
 - **Create vector databases**: Create vector databases from YAML configuration files
 - **Delete vector databases**: Delete vector databases by name
 - **Validate configurations**: Validate YAML configuration files
@@ -85,8 +87,9 @@ go build -o maestro-k src/*.go
 ./maestro-k document list --vdb=my-database --collection=my-collection --verbose
 
 # Query documents using natural language
+# Tip: pass --collection to avoid an interactive prompt
 ./maestro-k query "What is the main topic of the documents?" --vdb=my-database
-./maestro-k query "Find information about API endpoints" --vdb=my-database --doc-limit 10
+./maestro-k query "Find information about API endpoints" --vdb=my-database --collection=my-collection --doc-limit 10
 
 # Create vector database from YAML file
 ./maestro-k vectordb create config.yaml
@@ -102,6 +105,16 @@ go build -o maestro-k src/*.go
 
 # Validate YAML configuration
 ./maestro-k validate config.yaml
+
+# Create collection with chunking
+./maestro-k create collection my-database my-collection \
+   --embedding=text-embedding-3-small \
+   --chunking-strategy=Sentence \
+   --chunk-size=512 \
+   --chunk-overlap=32
+
+# List supported chunking strategies
+./maestro-k chunking list
 ```
 
 ### Enhanced UX Features
@@ -117,6 +130,12 @@ go build -o maestro-k src/*.go
 
 # The CLI will prompt you to select a document if not specified
 ./maestro-k document delete --vdb=my-database --collection=my-collection
+
+# Search and query also prompt for a collection when --collection is omitted
+./maestro-k search "example" --vdb=my-database
+./maestro-k query "example" --vdb=my-database
+
+# Note: Prompts are skipped in non-interactive contexts and with --dry-run; pass --collection to avoid prompting
 ```
 
 #### Auto-completion Setup
@@ -253,7 +272,7 @@ Set the `MAESTRO_KNOWLEDGE_MCP_SERVER_URI` environment variable:
 
 ```bash
 export MAESTRO_KNOWLEDGE_MCP_SERVER_URI="http://localhost:8030"
-./maestro-k list vector-dbs
+./maestro-k vectordb list
 ```
 
 #### 2. .env File
@@ -279,7 +298,7 @@ The CLI will automatically load the `.env` file if it exists in the current dire
 Override the MCP server URI via command-line flag:
 
 ```bash
-./maestro-k list vector-dbs --mcp-server-uri="http://localhost:8030"
+./maestro-k vectordb list --mcp-server-uri="http://localhost:8030"
 ```
 
 **Priority order**: Command-line flag > Environment variable > .env file > Default (http://localhost:8030)
@@ -289,6 +308,14 @@ Override the MCP server URI via command-line flag:
 - `WEAVIATE_API_KEY`: Weaviate API key for Weaviate backend
 - `WEAVIATE_URL`: Weaviate cluster URL
 - `OPENAI_API_KEY`: OpenAI API key for embeddings
+
+### Chunking support
+
+- Configure chunking when defining collections via YAML. The CLI exposes discovery of supported strategies with:
+
+```bash
+./maestro-k chunking list
+```
 
 ### Environment Variable Substitution in YAML Files
 
@@ -308,6 +335,7 @@ spec:
 ```
 
 When you run `./maestro-k create vector-db config.yaml`, the CLI will:
+ 
 1. Load environment variables from `.env` file (if present)
 2. Replace `{{WEAVIATE_URL}}` with the actual value from the environment
 3. Process the YAML file with the substituted values
@@ -328,11 +356,12 @@ The CLI automatically normalizes URLs to ensure they have the correct protocol p
 - **HTTPS URL**: `https://example.com:9000` → `https://example.com:9000` (unchanged)
 
 This makes it easy to specify server addresses in any format:
+
 ```bash
 # All of these work the same way:
-./maestro-k list vector-dbs --mcp-server-uri="localhost:8030"
-./maestro-k list vector-dbs --mcp-server-uri="http://localhost:8030"
-./maestro-k list vector-dbs --mcp-server-uri="https://example.com:9000"
+./maestro-k vectordb list --mcp-server-uri="localhost:8030"
+./maestro-k vectordb list --mcp-server-uri="http://localhost:8030"
+./maestro-k vectordb list --mcp-server-uri="https://example.com:9000"
 ```
 
 ### Global Flags
@@ -395,7 +424,7 @@ The CLI provides resource-based list commands for vector databases, collections,
 - Document count
 
 Example:
-```
+```text
 Found 2 vector database(s):
 
 1. project_a_db (weaviate)
@@ -411,7 +440,7 @@ Found 2 vector database(s):
 - Supported embedding models for the specific database type
 
 Example:
-```
+```text
 Supported embeddings for weaviate vector database 'my-database': [
   "default",
   "text2vec-weaviate",
@@ -423,12 +452,13 @@ Supported embeddings for weaviate vector database 'my-database': [
   "text-embedding-3-large"
 ]
 ```
+- `--collection`: Specific collection to search in (optional; if omitted you'll be prompted interactively unless in --dry-run or non-interactive mode)
 
 **Collections**: When listing collections for a vector database, the output shows:
 - All collections available in the vector database
 
 Example:
-```
+```text
 Collections in vector database 'my-database': [
   "Collection1",
   "Collection2",
@@ -440,7 +470,7 @@ Collections in vector database 'my-database': [
 - All documents in the specified collection with their properties
 
 Example:
-```
+```json
 Found 3 documents in collection 'my-collection' of vector database 'my-database': [
   {
     "id": "doc1",
@@ -509,9 +539,6 @@ The CLI provides resource-based create commands for vector databases, collection
 # Create document from file
 ./maestro-k document create --name=my-doc --file=document.txt --vdb=my-database --collection=my-collection
 
-# Create document with specific embedding
-./maestro-k document create --name=my-doc --file=document.txt --vdb=my-database --collection=my-collection --embed=text-embedding-3-small
-
 # Create document with dry-run mode
 ./maestro-k document create --name=my-doc --file=document.txt --vdb=my-database --collection=my-collection --dry-run
 ```
@@ -524,15 +551,14 @@ The `write` command is an alias for creating documents:
 # Write document from file
 ./maestro-k write document my-database my-collection my-doc --file-name=document.txt
 
-# Write document with specific embedding
-./maestro-k write document my-database my-collection my-doc --file-name=document.txt --embed=text-embedding-3-small
-
 # Write document using short aliases
 ./maestro-k write doc my-database my-collection my-doc --file-name=document.txt
 ./maestro-k write vdb-doc my-database my-collection my-doc --file-name=document.txt
 
 # Write document with dry-run mode
 ./maestro-k write document my-database my-collection my-doc --file-name=document.txt --dry-run
+
+Note: --embed on write is deprecated and ignored; embedding is configured per collection when the collection is created.
 ```
 
 ### Confirmation Prompts for Destructive Operations
@@ -618,6 +644,38 @@ The CLI provides resource-based delete commands for vector databases, collection
 ./maestro-k document delete my-document --vdb=my-database --collection=my-collection --force
 ```
 
+### Search Command
+
+The `search` command performs a vector search and returns JSON results suitable for programmatic use.
+
+```bash
+# Basic search (prompts for collection if omitted)
+./maestro-k search "Find information about API endpoints" --vdb=my-database
+
+# Search with specific document limit and collection
+./maestro-k search "quantum circuits" --vdb=my-database --collection=my-collection --doc-limit 10
+```
+
+Search output schema (normalized across backends):
+
+- id, url, text
+- metadata:
+   - doc_name
+   - chunk_sequence_number
+   - total_chunks
+   - offset_start, offset_end
+   - chunk_size
+- similarity: canonical score in [0..1]
+- distance: cosine distance (for reference)
+- rank: 1-based rank
+- _metric: e.g., "cosine"
+- _search_mode: "vector" or "keyword"
+
+Flags:
+
+- `--doc-limit, -d`: Maximum number of documents to consider (default: 5)
+- `--collection`: Specific collection to search in (optional; if omitted you'll be prompted interactively unless in --dry-run or non-interactive mode)
+
 ### Query Command
 
 The `query` command allows you to search documents using natural language queries with semantic search:
@@ -651,7 +709,7 @@ The `query` command allows you to search documents using natural language querie
 #### Query Command Flags
 
 - `--doc-limit, -d`: Maximum number of documents to consider (default: 5)
-- `--collection-name, -c`: Specific collection to search in (optional)
+- `--collection`: Specific collection to search in (optional; if omitted you'll be prompted interactively unless in --dry-run or non-interactive mode)
 - `--dry-run`: Test the command without making changes
 - `--verbose`: Show detailed output
 - `--silent`: Suppress success messages
@@ -672,59 +730,36 @@ The `query` command allows you to search documents using natural language querie
 ./maestro-k query "Test query" --vdb=my-database --dry-run
 ```
 
-### Retrieve Command
+### Collection Info Command
 
-The `retrieve` command retrieves information about collections and documents:
-
-```bash
-# Retrieve collection information (uses default collection if not specified)
-./maestro-k retrieve collection my-database
-
-# Retrieve specific collection information
-./maestro-k retrieve collection my-database my-collection
-
-# Retrieve using short aliases
-./maestro-k retrieve col my-database
-./maestro-k retrieve vdb-col my-database my-collection
-
-# Retrieve with verbose output
-./maestro-k retrieve collection my-database --verbose
-
-# Retrieve with dry-run mode
-./maestro-k retrieve collection my-database --dry-run
-```
-
-#### Retrieve Document Command
+Show collection information (embedding and chunking):
 
 ```bash
-# Retrieve specific document from collection
-./maestro-k retrieve document my-database my-collection my-document
-
-# Retrieve document using short aliases
-./maestro-k retrieve doc my-database my-collection my-document
-./maestro-k retrieve vdb-doc my-database my-collection my-document
-
-# Retrieve document with verbose output
-./maestro-k retrieve document my-database my-collection my-document --verbose
-
-# Retrieve document with dry-run mode
-./maestro-k retrieve document my-database my-collection my-document --dry-run
+./maestro-k collection info --vdb=my-database --name=my-collection
 ```
 
-**Collection Information Output**: When retrieving collection information, the output shows:
+**Collection Information Output**: The output shows:
 - Collection name
 - Document count
 - Database type
 - Embedding information
+- Chunking configuration (strategy and parameters)
 - Additional metadata
 
 Example:
+
+Collection information for 'my-collection' in vector database 'my-database':
+
 ```json
-Collection information for 'my-collection' in vector database 'my-database': {
+{
   "name": "my-collection",
   "document_count": 15,
   "db_type": "weaviate",
   "embedding": "text2vec-weaviate",
+  "chunking": {
+    "strategy": "Sentence",
+    "parameters": { "chunk_size": 512, "overlap": 32 }
+  },
   "metadata": {
     "description": "My test collection",
     "vectorizer": "text2vec-weaviate",
@@ -734,26 +769,7 @@ Collection information for 'my-collection' in vector database 'my-database': {
 }
 ```
 
-**Document Information Output**: When retrieving document information, the output shows:
-- Document ID
-- Document URL
-- Document text content
-- Document metadata including doc_name and collection_name
-
-Example:
-```json
-Document 'my-document' from collection 'my-collection' in vector database 'my-database': {
-  "id": "doc_123",
-  "url": "https://example.com/my-document",
-  "text": "This is the content of the document...",
-  "metadata": {
-    "doc_name": "my-document",
-    "collection_name": "my-collection",
-    "source": "web",
-    "timestamp": "2024-01-01T00:00:00Z"
-  }
-}
-```
+Note: The CLI does not currently provide a standalone "document get" command.
 
 ### Validate Command
 
@@ -833,14 +849,16 @@ If you get connection errors:
    ```
 
 2. **Verify the server URI**:
+
 ```bash
-   ./maestro-k list vector-dbs --mcp-server-uri="http://localhost:8030" --verbose
-   ```
+./maestro-k vectordb list --mcp-server-uri="http://localhost:8030" --verbose
+```
 
 3. **Check server logs**:
-   ```bash
-   tail -f /path/to/maestro-knowledge/mcp_server.log
-   ```
+
+```bash
+tail -f /path/to/maestro-knowledge/mcp_server.log
+```
 
 ### Common Issues
 
@@ -855,7 +873,7 @@ If you get connection errors:
 
 ### Project Structure
 
-```
+```text
 cli/
 ├── src/
 │   ├── main.go          # Main CLI entry point
@@ -967,4 +985,4 @@ go test -v ./tests/...
 
 ## License
 
-Apache 2.0 License - see the main project LICENSE file for details. 
+Apache 2.0 License - see the main project LICENSE file for details.
