@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 vector_databases: dict[str, VectorDatabase] = {}
 
 
-def resync_vector_databases() -> list[str]:
+async def resync_vector_databases() -> list[str]:
     """Discover Milvus collections and register them in memory.
 
     Returns a list of collection names that were registered.
@@ -71,7 +71,7 @@ def resync_vector_databases() -> list[str]:
             return added
 
         try:
-            collections = temp.list_collections() or []
+            collections = await temp.list_collections() or []
         except Exception as e:
             logger.warning(f"Failed to list Milvus collections during resync: {e}")
             return added
@@ -143,7 +143,7 @@ def resync_vector_databases() -> list[str]:
     return added
 
 
-def resync_weaviate_databases() -> list[str]:
+async def resync_weaviate_databases() -> list[str]:
     """Discover Weaviate collections and register them in memory.
 
     Returns a list of collection names that were registered.
@@ -157,7 +157,7 @@ def resync_weaviate_databases() -> list[str]:
         # Attempt to create a temporary client; this will raise if env is missing
         temp = WeaviateVectorDatabase()
         try:
-            collections = temp.list_collections() or []
+            collections = await temp.list_collections() or []
         except Exception as e:
             logger.warning(f"Failed to list Weaviate collections during resync: {e}")
             return added
@@ -454,11 +454,11 @@ def create_mcp_server() -> FastMCP:
                 # Get the number of parameters in the setup method
                 param_count = len(db.setup.__code__.co_varnames)
                 if param_count > 2:  # self, embedding, collection_name
-                    db.setup(embedding=input.embedding)
+                    await db.setup(embedding=input.embedding)
                 elif param_count > 1:  # self, embedding
-                    db.setup(embedding=input.embedding)
+                    await db.setup(embedding=input.embedding)
                 else:  # self only
-                    db.setup()
+                    await db.setup()
 
             return f"Successfully set up {db.db_type} vector database '{input.db_name}' with embedding '{input.embedding}'"
         except Exception as e:
@@ -543,13 +543,15 @@ def create_mcp_server() -> FastMCP:
         coll_info = None
         try:
             # Best effort: fetch current collection info to get embedding
-            coll_info = db.get_collection_info()
+            coll_info = await db.get_collection_info()
         except Exception:
             pass
         collection_embedding = (coll_info or {}).get("embedding", "default")
         stats = None
         try:
-            stats = db.write_documents(input.documents, embedding=collection_embedding)
+            stats = await db.write_documents(
+                input.documents, embedding=collection_embedding
+            )
         except Exception as e:
             # surface error in JSON result
             result = {
@@ -561,7 +563,7 @@ def create_mcp_server() -> FastMCP:
         # Refresh collection info after write
         post_info = None
         try:
-            post_info = db.get_collection_info()
+            post_info = await db.get_collection_info()
         except Exception:
             post_info = None
 
@@ -613,7 +615,7 @@ def create_mcp_server() -> FastMCP:
             )
         coll_info = None
         try:
-            coll_info = db.get_collection_info()
+            coll_info = await db.get_collection_info()
         except Exception:
             pass
         collection_embedding = (coll_info or {}).get("embedding", "default")
@@ -632,7 +634,7 @@ def create_mcp_server() -> FastMCP:
         # Post-write info and suggestion
         post_info = None
         try:
-            post_info = db.get_collection_info()
+            post_info = await db.get_collection_info()
         except Exception:
             post_info = None
         sample_query = (
@@ -662,7 +664,7 @@ def create_mcp_server() -> FastMCP:
         db = get_database_by_name(input.db_name)
 
         # Check if the collection exists
-        collections = db.list_collections()
+        collections = await db.list_collections()
         if input.collection_name not in collections:
             raise ValueError(
                 f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
@@ -690,14 +692,14 @@ def create_mcp_server() -> FastMCP:
             )
         collection_embedding = "default"
         try:
-            info = db.get_collection_info(input.collection_name)
+            info = await db.get_collection_info(input.collection_name)
             collection_embedding = info.get("embedding", "default")
         except Exception:
             pass
         # Use the new write_documents_to_collection method
         stats = None
         try:
-            stats = db.write_documents_to_collection(
+            stats = await db.write_documents_to_collection(
                 [document], input.collection_name, embedding=collection_embedding
             )
         except Exception as e:
@@ -712,7 +714,7 @@ def create_mcp_server() -> FastMCP:
         # Post-write info and suggestion
         post_info = None
         try:
-            post_info = db.get_collection_info(input.collection_name)
+            post_info = await db.get_collection_info(input.collection_name)
         except Exception:
             post_info = None
         sample_query = (
@@ -750,7 +752,7 @@ def create_mcp_server() -> FastMCP:
         db = get_database_by_name(input.db_name)
 
         # Check if the collection exists
-        collections = db.list_collections()
+        collections = await db.list_collections()
         # Use case-sensitive comparison
         if input.collection_name not in collections:
             raise ValueError(
@@ -758,7 +760,7 @@ def create_mcp_server() -> FastMCP:
             )
 
         # Use the new list_documents_in_collection method
-        documents = db.list_documents_in_collection(
+        documents = await db.list_documents_in_collection(
             input.collection_name, input.limit, input.offset
         )
         return f"Found {len(documents)} documents in collection '{input.collection_name}' of vector database '{input.db_name}':\n{json.dumps(documents, indent=2, default=str)}"
@@ -795,7 +797,7 @@ def create_mcp_server() -> FastMCP:
         db = get_database_by_name(input.db_name)
 
         # Check if the collection exists
-        collections = db.list_collections()
+        collections = await db.list_collections()
         if input.collection_name not in collections:
             raise ValueError(
                 f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
@@ -836,7 +838,7 @@ def create_mcp_server() -> FastMCP:
         db = get_database_by_name(input.db_name)
 
         # Check if the collection exists
-        collections = db.list_collections()
+        collections = await db.list_collections()
         if input.collection_name not in collections:
             raise ValueError(
                 f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
@@ -859,7 +861,7 @@ def create_mcp_server() -> FastMCP:
             db = get_database_by_name(input.db_name)
 
             # Check if the collection exists
-            collections = db.list_collections()
+            collections = await db.list_collections()
             if input.collection_name not in collections:
                 raise ValueError(
                     f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
@@ -915,7 +917,7 @@ def create_mcp_server() -> FastMCP:
     async def list_collections(input: ListCollectionsInput) -> str:
         """List all collections in a vector database."""
         db = get_database_by_name(input.db_name)
-        collections = db.list_collections()
+        collections = await db.list_collections()
 
         if not collections:
             return f"No collections found in vector database '{input.db_name}'"
@@ -928,7 +930,7 @@ def create_mcp_server() -> FastMCP:
         db = get_database_by_name(input.db_name)
         # Always delegate to the backend which can surface metadata even if
         # the collection doesn't exist (including chunking config and errors)
-        info = db.get_collection_info(input.collection_name)
+        info = await db.get_collection_info(input.collection_name)
 
         return (
             f"Collection information for '{info.get('name')}' in vector database "
@@ -942,7 +944,7 @@ def create_mcp_server() -> FastMCP:
             db = get_database_by_name(input.db_name)
 
             # Check if collection already exists
-            existing_collections = db.list_collections()
+            existing_collections = await db.list_collections()
             if input.collection_name in existing_collections:
                 return f"Error: Collection '{input.collection_name}' already exists in vector database '{input.db_name}'"
 
@@ -959,22 +961,22 @@ def create_mcp_server() -> FastMCP:
                     if (
                         param_count > 3
                     ):  # self, embedding, collection_name, chunking_config
-                        db.setup(
+                        await db.setup(
                             embedding=input.embedding,
                             collection_name=input.collection_name,
                             chunking_config=input.chunking_config,
                         )
                     elif param_count > 2:  # self, embedding, collection_name
-                        db.setup(
+                        await db.setup(
                             embedding=input.embedding,
                             collection_name=input.collection_name,
                         )
                     elif param_count > 1:  # self, embedding
-                        db.setup(embedding=input.embedding)
+                        await db.setup(embedding=input.embedding)
                     else:  # self only
-                        db.setup()
+                        await db.setup()
                 else:
-                    db.setup()
+                    await db.setup()
 
                 # NOTE: Embedding is configured per-collection at creation time.
                 # TODO(deprecate): Remove write-time embedding parameters from write tools in a future release.
@@ -1033,7 +1035,7 @@ def create_mcp_server() -> FastMCP:
                     "name": db_name,
                     "type": db.db_type,
                     "collection": db.collection_name,
-                    "document_count": db.count_documents(),
+                    "document_count": await db.count_documents(),
                 }
             )
 
@@ -1044,8 +1046,8 @@ def create_mcp_server() -> FastMCP:
     async def resync_databases_tool() -> str:
         """Discover and register Milvus collections into the MCP server's in-memory registry."""
         try:
-            added_milvus = resync_vector_databases()
-            added_weaviate = resync_weaviate_databases()
+            added_milvus = await resync_vector_databases()
+            added_weaviate = await resync_weaviate_databases()
             return json.dumps(
                 {
                     "milvus": {"added": added_milvus, "count": len(added_milvus)},
