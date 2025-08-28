@@ -769,7 +769,7 @@ def create_mcp_server() -> FastMCP:
     async def count_documents(input: CountDocumentsInput) -> str:
         """Get the current count of documents in a collection."""
         db = get_database_by_name(input.db_name)
-        count = db.count_documents()
+        count = await db.count_documents()
 
         return f"Document count in vector database '{input.db_name}': {count}"
 
