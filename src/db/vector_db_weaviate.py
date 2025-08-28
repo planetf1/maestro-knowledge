@@ -82,7 +82,6 @@ class WeaviateVectorDatabase(VectorDatabase):
             cluster_url=weaviate_url,
             auth_credentials=Auth.api_key(weaviate_api_key),
         )
-        await self.client.connect()
 
     def _get_vectorizer_config(
         self, embedding: str
@@ -166,6 +165,7 @@ class WeaviateVectorDatabase(VectorDatabase):
             "chunking": chunking_config or {"strategy": "None", "parameters": {}},
         }
         self._collections_metadata[target_collection] = target_meta
+        await self.client.connect()
         if not await self.client.collections.exists(target_collection):
             vectorizer_config = self._get_vectorizer_config(embedding)
 
