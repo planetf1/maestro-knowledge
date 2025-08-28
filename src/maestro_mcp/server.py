@@ -164,7 +164,7 @@ async def resync_weaviate_databases() -> list[str]:
         finally:
             # Close the temporary connection to avoid resource warnings/leaks
             try:
-                temp.cleanup()
+                await temp.cleanup()
             except Exception:
                 pass
 
@@ -867,14 +867,14 @@ def create_mcp_server() -> FastMCP:
                     f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
                 )
 
-            db.delete_collection(input.collection_name)
+            await db.delete_collection(input.collection_name)
 
             return f"Successfully deleted collection '{input.collection_name}' from vector database '{input.db_name}'"
         try:
             from ..db.vector_db_milvus import MilvusVectorDatabase
 
             temp_db = MilvusVectorDatabase(collection_name=input.collection_name)
-            temp_db.delete_collection(input.collection_name)
+            await temp_db.delete_collection(input.collection_name)
             return f"Successfully dropped collection '{input.collection_name}' from Milvus (untracked)."
         except Exception as e:
             return f"Delete collection failed: {str(e)}"
@@ -884,7 +884,7 @@ def create_mcp_server() -> FastMCP:
         """Clean up resources and close connections for a vector database."""
         if input.db_name in vector_databases:
             db = get_database_by_name(input.db_name)
-            db.cleanup()
+            await db.cleanup()
             del vector_databases[input.db_name]
             return (
                 f"Successfully cleaned up and removed vector database '{input.db_name}'"
@@ -893,7 +893,7 @@ def create_mcp_server() -> FastMCP:
             from ..db.vector_db_milvus import MilvusVectorDatabase
 
             temp_db = MilvusVectorDatabase(collection_name=input.db_name)
-            temp_db.delete_collection(input.db_name)
+            await temp_db.delete_collection(input.db_name)
             return f"Successfully dropped collection '{input.db_name}' from Milvus (untracked)."
         except Exception as e:
             return f"Cleanup failed: {str(e)}"
