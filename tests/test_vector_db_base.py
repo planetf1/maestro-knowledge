@@ -19,7 +19,7 @@ warnings.filterwarnings(
 import sys
 import os
 import pytest
-from typing import Dict, Any
+from typing import Any
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -81,7 +81,7 @@ class ConcreteVectorDatabase(VectorDatabase):
 
     def get_document(
         self, doc_name: str, collection_name: str = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get a specific document by name from the vector database."""
         target_collection = collection_name or self.collection_name
 

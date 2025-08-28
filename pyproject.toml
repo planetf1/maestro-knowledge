@@ -31,6 +31,8 @@ dependencies = [
 # Disable E402 (module level import not at top) globally
 # This is needed due to our test structure with sys.path.append and warnings.filterwarnings
 ignore = ["E402"]
+# Enable PEP 585 (list[]) and PEP 604 (str | int) style annotations
+select = ["UP006", "UP007"]
 
 [tool.pytest.ini_options]
 # Suppress expected warnings during testing

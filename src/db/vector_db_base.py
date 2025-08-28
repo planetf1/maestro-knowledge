@@ -3,7 +3,7 @@
 
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List
+from typing import Any
 
 # Suppress Pydantic deprecation warnings from dependencies
 warnings.filterwarnings(
@@ -34,7 +34,7 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def supported_embeddings(self) -> List[str]:
+    def supported_embeddings(self) -> list[str]:
         """
         Return a list of supported embedding model names for this vector database.
 
@@ -48,7 +48,7 @@ class VectorDatabase(ABC):
         self,
         embedding: str = "default",
         collection_name: str = None,
-        chunking_config: Dict[str, Any] = None,
+        chunking_config: dict[str, Any] = None,
     ):
         """
         Set up the database and create collections if they don't exist.
@@ -63,7 +63,7 @@ class VectorDatabase(ABC):
     @abstractmethod
     def write_documents(
         self,
-        documents: List[Dict[str, Any]],
+        documents: list[dict[str, Any]],
         embedding: str = "default",
         collection_name: str = None,
     ):
@@ -79,7 +79,7 @@ class VectorDatabase(ABC):
 
     def write_documents_to_collection(
         self,
-        documents: List[Dict[str, Any]],
+        documents: list[dict[str, Any]],
         collection_name: str,
         embedding: str = "default",
     ):
@@ -95,7 +95,7 @@ class VectorDatabase(ABC):
 
     def write_document(
         self,
-        document: Dict[str, Any],
+        document: dict[str, Any],
         embedding: str = "default",
         collection_name: str = None,
     ):
@@ -110,7 +110,7 @@ class VectorDatabase(ABC):
         return self.write_documents([document], embedding, collection_name)
 
     @abstractmethod
-    def list_documents(self, limit: int = 10, offset: int = 0) -> List[Dict[str, Any]]:
+    def list_documents(self, limit: int = 10, offset: int = 0) -> list[dict[str, Any]]:
         """
         List documents from the vector database.
 
@@ -125,7 +125,7 @@ class VectorDatabase(ABC):
 
     def list_documents_in_collection(
         self, collection_name: str, limit: int = 10, offset: int = 0
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         List documents from a specific collection in the vector database.
 
@@ -148,7 +148,7 @@ class VectorDatabase(ABC):
     @abstractmethod
     def get_document(
         self, doc_name: str, collection_name: str = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get a specific document by name from the vector database.
 
@@ -193,7 +193,7 @@ class VectorDatabase(ABC):
             self.collection_name = original_collection
 
     @abstractmethod
-    def list_collections(self) -> List[str]:
+    def list_collections(self) -> list[str]:
         """
         List all collections in the vector database.
 
@@ -203,7 +203,7 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def get_collection_info(self, collection_name: str = None) -> Dict[str, Any]:
+    def get_collection_info(self, collection_name: str = None) -> dict[str, Any]:
         """
         Get detailed information about a collection.
 
@@ -221,7 +221,7 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def delete_documents(self, document_ids: List[str]):
+    def delete_documents(self, document_ids: list[str]):
         """
         Delete documents from the vector database by their IDs.
 
@@ -293,7 +293,7 @@ class VectorDatabase(ABC):
 
     def get_document_chunks(
         self, doc_id: str, collection_name: str = None
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Retrieve all chunks for a specific document.
 
@@ -307,7 +307,7 @@ class VectorDatabase(ABC):
         return []
 
     # option to retrieve the full document
-    def reassemble_document(self, chunks: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def reassemble_document(self, chunks: list[dict[str, Any]]) -> dict[str, Any]:
         """
         Reassemble a document from its chunks.
 
