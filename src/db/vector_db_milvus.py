@@ -306,7 +306,7 @@ class MilvusVectorDatabase(VectorDatabase):
             try:
                 # Use the target collection (not the object's default) when describing
                 info = await self.client.describe_collection(target_collection)
-                for field in info.get("fields", []):
+                for field in await info.get("fields", []):
                     if field.get("name") == "vector":
                         existing_dim = field.get("params", {}).get("dim")
                         if existing_dim != self.dimension:
@@ -567,7 +567,7 @@ class MilvusVectorDatabase(VectorDatabase):
         target_collection = collection_name or self.collection_name
         try:
             # Query for all records with matching metadata.doc_name
-            results = await self.client.query(
+            results = self.client.query(
                 target_collection,
                 filter=f'metadata["doc_name"] == "{doc_id}"',
                 output_fields=["id", "url", "text", "metadata"],
@@ -632,7 +632,7 @@ class MilvusVectorDatabase(VectorDatabase):
 
         try:
             # Query all documents, paginated
-            results = await self.client.query(
+            results = self.client.query(
                 self.collection_name,
                 output_fields=["id", "url", "text", "metadata"],
                 limit=limit,
@@ -672,7 +672,7 @@ class MilvusVectorDatabase(VectorDatabase):
 
         try:
             # Get collection statistics
-            stats = await self.client.get_collection_stats(self.collection_name)
+            stats = self.client.get_collection_stats(self.collection_name)
             return stats.get("row_count", 0)
         except Exception as e:
             warnings.warn(f"Could not get collection stats: {e}")
@@ -708,7 +708,7 @@ class MilvusVectorDatabase(VectorDatabase):
                 return []
 
             # Query documents from the specific collection
-            results = await self.client.query(
+            results = self.client.query(
                 collection_name,
                 output_fields=["id", "url", "text", "metadata"],
                 limit=limit,
@@ -1471,7 +1471,7 @@ class MilvusVectorDatabase(VectorDatabase):
         if self.client is not None:
             if self.collection_name:
                 if await self.client.has_collection(self.collection_name):
-                    await self.client.drop_collection(self.collection_name)
+                    self.client.drop_collection(self.collection_name)
         self.client = None
 
     @property

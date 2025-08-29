@@ -19,6 +19,7 @@ warnings.filterwarnings(
 import sys
 import os
 import pytest
+import asyncio
 from typing import Any
 
 # Add the project root to the Python path
@@ -34,7 +35,6 @@ class TestVectorDatabase:
         """Test that VectorDatabase is abstract and cannot be instantiated."""
         with pytest.raises(TypeError):
             VectorDatabase()
-
 
 class ConcreteVectorDatabase(VectorDatabase):
     """Concrete implementation for testing abstract methods."""
@@ -73,7 +73,7 @@ class ConcreteVectorDatabase(VectorDatabase):
     def count_documents(self) -> int:
         return len(self.documents)
 
-    def delete_documents(self, document_ids: list[str]) -> None:
+    async def delete_documents(self, document_ids: list[str]) -> None:
         self.documents = [
             doc for doc in self.documents if doc["id"] not in document_ids
         ]
@@ -180,7 +180,8 @@ class TestConcreteVectorDatabase:
         assert len(db.documents) == 2
         assert all(doc["embedding_used"] == "test-embedding" for doc in db.documents)
 
-    def test_delete_document_singular(self) -> None:
+    @pytest.mark.asyncio
+    async def test_delete_document_singular(self) -> None:
         """Test the singular delete_document method."""
         db = ConcreteVectorDatabase()
         doc = {"url": "test.com", "text": "test", "metadata": {"key": "value"}}
@@ -188,7 +189,7 @@ class TestConcreteVectorDatabase:
         db.write_document(doc)
         assert len(db.documents) == 1
 
-        db.delete_document("0")
+        await db.delete_document("0")
         assert len(db.documents) == 0
 
     def test_count_documents(self) -> None:
@@ -202,7 +203,8 @@ class TestConcreteVectorDatabase:
         db.write_documents([doc1, doc2])
         assert db.count_documents() == 2
 
-    def test_delete_documents_multiple(self) -> None:
+    @pytest.mark.asyncio
+    async def test_delete_documents_multiple(self) -> None:
         """Test the delete_documents method with multiple IDs."""
         db = ConcreteVectorDatabase()
         doc1 = {"url": "test1.com", "text": "test1", "metadata": {}}
@@ -212,7 +214,7 @@ class TestConcreteVectorDatabase:
         db.write_documents([doc1, doc2, doc3])
         assert db.count_documents() == 3
 
-        db.delete_documents(["0", "2"])
+        await db.delete_documents(["0", "2"])
         assert db.count_documents() == 1
         assert db.documents[0]["url"] == "test2.com"
 

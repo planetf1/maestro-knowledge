@@ -231,7 +231,7 @@ class WeaviateVectorDatabase(VectorDatabase):
 
         # Ensure collection exists with the correct embedding configuration
         if not await self.client.collections.exists(target_collection):
-            self.setup(embedding, target_collection)
+            await self.setup(embedding, target_collection)
 
         # If the collection has an embedding set and the caller provided a different one,
         # ignore the per-write parameter and warn (deprecation path).
@@ -256,7 +256,7 @@ class WeaviateVectorDatabase(VectorDatabase):
         build_start = time.perf_counter()
 
         try:
-            with collection.batch.dynamic() as batch:
+            with await collection.batch.dynamic() as batch:
                 for idx, doc in enumerate(documents):
                     doc_start = time.perf_counter()
                     orig_metadata = dict(doc.get("metadata", {}))
@@ -461,7 +461,7 @@ class WeaviateVectorDatabase(VectorDatabase):
         # Fetch all objects with metadata containing the doc_name
         collection = await self.client.collections.get(target_collection)
         result = await collection.query.fetch_objects(
-            where=await collection.query.filter.by_property("metadata").contains_any(
+            where=(await collection.query.filter.by_property("metadata")).contains_any(
                 [doc_name]
             ),
             limit=10000,
@@ -499,7 +499,7 @@ class WeaviateVectorDatabase(VectorDatabase):
         target_collection = collection_name or self.collection_name
         collection = await self.client.collections.get(target_collection)
         result = await collection.query.fetch_objects(
-            where=await collection.query.filter.by_property("metadata").contains_any(
+            where=(await collection.query.filter.by_property("metadata")).contains_any(
                 [doc_id]
             ),
             limit=10000,
@@ -526,7 +526,7 @@ class WeaviateVectorDatabase(VectorDatabase):
     async def count_documents(self) -> int:
         """Get the current count of documents in the collection."""
         # collection = await self.client.collections.get(self.collection_name)
-        collection = self.client.collections.get(self.collection_name)
+        collection = await self.client.collections.get(self.collection_name)
 
         # Query to get the count - use a simple approach
         try:
@@ -773,7 +773,7 @@ class WeaviateVectorDatabase(VectorDatabase):
         # Delete documents by UUID
         for doc_id in document_ids:
             try:
-                collection.data.delete_by_id(doc_id)
+                await collection.data.delete_by_id(doc_id)
             except Exception as e:
                 warnings.warn(f"Failed to delete document {doc_id}: {e}")
 
