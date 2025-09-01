@@ -1,13 +1,12 @@
 """Semantic chunking strategy that creates chunks based on semantic similarity between sentences."""
 
 import re
-from typing import Dict, List, Tuple
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
 
-def _split_text_to_sentences(text: str) -> List[Tuple[int, int, str]]:
+def _split_text_to_sentences(text: str) -> list[tuple[int, int, str]]:
     """Split text into sentences with their positions and content.
 
     Returns list of tuples: (start_offset, end_offset, sentence_text)
@@ -48,8 +47,8 @@ def _split_text_to_sentences(text: str) -> List[Tuple[int, int, str]]:
 
 
 def _create_sliding_windows(
-    sentences: List[Tuple[int, int, str]], window_size: int = 1
-) -> List[Dict[str, object]]:
+    sentences: list[tuple[int, int, str]], window_size: int = 1
+) -> list[dict[str, object]]:
     """Create sliding window context around each sentence.
 
     Args:
@@ -100,8 +99,8 @@ def _create_sliding_windows(
 
 
 def _embed_sentences(
-    sentences: List[Dict[str, object]], model_name: str = "all-MiniLM-L6-v2"
-) -> List[Dict[str, object]]:
+    sentences: list[dict[str, object]], model_name: str = "all-MiniLM-L6-v2"
+) -> list[dict[str, object]]:
     """Create embeddings for the combined sentence contexts."""
     try:
         model = SentenceTransformer(model_name)
@@ -119,7 +118,7 @@ def _embed_sentences(
     return sentences
 
 
-def _calculate_semantic_distances(sentences: List[Dict[str, object]]) -> List[float]:
+def _calculate_semantic_distances(sentences: list[dict[str, object]]) -> list[float]:
     """Calculate semantic distance between consecutive sentence windows."""
     distances = []
 
@@ -142,8 +141,8 @@ def _calculate_semantic_distances(sentences: List[Dict[str, object]]) -> List[fl
 
 
 def _find_chunk_boundaries(
-    distances: List[float], threshold_percentile: float = 95
-) -> List[int]:
+    distances: list[float], threshold_percentile: float = 95
+) -> list[int]:
     """Find indices where chunks should be split based on semantic distance.
 
     Args:
@@ -162,8 +161,8 @@ def _find_chunk_boundaries(
 
 
 def _create_chunks_from_boundaries(
-    sentences: List[Dict[str, object]], split_indices: List[int]
-) -> List[Dict[str, object]]:
+    sentences: list[dict[str, object]], split_indices: list[int]
+) -> list[dict[str, object]]:
     """Create chunks based on the identified split points.
 
     Args:
@@ -237,7 +236,7 @@ def semantic_chunk(
     window_size: int = 1,
     threshold_percentile: float = 95,
     model_name: str = "all-MiniLM-L6-v2",
-) -> List[Dict[str, object]]:
+) -> list[dict[str, object]]:
     """Create semantically coherent chunks based on sentence similarity.
 
     This strategy finds natural topic boundaries using sentence embeddings
