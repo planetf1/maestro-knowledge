@@ -271,6 +271,8 @@ class TestWeaviateVectorDatabase:
             mock_client.collections.get.return_value = mock_collection
             mock_collection.batch.dynamic.return_value = mock_batch_context
             mock_batch_context.__enter__.return_value = mock_batch
+            mock_batch.failed_objects = []  # Add this line
+            mock_batch.failed_references = []  # Add this line
             mock_connect.return_value = mock_client
 
             db = WeaviateVectorDatabase()
@@ -317,6 +319,8 @@ class TestWeaviateVectorDatabase:
             mock_client.collections.get.return_value = mock_collection
             mock_collection.batch.dynamic.return_value = mock_batch_context
             mock_batch_context.__enter__.return_value = mock_batch
+            mock_batch.failed_objects = []  # Add this line
+            mock_batch.failed_references = []  # Add this line
             mock_connect.return_value = mock_client
 
             # Mock the configuration objects
@@ -364,6 +368,8 @@ class TestWeaviateVectorDatabase:
             mock_client.collections.get.return_value = mock_collection
             mock_collection.batch.dynamic.return_value = mock_batch_context
             mock_batch_context.__enter__.return_value = mock_batch
+            mock_batch.failed_objects = []  # Add this line
+            mock_batch.failed_references = []  # Add this line
             mock_connect.return_value = mock_client
 
             db = WeaviateVectorDatabase()
