@@ -113,17 +113,22 @@ class MilvusVectorDatabase(VectorDatabase):
             if original_milvus_uri:
                 os.environ["MILVUS_URI"] = original_milvus_uri
 
-    def _generate_embedding(self, text: str, embedding_model: str) -> List[float]:
+    def _generate_embeddings_batch(
+        self, texts: List[str], embedding_model: str
+    ) -> List[List[float]]:
         """
-        Generate embeddings for text using the specified model.
+        Generate embeddings for a batch of texts using the specified model.
 
         Args:
-            text: Text to embed
-            embedding_model: Name of the embedding model to use
+            texts: List of texts to embed.
+            embedding_model: Name of the embedding model to use.
 
         Returns:
-            List of floats representing the embedding vector
+            A list of embedding vectors.
         """
+        if not texts:
+            return []
+
         try:
             import openai
 
@@ -145,30 +150,41 @@ class MilvusVectorDatabase(VectorDatabase):
                         "CUSTOM_EMBEDDING_MODEL must be set for 'custom_local' embedding."
                     )
             else:
-                # Get OpenAI API key from environment
                 api_key = os.getenv("OPENAI_API_KEY")
                 if not api_key:
-                    raise ValueError(
-                        "OPENAI_API_KEY is required for OpenAI embeddings."
-                    )
+                    raise ValueError("OPENAI_API_KEY is required for OpenAI embeddings.")
                 client_kwargs["api_key"] = api_key
-
                 if model_to_use == "default":
                     model_to_use = "text-embedding-ada-002"
 
             client = openai.OpenAI(**client_kwargs)
-            response = client.embeddings.create(model=model_to_use, input=text)
+            response = client.embeddings.create(model=model_to_use, input=texts)
 
-            return response.data[0].embedding
+            return [item.embedding for item in response.data]
 
         except ImportError:
             raise ImportError(
                 "openai package is required for embedding generation. Install with: pip install openai"
             )
-        except ValueError as e:
-            raise e
         except Exception as e:
-            raise RuntimeError(f"Failed to generate embedding: {e}")
+            raise RuntimeError(f"Failed to generate embeddings: {e}")
+
+    def _generate_embedding(self, text: str, embedding_model: str) -> List[float]:
+        """
+        Generate embeddings for text using the specified model.
+
+        Args:
+            text: Text to embed
+            embedding_model: Name of the embedding model to use
+
+        Returns:
+            List of floats representing the embedding vector
+        """
+        # This now wraps the batch method for single-text embedding.
+        embeddings = self._generate_embeddings_batch([text], embedding_model)
+        if not embeddings:
+            raise RuntimeError("Failed to generate embedding for a single text.")
+        return embeddings[0]
 
     def _get_embedding_dimension(self, embedding_model: str) -> int:
         """
@@ -329,19 +345,11 @@ class MilvusVectorDatabase(VectorDatabase):
         if self.client is None:
             warnings.warn("Milvus client is not available. Documents not written.")
             return
-        self._ensure_client()
-        if self.client is None:
-            warnings.warn("Milvus client is not available. Documents not written.")
-            return
 
-        # Use the specified collection name or fall back to the default
         target_collection = (
             collection_name if collection_name is not None else self.collection_name
         )
 
-        # TODO(embedding): Per-write 'embedding' is deprecated; prefer collection-level embedding set in setup().
-        #                  In a future release, remove the per-write parameter or make it a no-op.
-        # Determine effective embedding model: prefer collection-level embedding if set
         all_supported = self.supported_embeddings()
         if embedding not in all_supported:
             raise ValueError(
@@ -352,84 +360,94 @@ class MilvusVectorDatabase(VectorDatabase):
             None if embedding == "default" else embedding
         )
 
-        # If collection-level embedding is set and differs from the provided one,
-        # ignore the per-write parameter and emit a deprecation warning.
         if self.embedding_model and embedding not in ("default", self.embedding_model):
             warnings.warn(
                 "Embedding model should be configured per-collection. The per-write 'embedding' parameter is ignored.",
                 stacklevel=2,
             )
 
-        # Chunk documents according to collection chunking config and insert each chunk as a record
         coll_meta = getattr(self, "_collections_metadata", {}).get(
             target_collection, {}
         )
         chunking_conf = coll_meta.get("chunking") if coll_meta else None
 
-        data = []
+        # Get batch size from environment variable, with a default value
+        try:
+            embedding_batch_size = int(os.getenv("EMBEDDING_BATCH_SIZE", "32"))
+        except ValueError:
+            embedding_batch_size = 32
+
+        all_chunks_to_embed = []
+        doc_chunk_map = []
         stats_per_doc: List[Dict[str, Any]] = []
         total_chunks = 0
         build_start = time.perf_counter()
-        id_counter = 0
-        for doc in documents:
+
+        for doc_index, doc in enumerate(documents):
             doc_start = time.perf_counter()
             text = doc.get("text", "")
             orig_metadata = dict(doc.get("metadata", {}))
 
-            # Chunk the text
             cfg = ChunkingConfig(
                 strategy=(chunking_conf or {}).get("strategy", "None"),
                 parameters=(chunking_conf or {}).get("parameters", {}),
             )
             chunks = chunk_text(text, cfg)
-            # No automatic re-chunking safety net: if 'None' produces an oversized chunk,
-            # we proceed as-is, allowing the backend to surface any size-related errors.
-
-            # Track per-doc
             per_doc_chunk_count = 0
             per_doc_char_count = 0
 
             for chunk in chunks:
-                chunk_text_content = chunk["text"]
+                if "vector" not in doc or doc["vector"] is None:
+                    all_chunks_to_embed.append(chunk["text"])
+                    doc_chunk_map.append((doc_index, chunk))
                 per_doc_chunk_count += 1
-                per_doc_char_count += len(chunk_text_content or "")
+                per_doc_char_count += len(chunk["text"] or "")
 
-                # Determine vector for chunk
+            total_chunks += per_doc_chunk_count
+            stats_per_doc.append(
+                {
+                    "name": orig_metadata.get("doc_name")
+                    or doc.get("url")
+                    or f"doc_{doc_index}",
+                    "chunk_count": per_doc_chunk_count,
+                    "char_count": per_doc_char_count,
+                    "duration_ms": int((time.perf_counter() - doc_start) * 1000),
+                }
+            )
+
+        # Generate embeddings in batches
+        model_for_generation = effective_embedding or "text-embedding-ada-002"
+        all_embeddings = []
+        for i in range(0, len(all_chunks_to_embed), embedding_batch_size):
+            batch_texts = all_chunks_to_embed[i : i + embedding_batch_size]
+            all_embeddings.extend(
+                self._generate_embeddings_batch(batch_texts, model_for_generation)
+            )
+
+        data = []
+        id_counter = 0
+        embedding_idx = 0
+        for doc_index, doc in enumerate(documents):
+            orig_metadata = dict(doc.get("metadata", {}))
+            cfg = ChunkingConfig(
+                strategy=(chunking_conf or {}).get("strategy", "None"),
+                parameters=(chunking_conf or {}).get("parameters", {}),
+            )
+            chunks = chunk_text(doc.get("text", ""), cfg)
+
+            for chunk in chunks:
                 if "vector" in doc and doc["vector"] is not None:
-                    # Use provided vector if present; validate dimension when known
                     doc_vector = doc["vector"]
-                    try:
-                        expected_dim = self.dimension or (
-                            self._get_embedding_dimension(self.embedding_model)
-                            if self.embedding_model
-                            else None
-                        )
-                        if expected_dim is not None and len(doc_vector) != expected_dim:
-                            raise ValueError(
-                                f"Provided vector dimension {len(doc_vector)} does not match expected {expected_dim}."
-                            )
-                    except Exception:
-                        # If we cannot validate dimension, proceed without blocking
-                        pass
                 else:
-                    # Generate embedding using the effective (collection) model if set; otherwise default
-                    model_for_generation = (
-                        effective_embedding or "text-embedding-ada-002"
-                    )
-                    doc_vector = self._generate_embedding(
-                        chunk_text_content, model_for_generation
-                    )
+                    if embedding_idx < len(all_embeddings):
+                        doc_vector = all_embeddings[embedding_idx]
+                        embedding_idx += 1
+                    else:
+                        raise ValueError("Mismatch between chunks and generated embeddings.")
 
-                if doc_vector is None:
-                    raise ValueError("Failed to generate vector for a chunk")
-
-                # Merge metadata and add chunk-specific fields
                 new_meta = dict(orig_metadata)
-                # Retain original doc_name if present
                 if "doc_name" in orig_metadata:
                     new_meta["doc_name"] = orig_metadata.get("doc_name")
-                # omit chunking policy to reduce per-result duplication in search outputs
-                # Add ordered chunk-specific metadata (start before end)
                 new_meta.update(
                     {
                         "chunk_sequence_number": int(chunk["sequence"]),
@@ -444,24 +462,12 @@ class MilvusVectorDatabase(VectorDatabase):
                     {
                         "id": id_counter,
                         "url": doc.get("url", ""),
-                        "text": chunk_text_content,
+                        "text": chunk["text"],
                         "metadata": json.dumps(new_meta, ensure_ascii=False),
                         "vector": doc_vector,
                     }
                 )
                 id_counter += 1
-            # end per-doc tracking
-            total_chunks += per_doc_chunk_count
-            stats_per_doc.append(
-                {
-                    "name": orig_metadata.get("doc_name")
-                    or doc.get("url")
-                    or f"doc_{len(stats_per_doc)}",
-                    "chunk_count": per_doc_chunk_count,
-                    "char_count": per_doc_char_count,
-                    "duration_ms": int((time.perf_counter() - doc_start) * 1000),
-                }
-            )
 
         insert_duration_ms = 0
         if data:
