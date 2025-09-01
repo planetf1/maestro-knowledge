@@ -76,7 +76,9 @@ class ConcreteQueryVectorDatabase(VectorDatabase):
     def setup(self, embedding: str = "default", collection_name: str = None) -> None:
         pass
 
-    def write_documents(self, documents: list[dict[str, Any]], embedding: str ="default") -> None:
+    def write_documents(
+        self, documents: list[dict[str, Any]], embedding: str = "default"
+    ) -> None:
         for doc in documents:
             doc_copy = doc.copy()
             doc_copy["id"] = str(self.next_id)
@@ -84,7 +86,7 @@ class ConcreteQueryVectorDatabase(VectorDatabase):
             self.documents.append(doc_copy)
             self.next_id += 1
 
-    def list_documents(self, limit: int =10, offset: int =0) -> list[dict[str, Any]]:
+    def list_documents(self, limit: int = 10, offset: int = 0) -> list[dict[str, Any]]:
         return self.documents[offset : offset + limit]
 
     def count_documents(self) -> int:
@@ -95,7 +97,7 @@ class ConcreteQueryVectorDatabase(VectorDatabase):
             doc for doc in self.documents if doc["id"] not in document_ids
         ]
 
-    def delete_collection(self, collection_name: str =None) -> None:
+    def delete_collection(self, collection_name: str = None) -> None:
         target_collection = collection_name or self.collection_name
         if target_collection == self.collection_name:
             self.documents = []
@@ -125,7 +127,7 @@ class ConcreteQueryVectorDatabase(VectorDatabase):
     def list_collections(self) -> list[str]:
         return [self.collection_name] if self.collection_name else []
 
-    def get_collection_info(self, collection_name: str =None) -> dict[str, Any]:
+    def get_collection_info(self, collection_name: str = None) -> dict[str, Any]:
         target_collection = collection_name or self.collection_name
         return {
             "name": target_collection,

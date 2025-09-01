@@ -12,7 +12,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.maestro_mcp import server
 
 
-def test_resync_vector_databases_registers_collections(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_resync_vector_databases_registers_collections(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Mock MilvusVectorDatabase to return a predictable list and verify registration."""
 
     class DummyMilvus:

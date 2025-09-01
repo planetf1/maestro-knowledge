@@ -86,7 +86,9 @@ class TestMCPQueryFunctionality:
         assert True, "Query tool should exist in MCP server"
 
     @pytest.mark.asyncio
-    async def test_query_tool_functionality(self, mcp_server: FastMCP, mock_vector_db: Mock) -> None:
+    async def test_query_tool_functionality(
+        self, mcp_server: FastMCP, mock_vector_db: Mock
+    ) -> None:
         """Test the query tool functionality."""
         # Mock the vector_databases dictionary
         with patch(
@@ -118,7 +120,9 @@ class TestMCPQueryFunctionality:
         assert query_input.limit == 5
 
     @pytest.mark.asyncio
-    async def test_query_tool_database_error(self, mcp_server: FastMCP, mock_vector_db: Mock) -> None:
+    async def test_query_tool_database_error(
+        self, mcp_server: FastMCP, mock_vector_db: Mock
+    ) -> None:
         """Test query tool when database query raises an error."""
         # Test that the server was created successfully
         assert mcp_server is not None, "MCP server should be created"
@@ -131,7 +135,9 @@ class TestMCPQueryFunctionality:
         assert query_input.limit == 5
 
     @pytest.mark.asyncio
-    async def test_query_tool_with_different_limits(self, mcp_server: FastMCP, mock_vector_db: Mock) -> None:
+    async def test_query_tool_with_different_limits(
+        self, mcp_server: FastMCP, mock_vector_db: Mock
+    ) -> None:
         """Test query tool with different limit values."""
         # Test that the server was created successfully
         assert mcp_server is not None, "MCP server should be created"
@@ -147,7 +153,9 @@ class TestMCPQueryFunctionality:
             assert query_input.limit == limit
 
     @pytest.mark.asyncio
-    async def test_query_tool_empty_query(self, mcp_server: FastMCP, mock_vector_db: Mock) -> None:
+    async def test_query_tool_empty_query(
+        self, mcp_server: FastMCP, mock_vector_db: Mock
+    ) -> None:
         """Test query tool with empty query string."""
         # Test that the server was created successfully
         assert mcp_server is not None, "MCP server should be created"
@@ -160,7 +168,9 @@ class TestMCPQueryFunctionality:
         assert query_input.limit == 5
 
     @pytest.mark.asyncio
-    async def test_query_tool_special_characters(self, mcp_server: FastMCP, mock_vector_db: Mock) -> None:
+    async def test_query_tool_special_characters(
+        self, mcp_server: FastMCP, mock_vector_db: Mock
+    ) -> None:
         """Test query tool with special characters in query."""
         # Test that the server was created successfully
         assert mcp_server is not None, "MCP server should be created"

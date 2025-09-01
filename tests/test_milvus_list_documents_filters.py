@@ -18,11 +18,10 @@ from src.db.vector_db_milvus import MilvusVectorDatabase
 import inspect
 
 
-
-
-
 @patch("pymilvus.MilvusClient")
-def test_list_documents_respects_offset_pagination(mock_milvus_client: MagicMock) -> None:
+def test_list_documents_respects_offset_pagination(
+    mock_milvus_client: MagicMock,
+) -> None:
     """
     list_documents should pass offset/limit to backend and return non-repeating pages when backend responds accordingly.
     """
@@ -64,7 +63,9 @@ def test_list_documents_respects_offset_pagination(mock_milvus_client: MagicMock
 
 
 @patch("pymilvus.MilvusClient")
-def test_list_documents_in_collection_respects_offset(mock_milvus_client: MagicMock) -> None:
+def test_list_documents_in_collection_respects_offset(
+    mock_milvus_client: MagicMock,
+) -> None:
     """Existing API: list_documents_in_collection should propagate limit/offset and not repeat first page."""
     mock_client = MagicMock()
 

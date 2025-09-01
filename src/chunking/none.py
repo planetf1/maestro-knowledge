@@ -1,6 +1,5 @@
 """None chunking strategy: return a single chunk with full text."""
 
-
 from typing import Any
 
 

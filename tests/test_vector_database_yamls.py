@@ -76,7 +76,9 @@ class TestVectorDatabaseYAMLValidation:
         """Test that remote Weaviate YAML validates against the schema."""
         validate(instance=remote_weaviate_yaml, schema=schema)
 
-    def test_local_milvus_has_correct_structure(self, local_milvus_yaml: dict[str, Any]) -> None:
+    def test_local_milvus_has_correct_structure(
+        self, local_milvus_yaml: dict[str, Any]
+    ) -> None:
         """Test that local Milvus YAML has the expected structure."""
         assert local_milvus_yaml["apiVersion"] == "maestro/v1alpha1"
         assert local_milvus_yaml["kind"] == "VectorDatabase"
@@ -90,7 +92,9 @@ class TestVectorDatabaseYAMLValidation:
         assert local_milvus_yaml["spec"]["embedding"] == "text-embedding-3-small"
         assert local_milvus_yaml["spec"]["mode"] == "local"
 
-    def test_remote_weaviate_has_correct_structure(self, remote_weaviate_yaml: dict[str, Any]) -> None:
+    def test_remote_weaviate_has_correct_structure(
+        self, remote_weaviate_yaml: dict[str, Any]
+    ) -> None:
         """Test that remote Weaviate YAML has the expected structure."""
         assert remote_weaviate_yaml["apiVersion"] == "maestro/v1alpha1"
         assert remote_weaviate_yaml["kind"] == "VectorDatabase"
@@ -234,7 +238,9 @@ class TestVectorDatabaseYAMLValidation:
         # Should not raise any validation errors
         validate(instance=config_with_labels, schema=schema)
 
-    def test_schema_prevents_additional_properties(self, schema: dict[str, Any]) -> None:
+    def test_schema_prevents_additional_properties(
+        self, schema: dict[str, Any]
+    ) -> None:
         """Test that the schema prevents additional properties at the root level."""
         invalid_config = {
             "apiVersion": "maestro/v1alpha1",

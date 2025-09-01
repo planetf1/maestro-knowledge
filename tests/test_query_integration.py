@@ -180,9 +180,7 @@ class TestQueryCLIIntegration:
 
             # The command should exist and show help
             assert result.returncode == 0
-            (
-                f"Query vdb help command failed: {result.stderr}"
-            )
+            (f"Query vdb help command failed: {result.stderr}")
             assert "vdb" in result.stdout
             assert "doc-limit" in result.stdout
 
@@ -204,9 +202,7 @@ class TestQueryCLIIntegration:
 
             # The command should succeed with dry-run
             assert result.returncode == 0
-            (
-                f"Query dry-run command failed: {result.stderr}"
-            )
+            (f"Query dry-run command failed: {result.stderr}")
             assert "[DRY RUN]" in result.stdout
 
         except subprocess.TimeoutExpired:
@@ -235,9 +231,7 @@ class TestQueryCLIIntegration:
 
             # The command should succeed with dry-run
             assert result.returncode == 0
-            (
-                f"Query with doc-limit command failed: {result.stderr}"
-            )
+            (f"Query with doc-limit command failed: {result.stderr}")
             assert "[DRY RUN]" in result.stdout
 
         except subprocess.TimeoutExpired:

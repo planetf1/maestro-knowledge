@@ -91,7 +91,9 @@ class TestMilvusVectorDatabase:
         )
 
     @patch("pymilvus.MilvusClient")
-    def test_write_documents_with_precomputed_vector(self, mock_milvus_client: MagicMock) -> None:
+    def test_write_documents_with_precomputed_vector(
+        self, mock_milvus_client: MagicMock
+    ) -> None:
         """Test writing documents with pre-computed vectors."""
         mock_client = MagicMock()
         mock_milvus_client.return_value = mock_client
@@ -114,7 +116,9 @@ class TestMilvusVectorDatabase:
         assert mock_client.insert.called
 
     @patch("pymilvus.MilvusClient")
-    def test_write_documents_with_embedding_model(self, mock_milvus_client: MagicMock) -> None:
+    def test_write_documents_with_embedding_model(
+        self, mock_milvus_client: MagicMock
+    ) -> None:
         """Test writing documents with embedding model generation."""
         mock_client = MagicMock()
         mock_milvus_client.return_value = mock_client
@@ -137,7 +141,9 @@ class TestMilvusVectorDatabase:
                 assert mock_client.insert.called
 
     @patch("pymilvus.MilvusClient")
-    def test_write_documents_excludes_chunking_metadata(self, mock_milvus_client: MagicMock) -> None:
+    def test_write_documents_excludes_chunking_metadata(
+        self, mock_milvus_client: MagicMock
+    ) -> None:
         """Write path should NOT attach chunking policy into per-chunk metadata (kept at collection level)."""
         mock_client = MagicMock()
         mock_milvus_client.return_value = mock_client
@@ -186,7 +192,9 @@ class TestMilvusVectorDatabase:
         assert "chunk_sequence_number" in parsed and "total_chunks" in parsed
 
     @patch("pymilvus.MilvusClient")
-    def test_get_collection_info_custom_local_includes_config(self, mock_milvus_client: MagicMock) -> None:
+    def test_get_collection_info_custom_local_includes_config(
+        self, mock_milvus_client: MagicMock
+    ) -> None:
         """For custom_local embedding, collection info should include URL/model config."""
         mock_client = MagicMock()
         mock_client.has_collection.return_value = True
@@ -222,7 +230,9 @@ class TestMilvusVectorDatabase:
         assert cfg.get("model") == "nomic-embed-text"
 
     @patch("pymilvus.MilvusClient")
-    def test_write_documents_unsupported_embedding(self, mock_milvus_client: MagicMock) -> None:
+    def test_write_documents_unsupported_embedding(
+        self, mock_milvus_client: MagicMock
+    ) -> None:
         """Test writing documents with unsupported embedding model."""
         mock_client = MagicMock()
         mock_milvus_client.return_value = mock_client
@@ -238,7 +248,9 @@ class TestMilvusVectorDatabase:
             db.write_documents(documents, embedding="unsupported-model")
 
     @patch("pymilvus.MilvusClient")
-    def test_write_documents_missing_openai_key(self, mock_milvus_client: MagicMock) -> None:
+    def test_write_documents_missing_openai_key(
+        self, mock_milvus_client: MagicMock
+    ) -> None:
         """Test writing documents without OpenAI API key."""
         mock_client = MagicMock()
         mock_milvus_client.return_value = mock_client
@@ -267,7 +279,9 @@ class TestMilvusVectorDatabase:
                     db.write_documents(documents, embedding="text-embedding-ada-002")
 
     @patch("pymilvus.MilvusClient")
-    def test_write_documents_real_openai_integration(self, mock_milvus_client: MagicMock) -> None:
+    def test_write_documents_real_openai_integration(
+        self, mock_milvus_client: MagicMock
+    ) -> None:
         """Test writing documents with real OpenAI integration when available."""
         mock_client = MagicMock()
         mock_milvus_client.return_value = mock_client
@@ -420,7 +434,9 @@ class TestMilvusVectorDatabase:
         assert db.reassemble_document([]) is None
 
     @patch("pymilvus.MilvusClient")
-    def test_get_collection_info_includes_chunking(self, mock_milvus_client: MagicMock) -> None:
+    def test_get_collection_info_includes_chunking(
+        self, mock_milvus_client: MagicMock
+    ) -> None:
         """get_collection_info should include the chunking config after setup."""
         mock_client = MagicMock()
         mock_client.has_collection.return_value = True
@@ -539,7 +555,9 @@ class TestMilvusVectorDatabase:
             gen.assert_called()
 
     @patch("pymilvus.MilvusClient")
-    def test_get_document_collection_not_found(self, mock_milvus_client: MagicMock) -> None:
+    def test_get_document_collection_not_found(
+        self, mock_milvus_client: MagicMock
+    ) -> None:
         """Test getting a document when collection doesn't exist."""
         mock_client = MagicMock()
         mock_client.has_collection.return_value = False
@@ -551,7 +569,9 @@ class TestMilvusVectorDatabase:
             db.get_document("test_doc", "test_collection")
 
     @patch("pymilvus.MilvusClient")
-    def test_get_document_document_not_found(self, mock_milvus_client: MagicMock) -> None:
+    def test_get_document_document_not_found(
+        self, mock_milvus_client: MagicMock
+    ) -> None:
         """Test getting a document when document doesn't exist."""
         mock_client = MagicMock()
         mock_client.has_collection.return_value = True

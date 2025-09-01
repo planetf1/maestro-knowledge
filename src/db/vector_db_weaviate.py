@@ -83,7 +83,9 @@ class WeaviateVectorDatabase(VectorDatabase):
             auth_credentials=Auth.api_key(weaviate_api_key),
         )
 
-    def _get_vectorizer_config(self, embedding: str) -> weaviate.classes.config.Configure.Vectorizer:
+    def _get_vectorizer_config(
+        self, embedding: str
+    ) -> weaviate.classes.config.Configure.Vectorizer:
         """
         Get the appropriate vectorizer configuration for the embedding model.
 

@@ -297,7 +297,8 @@ class MilvusVectorDatabase(VectorDatabase):
                         "embedding": self.embedding_model,
                         "vector_size": self.dimension,
                         "chunking": self._collections_metadata.get(
-                            target_collection, {}).get("chunking"),
+                            target_collection, {}
+                        ).get("chunking"),
                     }
                     try:
                         self.client.set_collection_metadata(target_collection, meta)
@@ -512,8 +513,7 @@ class MilvusVectorDatabase(VectorDatabase):
         }
 
     def get_document_chunks(
-        self,
-        doc_id: str, collection_name: str = None
+        self, doc_id: str, collection_name: str = None
     ) -> list[dict[str, Any]]:
         """Retrieve all chunks for a specific document (by doc_name)."""
         self._ensure_client()
@@ -648,8 +648,7 @@ class MilvusVectorDatabase(VectorDatabase):
             return []
 
     def list_documents_in_collection(
-        self,
-        collection_name: str, limit: int = 10, offset: int = 0
+        self, collection_name: str, limit: int = 10, offset: int = 0
     ) -> list[dict[str, Any]]:
         """List documents from a specific collection in Milvus."""
         self._ensure_client()
@@ -950,7 +949,7 @@ class MilvusVectorDatabase(VectorDatabase):
                     "vector_size": vec_size,
                     "provider": provider,
                     "source": "collection" if self.embedding_model else "schema",
-                    **({'config': embedding_config} if embedding_config else {}),
+                    **({"config": embedding_config} if embedding_config else {}),
                 },
                 "metadata": {
                     "collection_id": collection_id,
@@ -1074,8 +1073,7 @@ class MilvusVectorDatabase(VectorDatabase):
             return f"Error querying database: {str(e)}"
 
     def _search_documents(
-        self,
-        query: str, limit: int = 5, collection_name: str = None
+        self, query: str, limit: int = 5, collection_name: str = None
     ) -> list[dict[str, Any]]:
         """
         Search for documents using vector similarity search.
@@ -1351,8 +1349,7 @@ class MilvusVectorDatabase(VectorDatabase):
         return self._search_documents(query, limit, collection_name)
 
     def _fallback_keyword_search(
-        self,
-        query: str, limit: int = 5
+        self, query: str, limit: int = 5
     ) -> list[dict[str, Any]]:
         """
         Fallback to simple keyword matching if vector search fails.
