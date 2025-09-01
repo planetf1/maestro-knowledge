@@ -38,6 +38,8 @@ import pytest
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from pymilvus.exceptions import MilvusException
+
 from src.db.vector_db_milvus import MilvusVectorDatabase
 
 
@@ -643,6 +645,36 @@ class TestMilvusVectorDatabase:
                 ValueError, match="CUSTOM_EMBEDDING_VECTORSIZE must be a valid integer"
             ):
                 db._get_embedding_dimension("custom_local")
+
+    @patch("pymilvus.MilvusClient")
+    def test_write_documents_raises_milvus_exception(self, mock_milvus_client):
+        """Test that write_documents raises a MilvusException on client error."""
+        mock_client = MagicMock()
+        mock_client.insert.side_effect = MilvusException("Insert failed")
+        mock_milvus_client.return_value = mock_client
+        db = MilvusVectorDatabase()
+        db.client = mock_client  # Directly set the client for the test
+        documents = [
+            {
+                "url": "http://test.com",
+                "text": "test content",
+                "metadata": {},
+                "vector": [0.1] * 1536,
+            }
+        ]
+        with pytest.raises(MilvusException, match="Insert failed"):
+            db.write_documents(documents)
+
+    @patch("pymilvus.MilvusClient")
+    def test_delete_documents_raises_milvus_exception(self, mock_milvus_client):
+        """Test that delete_documents raises a MilvusException on client error."""
+        mock_client = MagicMock()
+        mock_client.delete.side_effect = MilvusException("Delete failed")
+        mock_milvus_client.return_value = mock_client
+        db = MilvusVectorDatabase()
+        db.client = mock_client  # Directly set the client for the test
+        with pytest.raises(MilvusException, match="Delete failed"):
+            db.delete_documents(["1"])
 
 
 if __name__ == "__main__":
