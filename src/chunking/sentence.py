@@ -1,10 +1,9 @@
 """Sentence-aware chunking strategy that packs sentences up to chunk_size."""
 
 import re
-from typing import Dict, List, Tuple
 
 
-def _split_sentences(text: str) -> List[Tuple[int, int]]:
+def _split_sentences(text: str) -> list[tuple[int, int]]:
     """Return list of sentence spans as (start, end) offsets.
 
     A lightweight regex-based splitter that treats sequences ending with
@@ -13,7 +12,7 @@ def _split_sentences(text: str) -> List[Tuple[int, int]]:
 
     This avoids heavy NLP deps and is deterministic for tests.
     """
-    sentences: List[Tuple[int, int]] = []
+    sentences: list[tuple[int, int]] = []
     pattern = re.compile(r"([^.!?\n]+[.!?\n]?)", re.M)
     for m in pattern.finditer(text):
         start = m.start()
@@ -26,7 +25,7 @@ def _split_sentences(text: str) -> List[Tuple[int, int]]:
 
 def sentence_chunk(
     text: str, chunk_size: int = 512, overlap: int = 0
-) -> List[Dict[str, object]]:
+) -> list[dict[str, object]]:
     """Pack contiguous sentences into chunks near chunk_size.
 
     Behavior
@@ -58,7 +57,7 @@ def sentence_chunk(
         raise ValueError("overlap must be <= chunk_size")
 
     spans = _split_sentences(text)
-    chunks: List[Dict[str, object]] = []
+    chunks: list[dict[str, object]] = []
     current_text = ""
     current_start = 0
     seq = 0

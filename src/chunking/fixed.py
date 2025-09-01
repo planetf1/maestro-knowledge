@@ -1,11 +1,9 @@
 """Fixed-size chunking strategy with optional overlap."""
 
-from typing import Dict, List
-
 
 def fixed_chunk(
     text: str, chunk_size: int = 512, overlap: int = 0
-) -> List[Dict[str, object]]:
+) -> list[dict[str, object]]:
     """Split text into fixed-size windows with optional overlap.
 
     Behavior
@@ -30,7 +28,7 @@ def fixed_chunk(
         raise ValueError("overlap must be < chunk_size")
 
     step = max(1, chunk_size - overlap)
-    chunks: List[Dict[str, object]] = []
+    chunks: list[dict[str, object]] = []
     length = len(text)
     seq = 0
     for start in range(0, length, step):

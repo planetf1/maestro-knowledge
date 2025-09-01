@@ -4,7 +4,7 @@
 import warnings
 import pytest
 from unittest.mock import Mock
-from typing import Dict, Any
+from typing import Any
 
 # Suppress Pydantic deprecation warnings from dependencies
 warnings.filterwarnings(
@@ -103,7 +103,7 @@ class ConcreteQueryVectorDatabase(VectorDatabase):
 
     def get_document(
         self, doc_name: str, collection_name: str = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get a specific document by name from the vector database."""
         target_collection = collection_name or self.collection_name
 

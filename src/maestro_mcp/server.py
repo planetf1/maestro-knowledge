@@ -6,7 +6,7 @@ import json
 import logging
 import os
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 from fastmcp import FastMCP
 from fastmcp.tools.tool import ToolResult
@@ -42,10 +42,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Dictionary to store vector database instances keyed by name
-vector_databases: Dict[str, VectorDatabase] = {}
+vector_databases: dict[str, VectorDatabase] = {}
 
 
-def resync_vector_databases() -> List[str]:
+def resync_vector_databases() -> list[str]:
     """Discover Milvus collections and register them in memory.
 
     Returns a list of collection names that were registered.
@@ -143,13 +143,13 @@ def resync_vector_databases() -> List[str]:
     return added
 
 
-def resync_weaviate_databases() -> List[str]:
+def resync_weaviate_databases() -> list[str]:
     """Discover Weaviate collections and register them in memory.
 
     Returns a list of collection names that were registered.
     Best-effort: skips if Weaviate environment/config is not available.
     """
-    added: List[str] = []
+    added: list[str] = []
     try:
         # Import lazily to avoid mandatory dependency when Weaviate isn't used
         from ..db.vector_db_weaviate import WeaviateVectorDatabase
@@ -236,7 +236,7 @@ class GetSupportedEmbeddingsInput(BaseModel):
 
 class WriteDocumentsInput(BaseModel):
     db_name: str = Field(..., description="Name of the vector database instance")
-    documents: List[Dict[str, Any]] = Field(
+    documents: list[dict[str, Any]] = Field(
         ..., description="List of documents to write"
     )
     # TODO(deprecate): embedding at write-time is deprecated and ignored; embedding is per-collection
@@ -250,10 +250,10 @@ class WriteDocumentInput(BaseModel):
     db_name: str = Field(..., description="Name of the vector database instance")
     url: str = Field(..., description="URL of the document")
     text: str = Field(..., description="Text content of the document")
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata for the document"
     )
-    vector: List[float] = Field(
+    vector: list[float] = Field(
         default=None, description="Pre-computed vector embedding (optional, for Milvus)"
     )
     # TODO(deprecate): embedding at write-time is deprecated and ignored; embedding is per-collection
@@ -269,10 +269,10 @@ class WriteDocumentToCollectionInput(BaseModel):
     doc_name: str = Field(..., description="Name of the document")
     text: str = Field(..., description="Text content of the document")
     url: str = Field(..., description="URL of the document")
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata for the document"
     )
-    vector: List[float] = Field(
+    vector: list[float] = Field(
         default=None, description="Pre-computed vector embedding (optional, for Milvus)"
     )
     # TODO(deprecate): embedding at write-time is deprecated and ignored; embedding is per-collection
@@ -303,7 +303,7 @@ class CountDocumentsInput(BaseModel):
 
 class DeleteDocumentsInput(BaseModel):
     db_name: str = Field(..., description="Name of the vector database instance")
-    document_ids: List[str] = Field(..., description="List of document IDs to delete")
+    document_ids: list[str] = Field(..., description="List of document IDs to delete")
 
 
 class DeleteDocumentInput(BaseModel):
@@ -362,7 +362,7 @@ class CreateCollectionInput(BaseModel):
     embedding: str = Field(
         default="default", description="Embedding model to use for the collection"
     )
-    chunking_config: Dict[str, Any] = Field(
+    chunking_config: dict[str, Any] = Field(
         default=None,
         description="Optional chunking configuration for the collection. Example: {'strategy':'Sentence','parameters':{'chunk_size':256,'overlap':1}}",
     )
