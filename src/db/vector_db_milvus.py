@@ -152,7 +152,9 @@ class MilvusVectorDatabase(VectorDatabase):
             else:
                 api_key = os.getenv("OPENAI_API_KEY")
                 if not api_key:
-                    raise ValueError("OPENAI_API_KEY is required for OpenAI embeddings.")
+                    raise ValueError(
+                        "OPENAI_API_KEY is required for OpenAI embeddings."
+                    )
                 client_kwargs["api_key"] = api_key
                 if model_to_use == "default":
                     model_to_use = "text-embedding-ada-002"
@@ -443,7 +445,9 @@ class MilvusVectorDatabase(VectorDatabase):
                         doc_vector = all_embeddings[embedding_idx]
                         embedding_idx += 1
                     else:
-                        raise ValueError("Mismatch between chunks and generated embeddings.")
+                        raise ValueError(
+                            "Mismatch between chunks and generated embeddings."
+                        )
 
                 new_meta = dict(orig_metadata)
                 if "doc_name" in orig_metadata:

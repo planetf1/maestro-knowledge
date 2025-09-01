@@ -592,7 +592,9 @@ class TestMilvusVectorDatabase:
         with patch.dict(
             os.environ, {"CUSTOM_EMBEDDING_URL": "http://localhost:8080"}, clear=True
         ):
-            with pytest.raises(RuntimeError, match="CUSTOM_EMBEDDING_MODEL must be set"):
+            with pytest.raises(
+                RuntimeError, match="CUSTOM_EMBEDDING_MODEL must be set"
+            ):
                 db._generate_embedding("test", "custom_local")
 
     def test_custom_local_embedding_missing_vectorsize(self):
