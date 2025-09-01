@@ -250,6 +250,7 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
+    # TODO: Type needs consideration
     def create_query_agent(self) -> "VectorDatabase":
         """Create and return a query agent for this vector database."""
         pass

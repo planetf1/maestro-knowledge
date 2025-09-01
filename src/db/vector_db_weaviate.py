@@ -762,6 +762,8 @@ class WeaviateVectorDatabase(VectorDatabase):
         except Exception as e:
             warnings.warn(f"Failed to delete collection {target_collection}: {e}")
 
+    # TODO: Type needs consideration
+
     def create_query_agent(self) -> "QueryAgent":
         """Create a Weaviate query agent."""
         from weaviate.agents.query import QueryAgent

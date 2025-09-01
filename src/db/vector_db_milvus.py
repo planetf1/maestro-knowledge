@@ -1025,6 +1025,7 @@ class MilvusVectorDatabase(VectorDatabase):
             if target_collection == self.collection_name:
                 self.collection_name = None
 
+    # TODO: Type needs consideration
     def create_query_agent(self) -> "MilvusVectorDatabase":
         """Create a query agent for Milvus."""
         # Placeholder: Milvus does not have a built-in query agent like Weaviate
