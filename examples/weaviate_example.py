@@ -25,7 +25,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.db.vector_db_factory import create_vector_database
 
 
-def main():
+def main() -> None:
     """Main function demonstrating Weaviate usage."""
     print("🚀 Weaviate Vector Database Example")
     print("=" * 50)

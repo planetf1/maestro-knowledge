@@ -8,7 +8,7 @@ sys.path.append(
 from src.chunking import ChunkingConfig, chunk_text
 
 
-def test_fixed_chunk():
+def test_fixed_chunk() -> None:
     text = "a" * 1200
     cfg = ChunkingConfig(
         strategy="Fixed", parameters={"chunk_size": 500, "overlap": 100}
@@ -20,7 +20,7 @@ def test_fixed_chunk():
     assert res[1]["offset_start"] == 400
 
 
-def test_fixed_overlap_validation():
+def test_fixed_overlap_validation() -> None:
     text = "a" * 100
     # overlap == chunk_size should raise for Fixed
     cfg = ChunkingConfig(strategy="Fixed", parameters={"chunk_size": 10, "overlap": 10})
@@ -47,13 +47,13 @@ def test_fixed_overlap_validation():
         assert "chunk_size" in str(e)
 
 
-def test_fixed_empty_text_returns_no_chunks():
+def test_fixed_empty_text_returns_no_chunks() -> None:
     cfg = ChunkingConfig(strategy="Fixed", parameters={"chunk_size": 10, "overlap": 0})
     res = chunk_text("", cfg)
     assert res == []
 
 
-def test_fixed_defaults_apply_when_params_missing():
+def test_fixed_defaults_apply_when_params_missing() -> None:
     # Only set strategy; expect defaults chunk_size=512, overlap=0
     text = "a" * 600
     cfg = ChunkingConfig(strategy="Fixed", parameters={})
@@ -63,7 +63,7 @@ def test_fixed_defaults_apply_when_params_missing():
     assert res[1]["offset_start"] == 512
 
 
-def test_fixed_near_max_overlap_many_steps():
+def test_fixed_near_max_overlap_many_steps() -> None:
     # overlap just below chunk_size should produce many small steps (step=1)
     text = "a" * 35
     cfg = ChunkingConfig(strategy="Fixed", parameters={"chunk_size": 10, "overlap": 9})

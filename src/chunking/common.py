@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from collections.abc import Callable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @dataclass
@@ -11,7 +14,7 @@ class ChunkingConfig:
     strategy: str = "None"
     parameters: dict[str, object] | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.parameters is None:
             self.parameters = {}
 
@@ -23,7 +26,7 @@ class ChunkingConfig:
 _STRATEGIES: dict[str, Callable[..., list[dict[str, object]]]] = {}
 
 
-def register_strategy(name: str, func: Callable[..., list[dict[str, object]]]):
+def register_strategy(name: str, func: Callable[..., list[dict[str, object]]]) -> None:
     _STRATEGIES[name] = func
 
 

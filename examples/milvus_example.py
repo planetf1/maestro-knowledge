@@ -98,7 +98,7 @@ def create_sample_documents_without_vectors() -> list[dict[str, Any]]:
     ]
 
 
-def main():
+def main() -> None:
     """Main example function."""
     print("🚀 Maestro Knowledge - Milvus Vector Database Example")
     print("=" * 60)

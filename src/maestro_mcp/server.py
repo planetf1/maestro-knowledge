@@ -20,7 +20,7 @@ from ..db.vector_db_factory import create_vector_database
 
 
 # Load environment variables from .env file
-def load_env_file():
+def load_env_file() -> None:
     """Load environment variables from .env file."""
     env_file = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"
@@ -1076,13 +1076,13 @@ def create_mcp_server() -> FastMCP:
     return app
 
 
-async def main():
+async def main() -> None:
     """Main entry point for the MCP server."""
     app = create_mcp_server()
     await app.run()
 
 
-async def run_http_server(host: str = "localhost", port: int = 8030):
+async def run_http_server(host: str = "localhost", port: int = 8030) -> None:
     """Run the MCP server with HTTP interface."""
     # Create the MCP server
     mcp_app = create_mcp_server()
@@ -1107,7 +1107,7 @@ async def run_http_server(host: str = "localhost", port: int = 8030):
     await mcp_app.run_http_async(host=host, port=port)
 
 
-def run_server():
+def run_server() -> None:
     """Entry point for running the server."""
     try:
         asyncio.run(main())
@@ -1118,7 +1118,7 @@ def run_server():
         sys.exit(1)
 
 
-def run_http_server_sync(host: str = "localhost", port: int = 8030):
+def run_http_server_sync(host: str = "localhost", port: int = 8030) -> None:
     """Synchronous entry point for running the HTTP server."""
     try:
         asyncio.run(run_http_server(host, port))

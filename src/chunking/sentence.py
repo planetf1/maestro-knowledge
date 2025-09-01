@@ -62,7 +62,7 @@ def sentence_chunk(
     current_start = 0
     seq = 0
 
-    def flush(end_idx: int):
+    def flush(end_idx: int) -> None:
         """Close the current chunk into the output list.
 
         Uses the current_start offset and current_text to construct a chunk

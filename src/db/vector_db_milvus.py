@@ -29,7 +29,7 @@ from .vector_db_base import VectorDatabase
 class MilvusVectorDatabase(VectorDatabase):
     """Milvus implementation of the vector database interface."""
 
-    def __init__(self, collection_name: str = "MaestroDocs"):
+    def __init__(self, collection_name: str = "MaestroDocs") -> None:
         super().__init__(collection_name)
         # Client connection handle (lazy-created)
         self.client = None
@@ -62,13 +62,13 @@ class MilvusVectorDatabase(VectorDatabase):
             "custom_local",
         ]
 
-    def _ensure_client(self):
+    def _ensure_client(self) -> None:
         """Ensure the client is created, handling import-time issues."""
         if not self._client_created:
             self._create_client()
             self._client_created = True
 
-    def _create_client(self):
+    def _create_client(self) -> None:
         # Temporarily unset MILVUS_URI to prevent pymilvus from auto-connecting during import
         original_milvus_uri = os.environ.pop("MILVUS_URI", None)
 
@@ -211,7 +211,7 @@ class MilvusVectorDatabase(VectorDatabase):
         embedding: str = "default",
         collection_name: str = None,
         chunking_config: dict[str, Any] = None,
-    ):
+    ) -> None:
         """Set up Milvus collection if it doesn't exist."""
 
         self._ensure_client()
@@ -297,8 +297,7 @@ class MilvusVectorDatabase(VectorDatabase):
                         "embedding": self.embedding_model,
                         "vector_size": self.dimension,
                         "chunking": self._collections_metadata.get(
-                            target_collection, {}
-                        ).get("chunking"),
+                            target_collection, {}).get("chunking"),
                     }
                     try:
                         self.client.set_collection_metadata(target_collection, meta)
@@ -313,7 +312,7 @@ class MilvusVectorDatabase(VectorDatabase):
         documents: list[dict[str, Any]],
         embedding: str = "default",
         collection_name: str = None,
-    ):
+    ) -> dict[str, Any]:
         """
         Write documents to Milvus.
 
@@ -513,7 +512,8 @@ class MilvusVectorDatabase(VectorDatabase):
         }
 
     def get_document_chunks(
-        self, doc_id: str, collection_name: str = None
+        self,
+        doc_id: str, collection_name: str = None
     ) -> list[dict[str, Any]]:
         """Retrieve all chunks for a specific document (by doc_name)."""
         self._ensure_client()
@@ -648,7 +648,8 @@ class MilvusVectorDatabase(VectorDatabase):
             return []
 
     def list_documents_in_collection(
-        self, collection_name: str, limit: int = 10, offset: int = 0
+        self,
+        collection_name: str, limit: int = 10, offset: int = 0
     ) -> list[dict[str, Any]]:
         """List documents from a specific collection in Milvus."""
         self._ensure_client()
@@ -949,7 +950,7 @@ class MilvusVectorDatabase(VectorDatabase):
                     "vector_size": vec_size,
                     "provider": provider,
                     "source": "collection" if self.embedding_model else "schema",
-                    **({"config": embedding_config} if embedding_config else {}),
+                    **({'config': embedding_config} if embedding_config else {}),
                 },
                 "metadata": {
                     "collection_id": collection_id,
@@ -995,7 +996,7 @@ class MilvusVectorDatabase(VectorDatabase):
                 "metadata": {"error": str(e)},
             }
 
-    def delete_documents(self, document_ids: list[str]):
+    def delete_documents(self, document_ids: list[str]) -> None:
         """Delete documents from Milvus by their IDs."""
         self._ensure_client()
         if self.client is None:
@@ -1011,7 +1012,7 @@ class MilvusVectorDatabase(VectorDatabase):
         # Delete documents by ID
         self.client.delete(self.collection_name, ids=int_ids)
 
-    def delete_collection(self, collection_name: str = None):
+    def delete_collection(self, collection_name: str = None) -> None:
         """Delete an entire collection from Milvus."""
         self._ensure_client()
         if self.client is None:
@@ -1025,7 +1026,7 @@ class MilvusVectorDatabase(VectorDatabase):
             if target_collection == self.collection_name:
                 self.collection_name = None
 
-    def create_query_agent(self):
+    def create_query_agent(self) -> "MilvusVectorDatabase":
         """Create a query agent for Milvus."""
         # Placeholder: Milvus does not have a built-in query agent like Weaviate
         # You would implement your own search logic here
@@ -1073,7 +1074,8 @@ class MilvusVectorDatabase(VectorDatabase):
             return f"Error querying database: {str(e)}"
 
     def _search_documents(
-        self, query: str, limit: int = 5, collection_name: str = None
+        self,
+        query: str, limit: int = 5, collection_name: str = None
     ) -> list[dict[str, Any]]:
         """
         Search for documents using vector similarity search.
@@ -1179,7 +1181,7 @@ class MilvusVectorDatabase(VectorDatabase):
             documents = []
 
             # Helper to process an individual hit object (different shapes)
-            def _process_hit(hit_obj):
+            def _process_hit(hit_obj: dict[str, Any]) -> dict[str, Any]:
                 # If wrapper returns Hit objects with .entity and .score
                 try:
                     raw_score = None
@@ -1349,7 +1351,8 @@ class MilvusVectorDatabase(VectorDatabase):
         return self._search_documents(query, limit, collection_name)
 
     def _fallback_keyword_search(
-        self, query: str, limit: int = 5
+        self,
+        query: str, limit: int = 5
     ) -> list[dict[str, Any]]:
         """
         Fallback to simple keyword matching if vector search fails.
@@ -1413,7 +1416,7 @@ class MilvusVectorDatabase(VectorDatabase):
             warnings.warn(f"Fallback keyword search also failed: {e}")
             return []
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up Milvus client."""
         if self.client is not None:
             if self.collection_name:

@@ -5,6 +5,11 @@ import json
 import warnings
 from typing import Any
 
+import weaviate
+
+# Suppress all deprecation warnings from external packages immediately
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 # Suppress Pydantic deprecation warnings from dependencies
 warnings.filterwarnings(
     "ignore", category=DeprecationWarning, message=".*class-based `config`.*"
@@ -26,7 +31,7 @@ from .vector_db_base import VectorDatabase
 class WeaviateVectorDatabase(VectorDatabase):
     """Weaviate implementation of the vector database interface."""
 
-    def __init__(self, collection_name: str = "MaestroDocs"):
+    def __init__(self, collection_name: str = "MaestroDocs") -> None:
         super().__init__(collection_name)
         self.client = None
         self.embedding_model = None  # Store the embedding model used
@@ -53,7 +58,7 @@ class WeaviateVectorDatabase(VectorDatabase):
             "text-embedding-3-large",
         ]
 
-    def _create_client(self):
+    def _create_client(self) -> None:
         """Create the Weaviate client."""
         import os
 
@@ -78,7 +83,7 @@ class WeaviateVectorDatabase(VectorDatabase):
             auth_credentials=Auth.api_key(weaviate_api_key),
         )
 
-    def _get_vectorizer_config(self, embedding: str):
+    def _get_vectorizer_config(self, embedding: str) -> weaviate.classes.config.Configure.Vectorizer:
         """
         Get the appropriate vectorizer configuration for the embedding model.
 
@@ -132,7 +137,7 @@ class WeaviateVectorDatabase(VectorDatabase):
         embedding: str = "default",
         collection_name: str = None,
         chunking_config: dict[str, Any] = None,
-    ):
+    ) -> None:
         """
         Set up Weaviate collection if it doesn't exist.
 
@@ -198,7 +203,7 @@ class WeaviateVectorDatabase(VectorDatabase):
         documents: list[dict[str, Any]],
         embedding: str = "default",
         collection_name: str = None,
-    ):
+    ) -> dict[str, Any]:
         # TODO(embedding): Per-write 'embedding' parameter is deprecated. Collection-level embedding
         #                  set via setup() should be used. This parameter will be removed or ignored in a future release.
         """
@@ -317,7 +322,7 @@ class WeaviateVectorDatabase(VectorDatabase):
         documents: list[dict[str, Any]],
         collection_name: str,
         embedding: str = "default",
-    ):
+    ) -> dict[str, Any]:
         """
         Write documents to a specific collection in Weaviate.
 
@@ -732,7 +737,7 @@ class WeaviateVectorDatabase(VectorDatabase):
                 "metadata": {"error": str(e)},
             }
 
-    def delete_documents(self, document_ids: list[str]):
+    def delete_documents(self, document_ids: list[str]) -> None:
         """Delete documents from Weaviate by their IDs."""
         collection = self.client.collections.get(self.collection_name)
 
@@ -743,7 +748,7 @@ class WeaviateVectorDatabase(VectorDatabase):
             except Exception as e:
                 warnings.warn(f"Failed to delete document {doc_id}: {e}")
 
-    def delete_collection(self, collection_name: str = None):
+    def delete_collection(self, collection_name: str = None) -> None:
         """Delete an entire collection from Weaviate."""
         target_collection = collection_name or self.collection_name
 
@@ -755,7 +760,7 @@ class WeaviateVectorDatabase(VectorDatabase):
         except Exception as e:
             warnings.warn(f"Failed to delete collection {target_collection}: {e}")
 
-    def create_query_agent(self):
+    def create_query_agent(self) -> "QueryAgent":
         """Create a Weaviate query agent."""
         from weaviate.agents.query import QueryAgent
 
@@ -798,7 +803,10 @@ class WeaviateVectorDatabase(VectorDatabase):
             return f"Error querying database: {str(e)}"
 
     def search(
-        self, query: str, limit: int = 5, collection_name: str = None
+        self,
+        query: str,
+        limit: int = 5,
+        collection_name: str = None,
     ) -> list[dict[str, Any]]:
         """
         Search for documents using Weaviate's vector similarity search.
@@ -937,7 +945,10 @@ class WeaviateVectorDatabase(VectorDatabase):
             return self._fallback_keyword_search(query, limit, collection_name)
 
     def _fallback_keyword_search(
-        self, query: str, limit: int = 5, collection_name: str = None
+        self,
+        query: str,
+        limit: int = 5,
+        collection_name: str = None,
     ) -> list[dict[str, Any]]:
         """
         Fallback to simple keyword matching if vector search fails.
@@ -1008,7 +1019,7 @@ class WeaviateVectorDatabase(VectorDatabase):
             warnings.warn(f"Fallback keyword search also failed: {e}")
             return []
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up Weaviate client."""
         if self.client:
             try:

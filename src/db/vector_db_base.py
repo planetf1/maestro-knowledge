@@ -23,7 +23,7 @@ class VectorDatabase(ABC):
     """Abstract base class for vector database implementations."""
 
     @abstractmethod
-    def __init__(self, collection_name: str = "MaestroDocs"):
+    def __init__(self, collection_name: str = "MaestroDocs") -> None:
         """Initialize the vector database with a collection name."""
         self.collection_name = collection_name
 
@@ -49,7 +49,7 @@ class VectorDatabase(ABC):
         embedding: str = "default",
         collection_name: str = None,
         chunking_config: dict[str, Any] = None,
-    ):
+    ) -> None:
         """
         Set up the database and create collections if they don't exist.
 
@@ -66,7 +66,7 @@ class VectorDatabase(ABC):
         documents: list[dict[str, Any]],
         embedding: str = "default",
         collection_name: str = None,
-    ):
+    ) -> None:
         """
         Write documents to the vector database.
 
@@ -82,7 +82,7 @@ class VectorDatabase(ABC):
         documents: list[dict[str, Any]],
         collection_name: str,
         embedding: str = "default",
-    ):
+    ) -> None:
         """
         Write documents to a specific collection in the vector database.
 
@@ -98,7 +98,7 @@ class VectorDatabase(ABC):
         document: dict[str, Any],
         embedding: str = "default",
         collection_name: str = None,
-    ):
+    ) -> None:
         """
         Write a single document to the vector database.
 
@@ -221,7 +221,7 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def delete_documents(self, document_ids: list[str]):
+    def delete_documents(self, document_ids: list[str]) -> None:
         """
         Delete documents from the vector database by their IDs.
 
@@ -230,7 +230,7 @@ class VectorDatabase(ABC):
         """
         pass
 
-    def delete_document(self, document_id: str):
+    def delete_document(self, document_id: str) -> None:
         """
         Delete a single document from the vector database by its ID.
 
@@ -240,7 +240,7 @@ class VectorDatabase(ABC):
         return self.delete_documents([document_id])
 
     @abstractmethod
-    def delete_collection(self, collection_name: str = None):
+    def delete_collection(self, collection_name: str = None) -> None:
         """
         Delete an entire collection from the database.
 
@@ -250,7 +250,7 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def create_query_agent(self):
+    def create_query_agent(self) -> "VectorDatabase":
         """Create and return a query agent for this vector database."""
         pass
 
@@ -287,7 +287,7 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up resources and close connections."""
         pass
 

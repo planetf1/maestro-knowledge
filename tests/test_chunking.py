@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.chunking import ChunkingConfig, chunk_text
 
 
-def test_none_chunk():
+def test_none_chunk() -> None:
     text = "Hello world"
     cfg = ChunkingConfig()
     res = chunk_text(text, cfg)
@@ -15,7 +15,7 @@ def test_none_chunk():
     assert res[0]["text"] == text
 
 
-def test_fixed_chunk():
+def test_fixed_chunk() -> None:
     text = "a" * 1200
     cfg = ChunkingConfig(
         strategy="Fixed", parameters={"chunk_size": 500, "overlap": 100}
@@ -27,7 +27,7 @@ def test_fixed_chunk():
     assert res[1]["offset_start"] == 400
 
 
-def test_sentence_chunk_simple():
+def test_sentence_chunk_simple() -> None:
     text = "This is one sentence. This is another! And a third?"
     cfg = ChunkingConfig(
         strategy="Sentence", parameters={"chunk_size": 50, "overlap": 0}
@@ -39,7 +39,7 @@ def test_sentence_chunk_simple():
     assert seqs == sorted(seqs)
 
 
-def test_sentence_split_long_sentence():
+def test_sentence_split_long_sentence() -> None:
     text = "A" * 1200
     cfg = ChunkingConfig(
         strategy="Sentence", parameters={"chunk_size": 500, "overlap": 50}
@@ -50,7 +50,7 @@ def test_sentence_split_long_sentence():
     assert all("total" in c for c in res)
 
 
-def test_fixed_overlap_validation():
+def test_fixed_overlap_validation() -> None:
     text = "a" * 100
     # overlap == chunk_size should raise for Fixed
     cfg = ChunkingConfig(strategy="Fixed", parameters={"chunk_size": 10, "overlap": 10})
@@ -77,7 +77,7 @@ def test_fixed_overlap_validation():
         assert "chunk_size" in str(e)
 
 
-def test_sentence_overlap_validation():
+def test_sentence_overlap_validation() -> None:
     text = "a" * 100
     # overlap > chunk_size should raise for Sentence
     cfg = ChunkingConfig(
@@ -119,13 +119,13 @@ def test_sentence_overlap_validation():
     assert starts == [0, 10, 20]
 
 
-def test_fixed_empty_text_returns_no_chunks():
+def test_fixed_empty_text_returns_no_chunks() -> None:
     cfg = ChunkingConfig(strategy="Fixed", parameters={"chunk_size": 10, "overlap": 0})
     res = chunk_text("", cfg)
     assert res == []
 
 
-def test_sentence_empty_text_returns_no_chunks():
+def test_sentence_empty_text_returns_no_chunks() -> None:
     cfg = ChunkingConfig(
         strategy="Sentence", parameters={"chunk_size": 10, "overlap": 0}
     )
@@ -133,7 +133,7 @@ def test_sentence_empty_text_returns_no_chunks():
     assert res == []
 
 
-def test_fixed_defaults_apply_when_params_missing():
+def test_fixed_defaults_apply_when_params_missing() -> None:
     # Only set strategy; expect defaults chunk_size=512, overlap=0
     text = "a" * 600
     cfg = ChunkingConfig(strategy="Fixed", parameters={})
@@ -143,7 +143,7 @@ def test_fixed_defaults_apply_when_params_missing():
     assert res[1]["offset_start"] == 512
 
 
-def test_sentence_packs_sentences_and_is_contiguous():
+def test_sentence_packs_sentences_and_is_contiguous() -> None:
     text = "A. B. C. D. E. F."
     cfg = ChunkingConfig(
         strategy="Sentence", parameters={"chunk_size": 5, "overlap": 0}
@@ -156,7 +156,7 @@ def test_sentence_packs_sentences_and_is_contiguous():
         assert res[i - 1]["offset_end"] == res[i]["offset_start"]
 
 
-def test_sentence_split_long_sentence_with_overlap_windows():
+def test_sentence_split_long_sentence_with_overlap_windows() -> None:
     # One long sentence should be split with the requested overlap
     text = "X" * 30
     cfg = ChunkingConfig(
@@ -172,7 +172,7 @@ def test_sentence_split_long_sentence_with_overlap_windows():
     assert all(c["total"] == len(res) for c in res)
 
 
-def test_unknown_strategy_raises_value_error():
+def test_unknown_strategy_raises_value_error() -> None:
     cfg = ChunkingConfig(strategy="Bogus", parameters={})
     try:
         chunk_text("hi", cfg)
@@ -181,7 +181,7 @@ def test_unknown_strategy_raises_value_error():
         assert "Unknown chunking strategy" in str(e)
 
 
-def test_fixed_near_max_overlap_many_steps():
+def test_fixed_near_max_overlap_many_steps() -> None:
     # overlap just below chunk_size should produce many small steps (step=1)
     text = "a" * 35
     cfg = ChunkingConfig(strategy="Fixed", parameters={"chunk_size": 10, "overlap": 9})
@@ -195,7 +195,7 @@ def test_fixed_near_max_overlap_many_steps():
     assert res[-1]["offset_end"] == len(text)
 
 
-def test_sentence_mixed_punctuation_and_newlines():
+def test_sentence_mixed_punctuation_and_newlines() -> None:
     text = (
         "One line.\nSecond line!\nThird line? Fourth line without punctuation\nFifth."
     )
@@ -218,7 +218,7 @@ def test_sentence_mixed_punctuation_and_newlines():
     assert boundary_count >= (non_final // 2)
 
 
-def test_sentence_exact_fit_boundary():
+def test_sentence_exact_fit_boundary() -> None:
     # Two sentences exactly fill chunk_size — they should be packed together
     text = "abcd.efg."
     assert len(text) == 9
