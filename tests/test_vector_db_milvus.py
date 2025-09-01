@@ -113,74 +113,72 @@ class TestMilvusVectorDatabase:
         assert mock_client.insert.called
 
     @patch("pymilvus.MilvusClient")
-    def test_write_documents_with_embedding_model(self, mock_milvus_client):
+    @patch("src.db.vector_db_milvus.MilvusVectorDatabase._generate_embeddings_batch")
+    def test_write_documents_with_embedding_model(
+        self, mock_generate_batch, mock_milvus_client
+    ):
         """Test writing documents with embedding model generation."""
         mock_client = MagicMock()
         mock_milvus_client.return_value = mock_client
+        mock_generate_batch.return_value = [[0.1] * 1536]
 
         db = MilvusVectorDatabase()
+        db.dimension = 1536
+        documents = [
+            {
+                "url": "http://test1.com",
+                "text": "test content 1",
+                "metadata": {"type": "webpage"},
+            }
+        ]
 
-        # Mock the _generate_embedding method to return a test vector
-        with patch.object(db, "_generate_embedding", return_value=[0.1] * 1536):
-            documents = [
-                {
-                    "url": "http://test1.com",
-                    "text": "test content 1",
-                    "metadata": {"type": "webpage"},
-                }
-            ]
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+            db.write_documents(documents, embedding="text-embedding-ada-002")
 
-            # Set environment variable for OpenAI API key
-            with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-                db.write_documents(documents, embedding="text-embedding-ada-002")
-                assert mock_client.insert.called
+        assert mock_client.insert.called
+        mock_generate_batch.assert_called_once_with(
+            ["test content 1"], "text-embedding-ada-002"
+        )
 
     @patch("pymilvus.MilvusClient")
-    def test_write_documents_excludes_chunking_metadata(self, mock_milvus_client):
+    @patch("src.db.vector_db_milvus.MilvusVectorDatabase._generate_embeddings_batch")
+    def test_write_documents_excludes_chunking_metadata(
+        self, mock_generate_batch, mock_milvus_client
+    ):
         """Write path should NOT attach chunking policy into per-chunk metadata (kept at collection level)."""
         mock_client = MagicMock()
         mock_milvus_client.return_value = mock_client
-
         db = MilvusVectorDatabase("ChunkCol")
-        # Configure collection chunking
         chunk_cfg = {
             "strategy": "Fixed",
             "parameters": {"chunk_size": 16, "overlap": 0},
         }
-        # Also set embedding to avoid openai dependency by mocking _generate_embedding
         db.setup(
             embedding="text-embedding-ada-002",
             collection_name="ChunkCol",
             chunking_config=chunk_cfg,
         )
+        mock_generate_batch.return_value = [[0.0] * 1536, [0.0] * 1536]
 
-        # Mock embed generation
-        with patch.object(
-            db, "_generate_embedding", return_value=[0.0] * (db.dimension or 1536)
-        ):
-            documents = [
-                {
-                    "url": "u",
-                    "text": "abcdefghijklmnopqrstuvwxyz",
-                    "metadata": {"doc_name": "doc1"},
-                }
-            ]
-            db.write_documents(documents, embedding="default")
+        documents = [
+            {
+                "url": "u",
+                "text": "abcdefghijklmnopqrstuvwxyz",
+                "metadata": {"doc_name": "doc1"},
+            }
+        ]
+        db.write_documents(documents, embedding="default")
 
-        # Verify insert was called and metadata contains chunking
         assert mock_client.insert.called
         args, kwargs = mock_client.insert.call_args
         assert args[0] == "ChunkCol"
         data = args[1]
         assert isinstance(data, list) and len(data) > 0
         meta = data[0]["metadata"]
-        # metadata stored as JSON string
         import json as _json
 
         parsed = _json.loads(meta)
-        # Per-result chunking metadata has been removed to avoid duplication
         assert "chunking" not in parsed
-        # Still includes prior fields
         assert "offset_start" in parsed and "offset_end" in parsed
         assert "chunk_sequence_number" in parsed and "total_chunks" in parsed
 
@@ -242,28 +240,16 @@ class TestMilvusVectorDatabase:
         mock_client = MagicMock()
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
-
-        # Mock the _generate_embedding method to simulate missing openai module
-        with patch.object(
-            db,
-            "_generate_embedding",
-            side_effect=ValueError("OPENAI_API_KEY is required for OpenAI embeddings."),
-        ):
-            documents = [
-                {
-                    "url": "http://test1.com",
-                    "text": "test content 1",
-                    "metadata": {"type": "webpage"},
-                }
-            ]
-
-            # Ensure no OpenAI API key is set
-            with patch.dict(os.environ, {}, clear=True):
-                with pytest.raises(
-                    ValueError,
-                    match="OPENAI_API_KEY is required for OpenAI embeddings.",
-                ):
-                    db.write_documents(documents, embedding="text-embedding-ada-002")
+        documents = [
+            {
+                "url": "http://test1.com",
+                "text": "test content 1",
+                "metadata": {"type": "webpage"},
+            }
+        ]
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(RuntimeError, match="OPENAI_API_KEY is required"):
+                db.write_documents(documents, embedding="text-embedding-ada-002")
 
     @patch("pymilvus.MilvusClient")
     def test_write_documents_real_openai_integration(self, mock_milvus_client):
@@ -271,14 +257,13 @@ class TestMilvusVectorDatabase:
         mock_client = MagicMock()
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
+        db.dimension = 1536
 
-        # Only run this test if openai module is available
         import importlib.util
 
         if importlib.util.find_spec("openai") is None:
             pytest.skip("openai module not available")
 
-        # Mock the OpenAI client to return a test embedding
         with patch("openai.OpenAI") as mock_openai:
             mock_client_instance = MagicMock()
             mock_openai.return_value = mock_client_instance
@@ -294,15 +279,14 @@ class TestMilvusVectorDatabase:
                 }
             ]
 
-            # Set environment variable for OpenAI API key
             with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
                 db.write_documents(documents, embedding="text-embedding-ada-002")
-                assert mock_client.insert.called
-                # Verify that the OpenAI client was called correctly
-                mock_openai.assert_called_once_with(api_key="test-key")
-                mock_client_instance.embeddings.create.assert_called_once_with(
-                    model="text-embedding-ada-002", input="test content 1"
-                )
+
+            assert mock_client.insert.called
+            mock_openai.assert_called_once_with(api_key="test-key")
+            mock_client_instance.embeddings.create.assert_called_once_with(
+                model="text-embedding-ada-002", input=["test content 1"]
+            )
 
     @patch("pymilvus.MilvusClient")
     def test_list_documents(self, mock_milvus_client):
@@ -513,29 +497,27 @@ class TestMilvusVectorDatabase:
         )
 
     @patch("pymilvus.MilvusClient")
+    @patch("src.db.vector_db_milvus.MilvusVectorDatabase._generate_embeddings_batch")
     def test_write_documents_ignores_per_write_embedding_with_warning(
-        self, mock_milvus_client
+        self, mock_generate_batch, mock_milvus_client
     ):
         """When collection embedding is set, per-write embedding should be ignored and warn."""
         mock_client = MagicMock()
         mock_milvus_client.return_value = mock_client
         mock_client.has_collection.return_value = True
+        mock_generate_batch.return_value = [[0.0] * 1536]
 
         db = MilvusVectorDatabase()
-        # Simulate prior setup setting embedding model and dimension
         db.embedding_model = "text-embedding-3-small"
         db.dimension = 1536
 
-        # Patch embedding generator to check which model is used
-        with patch.object(db, "_generate_embedding", return_value=[0.0] * 1536) as gen:
-            docs = [{"url": "u", "text": "abc", "metadata": {}}]
-            with warnings.catch_warnings(record=True) as w:
-                warnings.simplefilter("always")
-                db.write_documents(docs, embedding="text-embedding-ada-002")
-                # one warning emitted
-                assert any("per-collection" in str(x.message) for x in w)
-            # Should have used effective (collection) model, not the per-write arg
-            gen.assert_called()
+        docs = [{"url": "u", "text": "abc", "metadata": {}}]
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            db.write_documents(docs, embedding="text-embedding-ada-002")
+            assert any("per-collection" in str(x.message) for x in w)
+
+        mock_generate_batch.assert_called_once_with(["abc"], "text-embedding-3-small")
 
     @patch("pymilvus.MilvusClient")
     def test_get_document_collection_not_found(self, mock_milvus_client):
@@ -602,7 +584,7 @@ class TestMilvusVectorDatabase:
     def test_custom_local_embedding_missing_url(self):
         db = MilvusVectorDatabase()
         with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="CUSTOM_EMBEDDING_URL must be set"):
+            with pytest.raises(RuntimeError, match="CUSTOM_EMBEDDING_URL must be set"):
                 db._generate_embedding("test", "custom_local")
 
     def test_custom_local_embedding_missing_model(self):
@@ -610,7 +592,7 @@ class TestMilvusVectorDatabase:
         with patch.dict(
             os.environ, {"CUSTOM_EMBEDDING_URL": "http://localhost:8080"}, clear=True
         ):
-            with pytest.raises(ValueError, match="CUSTOM_EMBEDDING_MODEL must be set"):
+            with pytest.raises(RuntimeError, match="CUSTOM_EMBEDDING_MODEL must be set"):
                 db._generate_embedding("test", "custom_local")
 
     def test_custom_local_embedding_missing_vectorsize(self):
@@ -643,6 +625,101 @@ class TestMilvusVectorDatabase:
                 ValueError, match="CUSTOM_EMBEDDING_VECTORSIZE must be a valid integer"
             ):
                 db._get_embedding_dimension("custom_local")
+
+    @patch("openai.OpenAI")
+    def test_generate_embeddings_batch(self, mock_openai):
+        """Test the _generate_embeddings_batch method."""
+        mock_client_instance = MagicMock()
+        mock_openai.return_value = mock_client_instance
+        mock_client_instance.embeddings.create.return_value.data = [
+            MagicMock(embedding=[0.1] * 1536),
+            MagicMock(embedding=[0.2] * 1536),
+        ]
+
+        db = MilvusVectorDatabase()
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+            embeddings = db._generate_embeddings_batch(
+                ["text1", "text2"], "text-embedding-ada-002"
+            )
+
+        assert len(embeddings) == 2
+        assert embeddings[0] == [0.1] * 1536
+        assert embeddings[1] == [0.2] * 1536
+        mock_client_instance.embeddings.create.assert_called_once_with(
+            model="text-embedding-ada-002", input=["text1", "text2"]
+        )
+
+    @patch("pymilvus.MilvusClient")
+    @patch("src.db.vector_db_milvus.MilvusVectorDatabase._generate_embeddings_batch")
+    def test_write_documents_uses_batching(
+        self, mock_generate_batch, mock_milvus_client
+    ):
+        """Test that write_documents uses batched embedding generation."""
+        mock_client = MagicMock()
+        mock_milvus_client.return_value = mock_client
+        mock_generate_batch.side_effect = lambda texts, model: [
+            [0.1] * 1536 for _ in texts
+        ]
+
+        db = MilvusVectorDatabase()
+        db.dimension = 1536
+        documents = [{"url": "http://test.com", "text": "doc1 chunk1. doc1 chunk2."}]
+
+        db.setup(
+            embedding="text-embedding-ada-002",
+            chunking_config={"strategy": "Sentence", "parameters": {"chunk_size": 15}},
+        )
+
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+            db.write_documents(documents, embedding="text-embedding-ada-002")
+
+        mock_generate_batch.assert_called_once()
+        assert len(mock_generate_batch.call_args[0][0]) == 2
+        assert mock_client.insert.called
+
+    @patch("pymilvus.MilvusClient")
+    @patch("src.db.vector_db_milvus.chunk_text")
+    @patch("src.db.vector_db_milvus.MilvusVectorDatabase._generate_embeddings_batch")
+    def test_write_documents_respects_batch_size_env_var(
+        self, mock_generate_batch, mock_chunk_text, mock_milvus_client
+    ):
+        """Test that write_documents respects the EMBEDDING_BATCH_SIZE env var."""
+        mock_client = MagicMock()
+        mock_milvus_client.return_value = mock_client
+        mock_generate_batch.side_effect = lambda texts, model: [
+            [0.1] * 1536 for _ in texts
+        ]
+        # Mock chunker to return a predictable number of chunks
+        mock_chunk_text.return_value = [
+            {
+                "text": f"c{i}",
+                "sequence": i,
+                "total": 5,
+                "offset_start": 0,
+                "offset_end": 0,
+                "chunk_size": 0,
+            }
+            for i in range(1, 6)
+        ]
+
+        db = MilvusVectorDatabase()
+        db.dimension = 1536
+        documents = [{"url": "http://test.com", "text": "some text"}]
+
+        db.setup(embedding="text-embedding-ada-002")
+
+        with patch.dict(
+            os.environ,
+            {"OPENAI_API_KEY": "test-key", "EMBEDDING_BATCH_SIZE": "2"},
+            clear=True,
+        ):
+            db.write_documents(documents, embedding="text-embedding-ada-002")
+
+        assert mock_generate_batch.call_count == 3
+        call_args_list = mock_generate_batch.call_args_list
+        assert len(call_args_list[0][0][0]) == 2
+        assert len(call_args_list[1][0][0]) == 2
+        assert len(call_args_list[2][0][0]) == 1
 
 
 if __name__ == "__main__":
