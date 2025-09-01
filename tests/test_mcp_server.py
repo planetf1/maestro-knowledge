@@ -9,6 +9,8 @@ This script tests the server functionality without requiring a full MCP client.
 
 import sys
 from pathlib import Path
+import pytest
+
 
 # Ensure the project root is in sys.path
 project_root = Path(__file__).parent.parent.resolve()
@@ -18,13 +20,14 @@ if str(project_root) not in sys.path:
 from src.maestro_mcp.server import create_mcp_server
 
 
-def test_server_creation() -> None:
+@pytest.mark.asyncio
+async def test_server_creation() -> None:
     """Test that the server can be created successfully."""
     print("Testing MCP Server Creation...")
     print("=" * 50)
 
     try:
-        server = create_mcp_server()
+        server = await create_mcp_server()
         print("✓ Server created successfully")
         print(f"✓ Server name: {server.name}")
 
@@ -34,13 +37,14 @@ def test_server_creation() -> None:
         assert False, f"Failed to create server: {e}"
 
 
-def test_tool_definitions() -> None:
+@pytest.mark.asyncio
+async def test_tool_definitions() -> None:
     """Test that all expected tools are defined."""
     print("\nTesting Tool Definitions...")
     print("=" * 50)
 
     try:
-        server = create_mcp_server()
+        server = await create_mcp_server()
 
         # Get the tool definitions from the server
         expected_tools = [
