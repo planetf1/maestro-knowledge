@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from collections.abc import Callable
 
 
 @dataclass
 class ChunkingConfig:
     strategy: str = "None"
-    parameters: Dict[str, object] = None
+    parameters: dict[str, object] | None = None
 
     def __post_init__(self):
         if self.parameters is None:
@@ -17,20 +17,19 @@ class ChunkingConfig:
 
 
 # Public API: chunk_text delegates to registered strategies
-from typing import Callable
 
 # Strategy registry is populated by importing strategy modules which register
 # themselves here by updating _STRATEGIES.
-_STRATEGIES: Dict[str, Callable[..., List[Dict[str, object]]]] = {}
+_STRATEGIES: dict[str, Callable[..., list[dict[str, object]]]] = {}
 
 
-def register_strategy(name: str, func: Callable[..., List[Dict[str, object]]]):
+def register_strategy(name: str, func: Callable[..., list[dict[str, object]]]):
     _STRATEGIES[name] = func
 
 
 def chunk_text(
-    text: str, config: Optional[ChunkingConfig] = None
-) -> List[Dict[str, object]]:
+    text: str, config: ChunkingConfig | None = None
+) -> list[dict[str, object]]:
     """Chunk text according to the provided ChunkingConfig.
 
     Returns list of dicts containing keys: text, offset_start, offset_end, chunk_size, sequence, total
