@@ -20,7 +20,7 @@ import sys
 import os
 import pytest
 import asyncio
-from typing import Any
+from typing import Dict, Any
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -35,6 +35,7 @@ class TestVectorDatabase:
         """Test that VectorDatabase is abstract and cannot be instantiated."""
         with pytest.raises(TypeError):
             VectorDatabase()
+
 
 class ConcreteVectorDatabase(VectorDatabase):
     """Concrete implementation for testing abstract methods."""

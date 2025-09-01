@@ -35,7 +35,6 @@ from unittest.mock import MagicMock, patch, AsyncMock
 from typing import Any
 
 import pytest
-import asyncio
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -43,6 +42,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pymilvus.exceptions import MilvusException
 
 from src.db.vector_db_milvus import MilvusVectorDatabase
+
 
 class TestMilvusVectorDatabase:
     """Test cases for the MilvusVectorDatabase implementation."""
@@ -276,7 +276,9 @@ class TestMilvusVectorDatabase:
                     ValueError,
                     match="OPENAI_API_KEY is required for OpenAI embeddings.",
                 ):
-                    await db.write_documents(documents, embedding="text-embedding-ada-002")
+                    await db.write_documents(
+                        documents, embedding="text-embedding-ada-002"
+                    )
 
     @pytest.mark.asyncio
     @patch("pymilvus.AsyncMilvusClient")

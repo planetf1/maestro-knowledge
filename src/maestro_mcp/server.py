@@ -82,7 +82,7 @@ async def resync_vector_databases() -> list[str]:
                     db = MilvusVectorDatabase(collection_name=coll)
                     # Try to infer collection-level embedding config and set on the instance
                     try:
-                        info = db.get_collection_info(coll)
+                        info = await db.get_collection_info(coll)
                         emb_details = info.get("embedding_details") or {}
                         # If the backend stored embedding config, prefer that
                         if emb_details.get("config"):
@@ -386,7 +386,7 @@ class SearchInput(BaseModel):
     )
 
 
-def create_mcp_server() -> FastMCP:
+async def create_mcp_server() -> FastMCP:
     """Create and configure the FastMCP server with vector database tools."""
 
     # Create FastMCP server directly
@@ -1066,8 +1066,8 @@ def create_mcp_server() -> FastMCP:
     # Attempt an automatic resync on startup so that in-memory registry reflects
     # any pre-existing Milvus collections created outside this process.
     try:
-        added_m = resync_vector_databases()
-        added_w = resync_weaviate_databases()
+        added_m = await resync_vector_databases()
+        added_w = await resync_weaviate_databases()
         if added_m or added_w:
             logger.info(
                 f"Auto-resynced vector databases at startup: milvus={added_m}, weaviate={added_w}"
@@ -1080,7 +1080,7 @@ def create_mcp_server() -> FastMCP:
 
 async def main() -> None:
     """Main entry point for the MCP server."""
-    app = create_mcp_server()
+    app = await create_mcp_server()
     await app.run()
 
 

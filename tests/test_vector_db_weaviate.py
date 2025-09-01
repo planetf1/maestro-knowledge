@@ -27,7 +27,6 @@ from unittest.mock import MagicMock, patch, AsyncMock
 from typing import Any
 
 import pytest
-import asyncio
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -701,7 +700,7 @@ class TestWeaviateVectorDatabase:
             mock_client = AsyncMock()
             mock_connect.return_value = mock_client
             mock_collection = AsyncMock()
-            mock_client.collections.exists =  AsyncMock(return_value=True)
+            mock_client.collections.exists = AsyncMock(return_value=True)
             mock_client.collections.get.return_value = mock_collection
             # config.get returns an object with attributes used in code
             mock_cfg = AsyncMock()
@@ -778,7 +777,7 @@ class TestWeaviateVectorDatabase:
 
             mock_result.objects = [mock_object1, mock_object2]
             mock_collection.query.fetch_objects.return_value = mock_result
-            mock_client.collections.exists =  AsyncMock(return_value=True)
+            mock_client.collections.exists = AsyncMock(return_value=True)
             mock_client.collections.get.return_value = mock_collection
             mock_connect.return_value = mock_client
 
@@ -805,7 +804,7 @@ class TestWeaviateVectorDatabase:
             ),
         ):
             mock_client = AsyncMock()
-            mock_client.collections.exists =  AsyncMock(return_value=False)
+            mock_client.collections.exists = AsyncMock(return_value=False)
             mock_connect.return_value = mock_client
 
             db = WeaviateVectorDatabase()
@@ -835,7 +834,7 @@ class TestWeaviateVectorDatabase:
             # No objects returned
             mock_result.objects = []
             mock_collection.query.fetch_objects.return_value = mock_result
-            mock_client.collections.exists =  AsyncMock(return_value=True)
+            mock_client.collections.exists = AsyncMock(return_value=True)
             mock_client.collections.get.return_value = mock_collection
             mock_connect.return_value = mock_client
 
@@ -877,7 +876,7 @@ class TestWeaviateVectorDatabase:
 
             mock_result.objects = [mock_object]
             mock_collection.query.fetch_objects.return_value = mock_result
-            mock_client.collections.exists =  AsyncMock(return_value=True)
+            mock_client.collections.exists = AsyncMock(return_value=True)
             mock_client.collections.get.return_value = mock_collection
             mock_connect.return_value = mock_client
 

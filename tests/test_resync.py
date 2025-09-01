@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: Apache 2.0
 # Test for resync_vector_databases helper
 
-import asyncio
 import pytest
 import os
 import sys
@@ -12,6 +11,7 @@ import pytest
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.maestro_mcp import server
+
 
 @pytest.mark.asyncio
 async def test_resync_vector_databases_registers_collections(
