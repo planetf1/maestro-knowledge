@@ -2,6 +2,7 @@
 # Copyright (c) 2025 IBM
 
 import json
+import os
 import logging
 import os
 import time
@@ -115,17 +116,39 @@ class MilvusVectorDatabase(VectorDatabase):
 
     def _generate_embedding(self, text: str, embedding_model: str) -> List[float]:
         """
-        Generate embeddings for text using the specified model.
+        Generate an embedding for a single text string.
 
         Args:
-            text: Text to embed
-            embedding_model: Name of the embedding model to use
+            text: The text to embed.
+            embedding_model: The embedding model to use.
 
         Returns:
-            List of floats representing the embedding vector
+            A list of floats representing the embedding vector.
+        """
+        # Call the batch embedding function with a single item
+        embeddings = self._generate_embeddings_batch([text], embedding_model)
+        return embeddings[0]
+
+    def _generate_embeddings_batch(
+        self, texts: List[str], embedding_model: str
+    ) -> List[List[float]]:
+        """
+        Generate embeddings for a batch of texts using the specified model.
+        The batch size is controlled by the EMBEDDING_BATCH_SIZE environment variable.
+
+        Args:
+            texts: A list of texts to embed.
+            embedding_model: Name of the embedding model to use.
+
+        Returns:
+            A list of embedding vectors.
         """
         try:
             import openai
+
+            batch_size = int(os.getenv("EMBEDDING_BATCH_SIZE", 1))
+            all_embeddings = []
+            logger = logging.getLogger(__name__)
 
             client_kwargs = {}
             model_to_use = embedding_model
@@ -145,7 +168,6 @@ class MilvusVectorDatabase(VectorDatabase):
                         "CUSTOM_EMBEDDING_MODEL must be set for 'custom_local' embedding."
                     )
             else:
-                # Get OpenAI API key from environment
                 api_key = os.getenv("OPENAI_API_KEY")
                 if not api_key:
                     raise ValueError(
@@ -157,18 +179,25 @@ class MilvusVectorDatabase(VectorDatabase):
                     model_to_use = "text-embedding-ada-002"
 
             client = openai.OpenAI(**client_kwargs)
-            response = client.embeddings.create(model=model_to_use, input=text)
 
-            return response.data[0].embedding
+            for i in range(0, len(texts), batch_size):
+                batch = texts[i : i + batch_size]
+                logger.info(
+                    f"Generating embeddings for batch {i // batch_size + 1} with {len(batch)} items."
+                )
+                response = client.embeddings.create(model=model_to_use, input=batch)
+                all_embeddings.extend([item.embedding for item in response.data])
+
+            return all_embeddings
 
         except ImportError:
             raise ImportError(
-                "openai package is required for embedding generation. Install with: pip install openai"
+                "OpenAI package is required for embedding generation. Install with: pip install openai"
             )
         except ValueError as e:
             raise e
         except Exception as e:
-            raise RuntimeError(f"Failed to generate embedding: {e}")
+            raise RuntimeError(f"Failed to generate embeddings in batch: {e}")
 
     def _get_embedding_dimension(self, embedding_model: str) -> int:
         """
@@ -211,6 +240,7 @@ class MilvusVectorDatabase(VectorDatabase):
         embedding: str = "default",
         collection_name: str = None,
         chunking_config: Dict[str, Any] = None,
+        description: str = "",
     ):
         """Set up Milvus collection if it doesn't exist."""
 
@@ -247,12 +277,14 @@ class MilvusVectorDatabase(VectorDatabase):
 
         # Store the embedding model
         self.embedding_model = embedding
+        
+        effective_chunking_config = chunking_config or {"strategy": "None", "parameters": {}}
 
         # Save chunking config for collection-level metadata
         self._collections_metadata[target_collection] = {
             "embedding": embedding,
             "vector_size": None,  # filled below
-            "chunking": chunking_config or {"strategy": "None", "parameters": {}},
+            "chunking_config": effective_chunking_config,
         }
 
         # Determine dimension based on embedding model
@@ -283,30 +315,22 @@ class MilvusVectorDatabase(VectorDatabase):
                 print(f"Using embedding model: {self.embedding_model}")
 
         if not collection_exists:
+            metadata_to_store = {
+                "version": "1.0",
+                "source": "maestro-knowledge",
+                "embedding": embedding,
+                "chunking_config": effective_chunking_config,
+                "description": description,
+            }
+            metadata_json = json.dumps(metadata_to_store)
+
             self.client.create_collection(
                 collection_name=target_collection,
-                dimension=self.dimension,  # Vector dimension
+                dimension=self.dimension,
                 primary_field_name="id",
                 vector_field_name="vector",
+                description=metadata_json,
             )
-            # Optionally store collection metadata about embedding and chunking
-            try:
-                # Some Milvus clients support setting collection description/metadata - attempt where available
-                if hasattr(self.client, "set_collection_metadata"):
-                    meta = {
-                        "embedding": self.embedding_model,
-                        "vector_size": self.dimension,
-                        "chunking": self._collections_metadata.get(
-                            target_collection, {}
-                        ).get("chunking"),
-                    }
-                    try:
-                        self.client.set_collection_metadata(target_collection, meta)
-                    except Exception:
-                        # not critical; ignore if client doesn't support
-                        pass
-            except Exception:
-                pass
 
     def write_documents(
         self,
@@ -329,19 +353,11 @@ class MilvusVectorDatabase(VectorDatabase):
         if self.client is None:
             warnings.warn("Milvus client is not available. Documents not written.")
             return
-        self._ensure_client()
-        if self.client is None:
-            warnings.warn("Milvus client is not available. Documents not written.")
-            return
 
-        # Use the specified collection name or fall back to the default
         target_collection = (
             collection_name if collection_name is not None else self.collection_name
         )
 
-        # TODO(embedding): Per-write 'embedding' is deprecated; prefer collection-level embedding set in setup().
-        #                  In a future release, remove the per-write parameter or make it a no-op.
-        # Determine effective embedding model: prefer collection-level embedding if set
         all_supported = self.supported_embeddings()
         if embedding not in all_supported:
             raise ValueError(
@@ -352,40 +368,33 @@ class MilvusVectorDatabase(VectorDatabase):
             None if embedding == "default" else embedding
         )
 
-        # If collection-level embedding is set and differs from the provided one,
-        # ignore the per-write parameter and emit a deprecation warning.
         if self.embedding_model and embedding not in ("default", self.embedding_model):
             warnings.warn(
                 "Embedding model should be configured per-collection. The per-write 'embedding' parameter is ignored.",
                 stacklevel=2,
             )
 
-        # Chunk documents according to collection chunking config and insert each chunk as a record
-        coll_meta = getattr(self, "_collections_metadata", {}).get(
-            target_collection, {}
-        )
-        chunking_conf = coll_meta.get("chunking") if coll_meta else None
+        coll_meta = getattr(self, "_collections_metadata", {}).get(target_collection, {})
+        chunking_conf = coll_meta.get("chunking_config") if coll_meta else None
 
-        data = []
+        data_to_insert = []
+        chunks_to_embed = []
         stats_per_doc: List[Dict[str, Any]] = []
         total_chunks = 0
         build_start = time.perf_counter()
         id_counter = 0
+
         for doc in documents:
             doc_start = time.perf_counter()
             text = doc.get("text", "")
             orig_metadata = dict(doc.get("metadata", {}))
 
-            # Chunk the text
             cfg = ChunkingConfig(
                 strategy=(chunking_conf or {}).get("strategy", "None"),
                 parameters=(chunking_conf or {}).get("parameters", {}),
             )
             chunks = chunk_text(text, cfg)
-            # No automatic re-chunking safety net: if 'None' produces an oversized chunk,
-            # we proceed as-is, allowing the backend to surface any size-related errors.
 
-            # Track per-doc
             per_doc_chunk_count = 0
             per_doc_char_count = 0
 
@@ -394,42 +403,9 @@ class MilvusVectorDatabase(VectorDatabase):
                 per_doc_chunk_count += 1
                 per_doc_char_count += len(chunk_text_content or "")
 
-                # Determine vector for chunk
-                if "vector" in doc and doc["vector"] is not None:
-                    # Use provided vector if present; validate dimension when known
-                    doc_vector = doc["vector"]
-                    try:
-                        expected_dim = self.dimension or (
-                            self._get_embedding_dimension(self.embedding_model)
-                            if self.embedding_model
-                            else None
-                        )
-                        if expected_dim is not None and len(doc_vector) != expected_dim:
-                            raise ValueError(
-                                f"Provided vector dimension {len(doc_vector)} does not match expected {expected_dim}."
-                            )
-                    except Exception:
-                        # If we cannot validate dimension, proceed without blocking
-                        pass
-                else:
-                    # Generate embedding using the effective (collection) model if set; otherwise default
-                    model_for_generation = (
-                        effective_embedding or "text-embedding-ada-002"
-                    )
-                    doc_vector = self._generate_embedding(
-                        chunk_text_content, model_for_generation
-                    )
-
-                if doc_vector is None:
-                    raise ValueError("Failed to generate vector for a chunk")
-
-                # Merge metadata and add chunk-specific fields
                 new_meta = dict(orig_metadata)
-                # Retain original doc_name if present
                 if "doc_name" in orig_metadata:
                     new_meta["doc_name"] = orig_metadata.get("doc_name")
-                # omit chunking policy to reduce per-result duplication in search outputs
-                # Add ordered chunk-specific metadata (start before end)
                 new_meta.update(
                     {
                         "chunk_sequence_number": int(chunk["sequence"]),
@@ -440,17 +416,21 @@ class MilvusVectorDatabase(VectorDatabase):
                     }
                 )
 
-                data.append(
-                    {
-                        "id": id_counter,
-                        "url": doc.get("url", ""),
-                        "text": chunk_text_content,
-                        "metadata": json.dumps(new_meta, ensure_ascii=False),
-                        "vector": doc_vector,
-                    }
-                )
+                item = {
+                    "id": id_counter,
+                    "url": doc.get("url", ""),
+                    "text": chunk_text_content,
+                    "metadata": json.dumps(new_meta, ensure_ascii=False),
+                }
+
+                if "vector" in doc and doc["vector"] is not None:
+                    item["vector"] = doc["vector"]
+                    data_to_insert.append(item)
+                else:
+                    chunks_to_embed.append(item)
+
                 id_counter += 1
-            # end per-doc tracking
+
             total_chunks += per_doc_chunk_count
             stats_per_doc.append(
                 {
@@ -463,29 +443,33 @@ class MilvusVectorDatabase(VectorDatabase):
                 }
             )
 
+        if chunks_to_embed:
+            model_for_generation = effective_embedding or "text-embedding-ada-002"
+            chunk_texts = [chunk["text"] for chunk in chunks_to_embed]
+            embeddings = self._generate_embeddings_batch(
+                chunk_texts, model_for_generation
+            )
+
+            for i, chunk in enumerate(chunks_to_embed):
+                chunk["vector"] = embeddings[i]
+                data_to_insert.append(chunk)
+
         insert_duration_ms = 0
-        if data:
+        if data_to_insert:
             insert_start = time.perf_counter()
-            self.client.insert(target_collection, data)
+            self.client.insert(target_collection, data_to_insert)
             insert_duration_ms = int((time.perf_counter() - insert_start) * 1000)
 
-            # Best-effort: ensure Milvus has flushed/loaded the inserted data so
-            # that subsequent searches and collection stats reflect the new rows.
-            # Different Milvus client wrappers expose different APIs (flush/load/load_collection).
-            # Call any available methods safely and ignore failures.
             try:
-                # pymilvus-style flush
                 if hasattr(self.client, "flush"):
                     try:
                         self.client.flush([target_collection])
                     except Exception:
-                        # Some clients accept a single collection name
                         try:
                             self.client.flush(target_collection)
                         except Exception:
                             pass
 
-                # load collection into queryable memory (client-specific)
                 if hasattr(self.client, "load_collection"):
                     try:
                         self.client.load_collection(target_collection)
@@ -493,12 +477,10 @@ class MilvusVectorDatabase(VectorDatabase):
                         pass
                 elif hasattr(self.client, "load"):
                     try:
-                        # some wrappers provide a load method
                         self.client.load(target_collection)
                     except Exception:
                         pass
             except Exception:
-                # Don't let flushing/loading interfere with the write path
                 pass
 
         total_duration_ms = int((time.perf_counter() - build_start) * 1000)
@@ -716,7 +698,6 @@ class MilvusVectorDatabase(VectorDatabase):
         self._ensure_client()
         if self.client is None:
             warnings.warn("Milvus client is not available. Returning empty info.")
-            # Build best-effort embedding details
             emb_name = self.embedding_model or "unknown"
             vec_size = None
             try:
@@ -760,179 +741,64 @@ class MilvusVectorDatabase(VectorDatabase):
         target_collection = collection_name or self.collection_name
 
         try:
-            # Check if collection exists
             if not self.client.has_collection(target_collection):
                 return {
                     "name": target_collection,
                     "document_count": 0,
                     "db_type": "milvus",
                     "embedding": "unknown",
-                    "chunking": getattr(self, "_collections_metadata", {})
-                    .get(target_collection, {})
-                    .get("chunking"),
-                    "embedding_details": {
-                        "name": self.embedding_model or "unknown",
-                        "vector_size": getattr(self, "_collections_metadata", {})
-                        .get(target_collection, {})
-                        .get("vector_size"),
-                        "provider": (
-                            "custom"
-                            if (self.embedding_model == "custom_local")
-                            else (
-                                "openai"
-                                if (
-                                    self.embedding_model
-                                    in {
-                                        "text-embedding-ada-002",
-                                        "text-embedding-3-small",
-                                        "text-embedding-3-large",
-                                        "default",
-                                    }
-                                )
-                                else "unknown"
-                            )
-                        ),
-                        "source": "collection" if self.embedding_model else "unknown",
-                    },
+                    "chunking": None,
+                    "embedding_details": {},
                     "metadata": {"error": "Collection does not exist"},
                 }
 
-            # Get collection statistics
             stats = self.client.get_collection_stats(target_collection)
-            try:
-                if isinstance(stats, dict):
-                    document_count = stats.get("row_count", 0)
-                else:
-                    # Some clients may return an object; try attribute access
-                    document_count = getattr(stats, "row_count", 0)
-            except Exception:
-                document_count = 0
+            document_count = stats.get("row_count", 0) if isinstance(stats, dict) else getattr(stats, "row_count", 0)
 
-            # Get collection schema information (dict or object depending on client)
             collection_info = self.client.describe_collection(target_collection)
-
-            # Use stored embedding model if available, otherwise try to extract from schema
-            if self.embedding_model:
-                embedding_info = self.embedding_model
-            else:
-                embedding_info = "unknown"
-                # Attempt to parse schema from dict or object
+            
+            description_str = collection_info.get("description", "")
+            stored_metadata = {}
+            if description_str and description_str.strip().startswith("{"):
                 try:
-                    fields = None
-                    if isinstance(collection_info, dict):
-                        fields = collection_info.get("fields")
-                    elif hasattr(collection_info, "fields"):
-                        fields = getattr(collection_info, "fields")
-                    if fields:
-                        for field in fields:
-                            # field may be dict or object
-                            fname = (
-                                field.get("name")
-                                if isinstance(field, dict)
-                                else getattr(field, "name", None)
-                            )
-                            if fname == "vector":
-                                params = (
-                                    field.get("params", {})
-                                    if isinstance(field, dict)
-                                    else getattr(field, "params", {})
-                                )
-                                dim_val = (
-                                    params.get("dim")
-                                    if isinstance(params, dict)
-                                    else getattr(params, "dim", "unknown")
-                                )
-                                embedding_info = f"vector_dim_{dim_val}"
-                                break
-                except Exception:
+                    parsed = json.loads(description_str)
+                    if isinstance(parsed, dict) and parsed.get("source") == "maestro-knowledge":
+                        stored_metadata = parsed
+                except json.JSONDecodeError:
                     pass
 
-            # Attempt to include configured chunking metadata if tracked
-            chunking_conf = (
-                getattr(self, "_collections_metadata", {})
-                .get(target_collection, {})
-                .get("chunking")
-            )
+            chunking_conf = stored_metadata.get("chunking_config")
+            embedding_info = stored_metadata.get("embedding")
 
-            # Build embedding details
-            try:
-                dim_from_schema = None
-                fields = None
-                if isinstance(collection_info, dict):
-                    fields = collection_info.get("fields")
-                elif hasattr(collection_info, "fields"):
-                    fields = getattr(collection_info, "fields")
-                if fields:
-                    for field in fields:
-                        fname = (
-                            field.get("name")
-                            if isinstance(field, dict)
-                            else getattr(field, "name", None)
-                        )
-                        if fname == "vector":
-                            params = (
-                                field.get("params", {})
-                                if isinstance(field, dict)
-                                else getattr(field, "params", {})
-                            )
-                            dim_from_schema = (
-                                params.get("dim")
-                                if isinstance(params, dict)
-                                else getattr(params, "dim", None)
-                            )
-                            break
-            except Exception:
-                dim_from_schema = None
+            if not chunking_conf or not embedding_info:
+                # Fallback to in-memory if metadata not in description
+                in_memory_meta = getattr(self, "_collections_metadata", {}).get(target_collection, {})
+                if not chunking_conf:
+                    chunking_conf = in_memory_meta.get("chunking")
+                if not embedding_info:
+                    embedding_info = in_memory_meta.get("embedding") or self.embedding_model
 
-            vec_size = (
-                self.dimension
-                or getattr(self, "_collections_metadata", {})
-                .get(target_collection, {})
-                .get("vector_size")
-                or dim_from_schema
-            )
+            embedding_info = embedding_info or "unknown"
+
+            # Update in-memory cache from stored metadata
+            if stored_metadata:
+                self._collections_metadata[target_collection] = {
+                    "embedding": embedding_info,
+                    "chunking": chunking_conf,
+                    "vector_size": self._get_embedding_dimension(embedding_info),
+                }
+                self.embedding_model = embedding_info
+
+            vec_size = self._get_embedding_dimension(embedding_info)
             provider = (
                 "custom"
-                if (self.embedding_model == "custom_local")
-                else (
-                    "openai"
-                    if (
-                        self.embedding_model
-                        in {
-                            "text-embedding-ada-002",
-                            "text-embedding-3-small",
-                            "text-embedding-3-large",
-                            "default",
-                        }
-                    )
-                    else "unknown"
-                )
+                if embedding_info == "custom_local"
+                else "openai" if embedding_info in {"text-embedding-ada-002", "text-embedding-3-small", "text-embedding-3-large", "default"}
+                else "unknown"
             )
 
-            # Extract collection metadata (ID, created_time, description, fields_count)
-            try:
-                if isinstance(collection_info, dict):
-                    collection_id = collection_info.get("id")
-                    created_time = collection_info.get("created_time")
-                    description = collection_info.get("description")
-                    fields_list = collection_info.get("fields") or []
-                else:
-                    collection_id = getattr(collection_info, "id", None)
-                    created_time = getattr(collection_info, "created_time", None)
-                    description = getattr(collection_info, "description", None)
-                    fields_list = getattr(collection_info, "fields", []) or []
-                fields_count = (
-                    len(fields_list) if isinstance(fields_list, (list, tuple)) else 0
-                )
-            except Exception:
-                collection_id = None
-                created_time = None
-                description = None
-                fields_count = 0
-
-            # Build optional embedding config for custom_local
             embedding_config = None
-            if (self.embedding_model or "") == "custom_local":
+            if embedding_info == "custom_local":
                 embedding_config = {
                     "url": os.getenv("CUSTOM_EMBEDDING_URL"),
                     "model": os.getenv("CUSTOM_EMBEDDING_MODEL"),
@@ -945,17 +811,18 @@ class MilvusVectorDatabase(VectorDatabase):
                 "embedding": embedding_info,
                 "chunking": chunking_conf,
                 "embedding_details": {
-                    "name": self.embedding_model or embedding_info,
+                    "name": embedding_info,
                     "vector_size": vec_size,
                     "provider": provider,
-                    "source": "collection" if self.embedding_model else "schema",
+                    "source": "collection_metadata" if stored_metadata else "in_memory",
                     **({"config": embedding_config} if embedding_config else {}),
                 },
                 "metadata": {
-                    "collection_id": collection_id,
-                    "created_time": created_time,
-                    "description": description,
-                    "fields_count": fields_count,
+                    "collection_id": collection_info.get("id"),
+                    "created_time": collection_info.get("created_time"),
+                    "description": stored_metadata.get("description", description_str),
+                    "fields_count": len(collection_info.get("fields", [])),
+                    "stored_metadata_version": stored_metadata.get("version"),
                 },
             }
         except Exception as e:

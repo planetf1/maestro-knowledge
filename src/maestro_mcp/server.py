@@ -80,55 +80,10 @@ def resync_vector_databases() -> List[str]:
             if coll not in vector_databases:
                 try:
                     db = MilvusVectorDatabase(collection_name=coll)
-                    # Try to infer collection-level embedding config and set on the instance
-                    try:
-                        info = db.get_collection_info(coll)
-                        emb_details = info.get("embedding_details") or {}
-                        # If the backend stored embedding config, prefer that
-                        if emb_details.get("config"):
-                            db.embedding_model = "custom_local"
-                            # try to set dimension if available
-                            try:
-                                db.dimension = emb_details.get("vector_size")
-                                db._collections_metadata[coll] = (
-                                    db._collections_metadata.get(coll, {})
-                                )
-                                db._collections_metadata[coll]["vector_size"] = (
-                                    db.dimension
-                                )
-                            except Exception:
-                                pass
-                        else:
-                            # If environment config exists and vector size matches, assume custom_local
-                            try:
-                                env_url = os.getenv("CUSTOM_EMBEDDING_URL")
-                                env_vs = os.getenv("CUSTOM_EMBEDDING_VECTORSIZE")
-                                if env_url and env_vs:
-                                    try:
-                                        vs_int = int(env_vs)
-                                        if (
-                                            info.get("embedding_details", {}).get(
-                                                "vector_size"
-                                            )
-                                            == vs_int
-                                        ):
-                                            db.embedding_model = "custom_local"
-                                            db.dimension = vs_int
-                                            db._collections_metadata[coll] = (
-                                                db._collections_metadata.get(coll, {})
-                                            )
-                                            db._collections_metadata[coll][
-                                                "vector_size"
-                                            ] = db.dimension
-                                    except Exception:
-                                        pass
-                            except Exception:
-                                pass
-
-                    except Exception:
-                        # best-effort: ignore failures to query collection info
-                        pass
-
+                    # This will read the collection description, parse the metadata,
+                    # and populate the in-memory cache for the db instance.
+                    db.get_collection_info(coll)
+                    
                     vector_databases[coll] = db
                     added.append(coll)
                 except Exception as e:

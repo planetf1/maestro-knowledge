@@ -87,7 +87,69 @@ class TestMilvusVectorDatabase:
             dimension=1536,
             primary_field_name="id",
             vector_field_name="vector",
+            description='{"version": "1.0", "source": "maestro-knowledge", "embedding": "default", "chunking_config": {"strategy": "None", "parameters": {}}, "description": ""}',
         )
+
+    @patch("pymilvus.MilvusClient")
+    def test_setup_and_get_collection_info_with_metadata(self, mock_milvus_client):
+        """Test that setup stores metadata in the description and get_collection_info retrieves it."""
+        mock_client = MagicMock()
+        mock_milvus_client.return_value = mock_client
+
+        db = MilvusVectorDatabase()
+        db.dimension = 1536
+        
+        collection_name = "metadata_test_collection"
+        chunk_config = {"strategy": "Fixed", "parameters": {"chunk_size": 128, "overlap": 10}}
+        user_description = "A test collection with metadata."
+
+        # 1. Test setup on a new collection
+        mock_client.has_collection.return_value = False
+        
+        db.setup(
+            collection_name=collection_name,
+            embedding="text-embedding-ada-002",
+            chunking_config=chunk_config,
+            description=user_description,
+        )
+
+        # Verify create_collection was called with the correct JSON description
+        mock_client.create_collection.assert_called_once()
+        call_args, call_kwargs = mock_client.create_collection.call_args
+        
+        assert call_kwargs.get("collection_name") == collection_name
+        
+        description_json = call_kwargs.get("description")
+        assert description_json is not None
+        
+        import json
+        stored_data = json.loads(description_json)
+        
+        assert stored_data["source"] == "maestro-knowledge"
+        assert stored_data["version"] == "1.0"
+        assert stored_data["description"] == user_description
+        assert stored_data["embedding"] == "text-embedding-ada-002"
+        assert stored_data["chunking_config"] == chunk_config
+
+        # 2. Test get_collection_info retrieves the metadata
+        mock_client.has_collection.return_value = True
+        mock_client.get_collection_stats.return_value = {"row_count": 0}
+        
+        # Mock the return value of describe_collection to include our stored metadata
+        mock_collection_info = {
+            "description": description_json,
+            "fields": [{"name": "vector", "params": {"dim": 1536}}]
+        }
+        mock_client.describe_collection.return_value = mock_collection_info
+
+        info = db.get_collection_info(collection_name)
+
+        assert info["name"] == collection_name
+        assert info["embedding"] == "text-embedding-ada-002"
+        assert info["chunking"] == chunk_config
+        assert info["embedding_details"]["source"] == "collection_metadata"
+        assert info["metadata"]["description"] == user_description
+        assert info["metadata"]["stored_metadata_version"] == "1.0"
 
     @patch("pymilvus.MilvusClient")
     def test_write_documents_with_precomputed_vector(self, mock_milvus_client):
@@ -113,33 +175,47 @@ class TestMilvusVectorDatabase:
         assert mock_client.insert.called
 
     @patch("pymilvus.MilvusClient")
-    def test_write_documents_with_embedding_model(self, mock_milvus_client):
+    @patch("openai.OpenAI")
+    def test_write_documents_with_embedding_model(self, mock_openai, mock_milvus_client):
         """Test writing documents with embedding model generation."""
         mock_client = MagicMock()
         mock_milvus_client.return_value = mock_client
 
+        # Mock OpenAI client and its response
+        mock_openai_instance = MagicMock()
+        mock_openai.return_value = mock_openai_instance
+        mock_openai_instance.embeddings.create.return_value.data = [MagicMock(embedding=[0.1] * 1536)]
+
         db = MilvusVectorDatabase()
 
-        # Mock the _generate_embedding method to return a test vector
-        with patch.object(db, "_generate_embedding", return_value=[0.1] * 1536):
-            documents = [
-                {
-                    "url": "http://test1.com",
-                    "text": "test content 1",
-                    "metadata": {"type": "webpage"},
-                }
-            ]
+        documents = [
+            {
+                "url": "http://test1.com",
+                "text": "test content 1",
+                "metadata": {"type": "webpage"},
+            }
+        ]
 
-            # Set environment variable for OpenAI API key
-            with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-                db.write_documents(documents, embedding="text-embedding-ada-002")
-                assert mock_client.insert.called
+        # Set environment variable for OpenAI API key
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+            db.write_documents(documents, embedding="text-embedding-ada-002")
+            assert mock_client.insert.called
+            mock_openai.assert_called_once_with(api_key="test-key")
+            mock_openai_instance.embeddings.create.assert_called_once_with(
+                model="text-embedding-ada-002", input=["test content 1"]
+            )
 
     @patch("pymilvus.MilvusClient")
-    def test_write_documents_excludes_chunking_metadata(self, mock_milvus_client):
+    @patch("openai.OpenAI")
+    def test_write_documents_excludes_chunking_metadata(self, mock_openai, mock_milvus_client):
         """Write path should NOT attach chunking policy into per-chunk metadata (kept at collection level)."""
         mock_client = MagicMock()
         mock_milvus_client.return_value = mock_client
+
+        # Mock OpenAI client and its response
+        mock_openai_instance = MagicMock()
+        mock_openai.return_value = mock_openai_instance
+        mock_openai_instance.embeddings.create.return_value.data = [MagicMock(embedding=[0.0] * 1536)]
 
         db = MilvusVectorDatabase("ChunkCol")
         # Configure collection chunking
@@ -154,10 +230,8 @@ class TestMilvusVectorDatabase:
             chunking_config=chunk_cfg,
         )
 
-        # Mock embed generation
-        with patch.object(
-            db, "_generate_embedding", return_value=[0.0] * (db.dimension or 1536)
-        ):
+        # Set environment variable for OpenAI API key
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
             documents = [
                 {
                     "url": "u",
@@ -303,6 +377,53 @@ class TestMilvusVectorDatabase:
                 mock_client_instance.embeddings.create.assert_called_once_with(
                     model="text-embedding-ada-002", input="test content 1"
                 )
+
+    @patch("pymilvus.MilvusClient")
+    def test_write_documents_with_batching(self, mock_milvus_client):
+        """Test writing documents with embedding model generation respects EMBEDDING_BATCH_SIZE."""
+        mock_client = MagicMock()
+        mock_milvus_client.return_value = mock_client
+        db = MilvusVectorDatabase()
+
+        # Only run this test if openai module is available
+        import importlib.util
+        if importlib.util.find_spec("openai") is None:
+            pytest.skip("openai module not available")
+
+        # Mock the OpenAI client to return a test embedding
+        with patch("openai.OpenAI") as mock_openai:
+            mock_client_instance = MagicMock()
+            mock_openai.return_value = mock_client_instance
+            # Simulate response for each batch
+            mock_client_instance.embeddings.create.side_effect = [
+                MagicMock(data=[MagicMock(embedding=[0.1] * 1536)] * 10),
+                MagicMock(data=[MagicMock(embedding=[0.1] * 1536)] * 10),
+                MagicMock(data=[MagicMock(embedding=[0.1] * 1536)] * 5),
+            ]
+
+            # 25 chunks of text
+            documents = [
+                {
+                    "url": f"http://test{i}.com",
+                    "text": f"test content {i}",
+                    "metadata": {"type": "webpage"},
+                }
+                for i in range(25)
+            ]
+
+            # Set batch size to 10, so we expect 3 calls (10, 10, 5)
+            with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key", "EMBEDDING_BATCH_SIZE": "10"}):
+                db.write_documents(documents, embedding="text-embedding-ada-002")
+                assert mock_client.insert.called
+                
+                # Verify that the OpenAI client was called 3 times
+                assert mock_client_instance.embeddings.create.call_count == 3
+                
+                # Check the input for each call
+                call_args_list = mock_client_instance.embeddings.create.call_args_list
+                assert len(call_args_list[0].kwargs['input']) == 10
+                assert len(call_args_list[1].kwargs['input']) == 10
+                assert len(call_args_list[2].kwargs['input']) == 5
 
     @patch("pymilvus.MilvusClient")
     def test_list_documents(self, mock_milvus_client):

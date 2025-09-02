@@ -9,6 +9,8 @@ This script tests the server functionality without requiring a full MCP client.
 
 import sys
 from pathlib import Path
+import json
+from unittest.mock import MagicMock, patch
 
 # Ensure the project root is in sys.path
 project_root = Path(__file__).parent.parent.resolve()
@@ -87,6 +89,62 @@ def test_imports():
     except Exception as e:
         assert False, f"Import test failed: {e}"
 
+def test_resync_vector_databases_with_metadata():
+    """Test that resync correctly loads metadata from collection descriptions."""
+    print("\nTesting resync_vector_databases with metadata...")
+    print("=" * 50)
+
+    # The server module holds the global 'vector_databases' dict we want to inspect
+    from src.maestro_mcp import server as mcp_server
+
+    # Clean up state from other tests
+    mcp_server.vector_databases.clear()
+
+    collection_name = "resync_test_collection"
+    
+    # This is the metadata we expect to be "read" from the collection description
+    expected_metadata = {
+        "name": collection_name,
+        "embedding": "text-embedding-3-small",
+        "chunking": {"strategy": "Sentence", "parameters": {"chunk_size": 256}},
+        "embedding_details": {"source": "collection_metadata"},
+    }
+
+    # We patch the MilvusVectorDatabase class within the server module's scope
+    with patch("src.maestro_mcp.server.MilvusVectorDatabase") as mock_milvus_vdb:
+        # Mock the instance that will be created inside resync
+        mock_instance = MagicMock()
+        
+        # Configure the mock for the instance's methods
+        mock_instance.list_collections.return_value = [collection_name]
+        mock_instance.get_collection_info.return_value = expected_metadata
+        
+        # When MilvusVectorDatabase() is called, return our mock_instance
+        mock_milvus_vdb.return_value = mock_instance
+
+        # Call the function to be tested
+        added = mcp_server.resync_vector_databases()
+
+    # Assertions
+    assert added == [collection_name], "The function should report the new collection as added."
+    print(f"✓ resync reported added collections: {added}")
+
+    assert collection_name in mcp_server.vector_databases, "The collection should be in the server's registry."
+    print(f"✓ Collection '{collection_name}' is in the registry.")
+
+    # Check that get_collection_info was called, which is the key of the new logic
+    mock_instance.get_collection_info.assert_called_once_with(collection_name)
+    print("✓ get_collection_info was called to load metadata.")
+
+    # Verify that the in-memory state of the registered DB instance is correct
+    registered_db = mcp_server.vector_databases[collection_name]
+    assert registered_db._collections_metadata[collection_name]["chunking"] == expected_metadata["chunking"]
+    assert registered_db.embedding_model == expected_metadata["embedding"]
+    print("✓ In-memory metadata cache was correctly populated.")
+
+    # Cleanup
+    mcp_server.vector_databases.clear()
+
 
 def main():
     """Run all tests."""
@@ -97,6 +155,7 @@ def main():
         test_imports,
         test_server_creation,
         test_tool_definitions,
+        test_resync_vector_databases_with_metadata,
     ]
 
     for test in tests:

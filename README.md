@@ -440,6 +440,7 @@ maestro-knowledge/
 - `OPENAI_API_KEY`: Required for OpenAI embedding models
 - `MAESTRO_KNOWLEDGE_MCP_SERVER_URI`: MCP server URI for CLI tool
 - `MILVUS_URI`: Milvus connection URI. **Important**: Do not use quotes around the URI value in your `.env` file (e.g., `MILVUS_URI=http://localhost:19530` instead of `MILVUS_URI="http://localhost:19530"`).
+- `EMBEDDING_BATCH_SIZE`: The number of documents to send in a single batch to the embedding service. Defaults to 1.
 - Database-specific environment variables for Weaviate and Milvus connections
 
 For detailed environment variable usage in CLI and MCP server, see their respective README files.
