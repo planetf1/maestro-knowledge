@@ -3,6 +3,7 @@
 ## OPENED
 
 ### CLI
+* CLI has been moved to separate repository: AI4quantum/maestro-cli
 * add a `create query` command as a way to retrieve a maestro agent configuration (YAML) for the query agent of a vdb
 
 ### chore

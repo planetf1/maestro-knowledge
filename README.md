@@ -10,7 +10,7 @@ A modular vector database interface supporting multiple backends (Weaviate, Milv
 - **Unified API**: Consistent interface across different vector database implementations
 - **Factory pattern**: Easy creation and switching between database types
 - **MCP Server**: Model Context Protocol server for AI agent integration with multi-database support
-- **CLI Tool**: Command-line interface for vector database operations with YAML configuration
+- **CLI Tool**: Command-line interface for vector database operations (separate repository: AI4quantum/maestro-k-cli)
 - **Document management**: Write, read, delete, and query documents
 - **Collection management**: List and manage collections across vector databases
 - **Query functionality**: Natural language querying with semantic search across documents
@@ -66,10 +66,10 @@ You can test the semantic chunking functionality using the CLI:
 
 ```bash
 # Check collection information to see chunking strategy
-cli/maestro-k collection info --vdb "Qiskit_studio_algo" --name "Qiskit_studio_algo"
+cli/maestro-k-k collection info --vdb "Qiskit_studio_algo" --name "Qiskit_studio_algo"
 
 # Search with semantic chunking to see results
-./cli/maestro-k search "quantum circuit" --vdb qiskit_studio_algo --collection qiskit_studio_algo --doc-limit 1
+./cli/maestro-k-k search "quantum circuit" --vdb qiskit_studio_algo --collection qiskit_studio_algo --doc-limit 1
 ```
 
 **Note**: The semantic chunking strategy uses sentence-transformers for chunking decisions, while the collection's own embedding model is used for search operations.
@@ -81,8 +81,8 @@ cli/maestro-k collection info --vdb "Qiskit_studio_algo" --name "Qiskit_studio_a
 First, clone the repository and navigate into the directory:
 
 ```bash
-git clone https://github.com/AI4quantum/maestro-knowledge.git
-cd maestro-knowledge
+git clone https://github.com/AI4quantum/maestro-k-knowledge.git
+cd maestro-k-knowledge
 ```
 
 You will need [Python](https://www.python.org/) 3.11+ and [uv](https://docs.astral.sh/uv/#highlights).
@@ -145,10 +145,12 @@ WEAVIATE_API_KEY=your-api-key-here
 WEAVIATE_URL=https://your-cluster-name.weaviate.network
 ```
 
-#### 2. Build and Start Services
+#### 2. Install CLI and Start Services
 ```bash
-# Build CLI tool
-cd cli && ./build.sh && cd ..
+# Install maestro-k CLI (from separate repository)
+# See: https://github.com/AI4quantum/maestro-cli for installation instructions
+# Build the CLI: cd /path/to/maestro-cli && ./build.sh
+# The CLI binary will be available as 'maestro' in the maestro-cli directory
 
 # Start MCP server
 ./start.sh
@@ -157,7 +159,7 @@ cd cli && ./build.sh && cd ..
 #### 3. Create Your First Database
 ```bash
 # Create config file (my_database.yaml)
-apiVersion: maestro/v1alpha1
+apiVersion: maestro-k/v1alpha1
 kind: VectorDatabase
 metadata:
   name: my_first_database
@@ -168,11 +170,11 @@ spec:
   embedding: default
   mode: remote
 
-# Create the database
-./cli/maestro-k vectordb create my_database.yaml
+# Create the database (using full path to CLI binary)
+/path/to/maestro-cli/commands vectordb create my_database.yaml
 
 # Verify creation
-./cli/maestro-k vectordb list
+/path/to/maestro-cli/commands vectordb list
 ```
 
 #### 4. Add and Query Documents
@@ -184,54 +186,59 @@ As of now, document ingestion process is manual. This will be updated in the fut
 echo "Your document content here" > my_doc.txt
 
 # Add document to database
-./cli/maestro-k document create --vdb=my_first_database --collection=My_documents --name=my_doc --file=my_doc.txt
+/path/to/maestro-cli/commands document create --vdb=my_first_database --collection=My_documents --name=my_doc --file=my_doc.txt
 
 # Query your documents
-./cli/maestro-k query "What is your question?" --vdb=my_first_database --collection=My_documents
+/path/to/maestro-cli/commands query "What is your question?" --vdb=my_first_database --collection=My_documents
 
 # List all documents
-./cli/maestro-k document list --vdb=my_first_database --collection=My_documents
+/path/to/maestro-cli/commands document list --vdb=my_first_database --collection=My_documents
 ```
 
 #### 5. Test Your Setup
 ```bash
 # Verify everything is working
-./cli/maestro-k vectordb list                    # Should show your database
-./cli/maestro-k collection list --vdb=my_first_database  # Should show collections
-./cli/maestro-k document list --vdb=my_first_database --collection=My_documents  # Should show your documents
+/path/to/maestro-cli/commands vectordb list                    # Should show your database
+/path/to/maestro-cli/commands collection list --vdb=my_first_database  # Should show collections
+/path/to/maestro-cli/commands document list --vdb=my_first_database --collection=My_documents  # Should show your documents
 
 # Try a semantic search query
-./cli/maestro-k query "What is machine learning?" --vdb=my_first_database --collection=My_documents
+/path/to/maestro-cli/commands query "What is machine learning?" --vdb=my_first_database --collection=My_documents
 ```
 
 ## Components
 
 ### CLI Tool
 
-The project includes a Go-based CLI tool for managing vector databases through the MCP server. For comprehensive CLI usage, installation, and examples, see [cli/README.md](cli/README.md).
+The CLI tool has been moved to a separate repository: [AI4quantum/maestro-k-cli](https://github.com/AI4quantum/maestro-k-cli). This Go-based CLI tool manages vector databases through the MCP server.
+
+**Prerequisites:**
+- Install the maestro CLI from the separate repository: [AI4quantum/maestro-cli](https://github.com/AI4quantum/maestro-cli)
+- Build the CLI: `cd /path/to/maestro-cli && ./build.sh`
+- Add the CLI to your PATH or place it in a relative path from your project
 
 **Quick CLI Examples:**
  
 ```bash
-# Build and use the CLI
-cd cli && go build -o maestro-k src/*.go
+# List vector databases (if in PATH)
+maestro vectordb list
 
-# List vector databases
-./maestro-k vectordb list
+# Or using relative path
+../maestro-cli/maestro vectordb list
 
 # Create vector database from YAML
-./maestro-k vectordb create config.yaml
+maestro vectordb create config.yaml
 
 # Query documents
-./maestro-k query "What is the main topic?" --vdb=my-database
+maestro query "What is the main topic?" --vdb=my-database
 
 # Resync any Milvus collections into the MCP server's in-memory registry (use after server restart)
-./maestro-k resync-databases
+maestro resync-databases
 ```
 
 ### MCP Server
 
-The project includes a Model Context Protocol (MCP) server that exposes vector database functionality to AI agents. For detailed MCP server documentation, configuration, and examples, see [src/maestro_mcp/README.md](src/maestro_mcp/README.md).
+The project includes a Model Context Protocol (MCP) server that exposes vector database functionality to AI agents. For detailed MCP server documentation, configuration, and examples, see [src/maestro-k_mcp/README.md](src/maestro-k_mcp/README.md).
 
 **Quick MCP Server Usage:**
 ```bash
@@ -246,7 +253,7 @@ The project includes a Model Context Protocol (MCP) server that exposes vector d
 
 # Manual resync tool (available as an MCP tool and through the CLI `resync-databases` command):
 # After restarting the MCP server, run the resync to register existing Milvus collections:
-./maestro-k resync-databases
+/path/to/maestro-cli/commands resync-databases
 ```
 
 ### Search and Query Output
@@ -274,7 +281,7 @@ Search result schema (normalized across Weaviate and Milvus):
 
 ## Embedding Strategies
 
-The library supports flexible embedding strategies for both vector databases. For detailed embedding model support and usage examples, see [src/maestro_mcp/README.md](src/maestro_mcp/README.md).
+The library supports flexible embedding strategies for both vector databases. For detailed embedding model support and usage examples, see [src/maestro-k_mcp/README.md](src/maestro-k_mcp/README.md).
 
 ### Quick Overview
 
@@ -309,7 +316,7 @@ The project includes several utility scripts for development and testing:
 ```bash
 # Code quality and formatting
 ./tools/lint.sh              # Run Python linting and formatting checks
-cd cli && ./lint.sh          # Run Go linting and code quality checks
+# Go linting is now in the separate CLI repository: AI4quantum/maestro-k-cli
 
 # MCP server management
 ./start.sh                   # Start the MCP server
@@ -317,28 +324,28 @@ cd cli && ./lint.sh          # Run Go linting and code quality checks
 
 # Testing
 ./test.sh [COMMAND]          # Run tests with options: cli, mcp, all, help
-./test-integration.sh        # Run CLI integration tests
-./tools/e2e.sh all          # Run end-to-end tests
+./test-integration.sh        # Run CLI integration tests (requires maestro-k CLI in PATH)
+./tools/e2e.sh all          # Run end-to-end tests (requires maestro-k CLI in PATH)
 
 # CLI tool
-cd cli && ./build.sh         # Build the CLI tool
+# CLI is now in separate repository: AI4quantum/maestro-k-cli
 ```
 
 ## Testing
 
 ```bash
-# Run all tests (CLI + MCP + Integration)
+# Run all tests (MCP + Integration)
 ./test.sh all
 
 # Run specific test suites
-./test.sh cli                # Run only CLI tests
+./test.sh cli                # CLI tests (redirected to separate repository)
 ./test.sh mcp                # Run only MCP server tests
 ./test.sh help               # Show test command help
 
 # Run comprehensive test suite (recommended before PR)
-./tools/lint.sh && cd cli && ./lint.sh && cd .. && ./test.sh all
+./tools/lint.sh && ./test.sh all
 
-# Run integration and end-to-end tests
+# Run integration and end-to-end tests (requires maestro-k CLI in PATH)
 ./test-integration.sh        # CLI integration tests
 ./tools/e2e.sh all          # Complete e2e workflows
 
@@ -360,6 +367,7 @@ The project maintains high code quality standards through comprehensive linting 
 
 ### Go Code Quality (CLI)
 
+- **CLI moved to separate repository**: [AI4quantum/maestro-k-cli](https://github.com/AI4quantum/maestro-k-cli)
 - **staticcheck**: Detects unused code, unreachable code, and other quality issues
 - **golangci-lint**: Advanced Go linting with multiple analyzers
 - **go fmt**: Consistent Go code formatting
@@ -374,36 +382,29 @@ The project maintains high code quality standards through comprehensive linting 
 # Python quality checks
 ./tools/lint.sh
 
-# Go quality checks (CLI)
-cd cli && ./lint.sh
+# Go quality checks (CLI - separate repository)
+# See: https://github.com/AI4quantum/maestro-k-cli
 
 # All quality checks
-./tools/lint.sh && cd cli && ./lint.sh
+./tools/lint.sh
 ```
 
 ## Project Structure
 
 ```text
-maestro-knowledge/
+maestro-k-knowledge/
 ├── src/                     # Source code
 │   ├── db/                  # Vector database implementations
 │   │   ├── vector_db_base.py      # Abstract base class
 │   │   ├── vector_db_weaviate.py  # Weaviate implementation
 │   │   ├── vector_db_milvus.py    # Milvus implementation
 │   │   └── vector_db_factory.py   # Factory function
-│   ├── maestro_mcp/         # MCP server implementation
+│   ├── maestro-k_mcp/         # MCP server implementation
 │   │   ├── server.py        # Main MCP server
 │   │   ├── mcp_config.json  # MCP client configuration
 │   │   └── README.md        # MCP server documentation
 │   ├── chunking/           # Pluggable document chunking package
 │   └── vector_db.py         # Main module exports
-├── cli/                     # Go CLI tool
-│   ├── src/                 # Go source code
-│   ├── tests/               # CLI tests
-│   ├── examples/            # CLI usage examples
-│   ├── build.sh             # Build script
-│   ├── lint.sh              # Go linting and code quality script
-│   └── README.md            # CLI documentation
 ├── start.sh                 # MCP server start script
 ├── stop.sh                  # MCP server stop script
 ├── tools/                   # Development tools
@@ -411,7 +412,7 @@ maestro-knowledge/
 │   ├── e2e.sh               # End-to-end testing script
 │   ├── test-integration.sh  # Integration tests
 │   └── tail-logs.sh        # Real-time log monitoring script
-├── test.sh                  # Test runner script (CLI, MCP, Integration)
+├── test.sh                  # Test runner script (MCP, Integration)
 ├── tests/                   # Test suite
 │   ├── test_vector_db_*.py  # Vector database tests
 │   ├── test_mcp_server.py   # MCP server tests

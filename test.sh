@@ -33,14 +33,14 @@ print_help() {
     echo "Usage: ./test.sh [COMMAND]"
     echo ""
     echo "Commands:"
-    echo "  cli         Run only CLI tests (Go-based command line interface)"
+    echo "  cli         CLI tests (moved to separate repository - AI4quantum/maestro-cli)"
     echo "  mcp         Run only MCP server tests (Python-based server)"
     echo "  integration Run only integration tests (CLI + MCP end-to-end)"
-    echo "  all         Run all tests (CLI + MCP + Integration)"
+    echo "  all         Run all tests (MCP + Integration)"
     echo "  help        Show this help message"
     echo ""
     echo "Examples:"
-    echo "  ./test.sh cli         # Run only CLI tests"
+    echo "  ./test.sh cli         # CLI tests (redirected to separate repo)"
     echo "  ./test.sh mcp         # Run only MCP server tests"
     echo "  ./test.sh integration # Run only integration tests"
     echo "  ./test.sh all         # Run all tests"
@@ -48,10 +48,8 @@ print_help() {
     echo ""
     echo "Test Categories:"
     echo "  CLI Tests:"
-    echo "    - Go unit tests for CLI commands"
-    echo "    - CLI functionality validation"
-    echo "    - YAML validation tests"
-    echo "    - Command line argument parsing"
+    echo "    - CLI has been moved to: AI4quantum/maestro-cli"
+    echo "    - Please run CLI tests in the maestro-cli repository"
     echo ""
     echo "  MCP Tests:"
     echo "    - Python unit tests for MCP server"
@@ -63,6 +61,7 @@ print_help() {
     echo "    - End-to-end CLI + MCP testing"
     echo "    - Real vector database operations"
     echo "    - Complete workflow validation"
+    echo "    - Requires CLI from AI4quantum/maestro-cli repository"
 }
 
 # Check command line arguments
@@ -101,132 +100,10 @@ esac
 
 # Run CLI tests if requested
 if [ "$RUN_CLI_TESTS" = true ]; then
-    print_header "Running CLI Workflow Tests..."
-    
-    # Check if we're in the right directory
-    if [ ! -f "cli/go.mod" ]; then
-        print_error "CLI tests require cli/go.mod to exist"
-        exit 1
-    fi
-
-    # Step 1: Set up Go
-    print_status "Step 1: Setting up Go..."
-    if command -v go &> /dev/null; then
-        GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
-        print_status "✓ Go $GO_VERSION detected"
-    else
-        print_error "Go is not installed"
-        exit 1
-    fi
-
-    # Step 2: Build CLI
-    print_status "Step 2: Building CLI..."
-    cd cli
-    if ./build.sh; then
-        print_status "✓ CLI build successful"
-    else
-        print_error "CLI build failed"
-        exit 1
-    fi
-    cd ..
-
-    # Step 3: Test CLI
-    print_status "Step 3: Testing CLI..."
-    cd cli
-    if ./test.sh unit; then
-        print_status "✓ CLI tests passed"
-    else
-        print_error "CLI tests failed"
-        exit 1
-    fi
-    cd ..
-
-    # Step 4: Test CLI functionality
-    print_status "Step 4: Testing CLI functionality..."
-    # Copy binary to root for testing
-    cp cli/maestro-k ./maestro-k
-    chmod +x ./maestro-k
-    if ./maestro-k --version &> /dev/null; then
-        print_status "✓ CLI version command works"
-    else
-        print_error "CLI version command failed"
-        exit 1
-    fi
-
-    if ./maestro-k --help &> /dev/null; then
-        print_status "✓ CLI help command works"
-    else
-        print_error "CLI help command failed"
-        exit 1
-    fi
-
-    if ./maestro-k validate --help &> /dev/null; then
-        print_status "✓ CLI validate help command works"
-    else
-        print_error "CLI validate help command failed"
-        exit 1
-    fi
-
-    # Step 5: Test YAML validation
-    print_status "Step 5: Testing YAML validation..."
-
-    # Test with valid YAML
-    if ./maestro-k validate --verbose tests/yamls/test_local_milvus.yaml &> /dev/null; then
-        print_status "✓ Valid YAML validation works"
-    else
-        print_error "Valid YAML validation failed"
-        exit 1
-    fi
-
-    # Test with schema validation (if schema exists)
-    if [ -f "schemas/vector-database-schema.json" ]; then
-        if ./maestro-k validate --verbose schemas/vector-database-schema.json tests/yamls/test_local_milvus.yaml &> /dev/null; then
-            print_status "✓ Schema validation works"
-        else
-            print_error "Schema validation failed"
-            exit 1
-        fi
-    else
-        print_warning "schemas/vector-database-schema.json not found, skipping schema validation test"
-    fi
-
-    # Test with invalid YAML (should fail)
-    # Create a temporary invalid YAML file
-    INVALID_YAML_CONTENT='---
-apiVersion: maestro/v1alpha1
-kind: VectorDatabase
-metadata:
-  name: test-milvus
-spec:
-  type: milvus
-  uri: localhost:19530
-  collection_name: test_collection
-  embedding: text-embedding-3-small
-  mode: local
-  # Missing closing quote - this will cause a YAML parsing error
-  api_version: "v1'
-    
-    INVALID_YAML_FILE=$(mktemp)
-    echo "$INVALID_YAML_CONTENT" > "$INVALID_YAML_FILE"
-    
-    if ./maestro-k validate --verbose "$INVALID_YAML_FILE" &> /dev/null; then
-        print_warning "⚠ Invalid YAML validation should have failed"
-    else
-        print_status "✓ Invalid YAML correctly rejected"
-    fi
-    
-    # Clean up
-    rm -f "$INVALID_YAML_FILE"
-
-    # Step 6: Show CLI info
-    print_status "Step 6: Showing CLI info..."
-    echo "CLI binary information:"
-    ls -lh maestro-k
-    file maestro-k
-    echo "CLI version:"
-    ./maestro-k --version
-
-    print_header "CLI Workflow Tests Completed Successfully! 🎉"
+    print_header "CLI tests are now in a separate repository..."
+    print_status "CLI has been moved to: AI4quantum/maestro-cli"
+    print_status "Please run CLI tests in the maestro-cli repository"
+    print_warning "Skipping CLI tests in this repository"
 fi
 
 # Run MCP tests if requested
@@ -247,6 +124,45 @@ fi
 # Run integration tests if requested
 if [ "$RUN_INTEGRATION_TESTS" = true ]; then
     print_header "Running Integration Tests..."
+    
+    # Check if CLI is available
+    CLI_PATH=""
+    
+    # First, try common relative paths (prioritize local CLI over system PATH)
+    POSSIBLE_PATHS=(
+        "../maestro-cli/maestro"
+        "../maestro-cli/commands"
+        "../../maestro-cli/maestro"
+        "../../maestro-cli/commands"
+    )
+    
+    for path in "${POSSIBLE_PATHS[@]}"; do
+        if [ -f "$path" ]; then
+            CLI_PATH="$path"
+            break
+        fi
+    done
+    
+    # If not found in relative paths, try PATH
+    if [ -z "$CLI_PATH" ]; then
+        if command -v maestro-k >/dev/null 2>&1; then
+            CLI_PATH="maestro-k"
+        elif command -v maestro >/dev/null 2>&1; then
+            # Verify this is the correct maestro CLI by checking if it has vectordb command
+            if maestro vectordb --help >/dev/null 2>&1; then
+                CLI_PATH="maestro"
+            fi
+        fi
+    fi
+    
+    if [ -z "$CLI_PATH" ]; then
+        print_error "maestro CLI not found in relative paths or PATH"
+        print_error "Please ensure the maestro CLI is built and available:"
+        print_error "1. Build the CLI: cd /path/to/maestro-cli && ./build.sh"
+        print_error "2. Add it to your PATH, or"
+        print_error "3. Place it in a relative path from this script"
+        exit 1
+    fi
     
     if [ -f "./tools/test-integration.sh" ]; then
         if ./tools/test-integration.sh; then

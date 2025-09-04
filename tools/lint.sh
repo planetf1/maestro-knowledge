@@ -50,28 +50,7 @@ echo "✨ All Python formatting checks passed!"
 
 # Go Linting Section
 print_header "Go Code Quality Checks"
-
-# Check if CLI directory exists
-if [ ! -d "cli" ]; then
-    print_error "CLI directory not found"
-    exit 1
-fi
-
-# Check if CLI lint script exists
-if [ ! -f "cli/lint.sh" ]; then
-    print_error "CLI lint script not found: cli/lint.sh"
-    exit 1
-fi
-
-# Run Go linting
-echo "🔧 Running Go linting checks..."
-cd cli
-if ./lint.sh; then
-    print_status "✓ Go linting checks passed"
-else
-    print_error "Go linting checks failed"
-    exit 1
-fi
-cd ..
+echo "📝 Go linting is now in the separate CLI repository: AI4quantum/maestro-cli"
+echo "✅ Skipping Go linting checks (CLI moved to separate repository)"
 
 print_header "All code quality checks completed successfully! 🎯" 
