@@ -255,58 +255,82 @@ class WeaviateVectorDatabase(VectorDatabase):
         total_chunks = 0
         build_start = time.perf_counter()
 
-        with collection.batch.dynamic() as batch:
-            for idx, doc in enumerate(documents):
-                doc_start = time.perf_counter()
-                orig_metadata = dict(doc.get("metadata", {}))
-                text = doc.get("text", "")
+        try:
+            with collection.batch.dynamic() as batch:
+                for idx, doc in enumerate(documents):
+                    doc_start = time.perf_counter()
+                    orig_metadata = dict(doc.get("metadata", {}))
+                    text = doc.get("text", "")
 
-                cfg = ChunkingConfig(
-                    strategy=(chunking_conf or {}).get("strategy", "None"),
-                    parameters=(chunking_conf or {}).get("parameters", {}),
-                )
-                chunks = chunk_text(text, cfg)
+                    cfg = ChunkingConfig(
+                        strategy=(chunking_conf or {}).get("strategy", "None"),
+                        parameters=(chunking_conf or {}).get("parameters", {}),
+                    )
+                    chunks = chunk_text(text, cfg)
 
-                per_doc_chunk_count = 0
-                per_doc_char_count = 0
+                    per_doc_chunk_count = 0
+                    per_doc_char_count = 0
 
-                for chunk in chunks:
-                    new_meta = dict(orig_metadata)
-                    if "doc_name" in orig_metadata:
-                        new_meta["doc_name"] = orig_metadata.get("doc_name")
-                    # omit chunking policy to reduce per-result duplication
-                    new_meta.update(
+                    for chunk in chunks:
+                        new_meta = dict(orig_metadata)
+                        if "doc_name" in orig_metadata:
+                            new_meta["doc_name"] = orig_metadata.get("doc_name")
+                        # omit chunking policy to reduce per-result duplication
+                        new_meta.update(
+                            {
+                                "chunk_sequence_number": int(chunk["sequence"]),
+                                "total_chunks": int(chunk["total"]),
+                                "offset_start": int(chunk["offset_start"]),
+                                "offset_end": int(chunk["offset_end"]),
+                                "chunk_size": int(chunk["chunk_size"]),
+                            }
+                        )
+                        per_doc_chunk_count += 1
+                        per_doc_char_count += len(chunk.get("text", "") or "")
+
+                        metadata_text = json.dumps(new_meta, ensure_ascii=False)
+                        batch.add_object(
+                            properties={
+                                "url": doc.get("url", ""),
+                                "text": chunk["text"],
+                                "metadata": metadata_text,
+                            }
+                        )
+
+                    total_chunks += per_doc_chunk_count
+                    stats_per_doc.append(
                         {
-                            "chunk_sequence_number": int(chunk["sequence"]),
-                            "total_chunks": int(chunk["total"]),
-                            "offset_start": int(chunk["offset_start"]),
-                            "offset_end": int(chunk["offset_end"]),
-                            "chunk_size": int(chunk["chunk_size"]),
+                            "name": orig_metadata.get("doc_name")
+                            or doc.get("url")
+                            or f"doc_{idx}",
+                            "chunk_count": per_doc_chunk_count,
+                            "char_count": per_doc_char_count,
+                            "duration_ms": int(
+                                (time.perf_counter() - doc_start) * 1000
+                            ),
                         }
                     )
-                    per_doc_chunk_count += 1
-                    per_doc_char_count += len(chunk.get("text", "") or "")
-
-                    metadata_text = json.dumps(new_meta, ensure_ascii=False)
-                    batch.add_object(
-                        properties={
-                            "url": doc.get("url", ""),
-                            "text": chunk["text"],
-                            "metadata": metadata_text,
-                        }
+            # Check for errors after the batch operation
+            if batch.failed_objects:
+                error_messages = []
+                for failed_obj in batch.failed_objects:
+                    error_messages.append(
+                        f"Failed to import object: {failed_obj.object_} - Error: {failed_obj.message}"
                     )
-
-                total_chunks += per_doc_chunk_count
-                stats_per_doc.append(
-                    {
-                        "name": orig_metadata.get("doc_name")
-                        or doc.get("url")
-                        or f"doc_{idx}",
-                        "chunk_count": per_doc_chunk_count,
-                        "char_count": per_doc_char_count,
-                        "duration_ms": int((time.perf_counter() - doc_start) * 1000),
-                    }
+                raise RuntimeError(
+                    f"Weaviate batch import failed for some objects: {'; '.join(error_messages)}"
                 )
+            if batch.failed_references:
+                error_messages = []
+                for failed_ref in batch.failed_references:
+                    error_messages.append(
+                        f"Failed to import reference: {failed_ref.reference_} - Error: {failed_ref.message}"
+                    )
+                raise RuntimeError(
+                    f"Weaviate batch import failed for some references: {'; '.join(error_messages)}"
+                )
+        except Exception as e:
+            raise RuntimeError(f"Error during Weaviate batch import: {e}") from e
 
         total_duration_ms = int((time.perf_counter() - build_start) * 1000)
 

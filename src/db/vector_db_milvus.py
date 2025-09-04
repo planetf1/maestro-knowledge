@@ -466,7 +466,11 @@ class MilvusVectorDatabase(VectorDatabase):
         insert_duration_ms = 0
         if data:
             insert_start = time.perf_counter()
-            self.client.insert(target_collection, data)
+            try:
+                self.client.insert(target_collection, data)
+            except Exception as e:
+                # Re-raise the exception to be handled by the caller
+                raise e
             insert_duration_ms = int((time.perf_counter() - insert_start) * 1000)
 
             # Best-effort: ensure Milvus has flushed/loaded the inserted data so
@@ -1009,7 +1013,11 @@ class MilvusVectorDatabase(VectorDatabase):
             raise ValueError("Milvus document IDs must be convertible to integers.")
 
         # Delete documents by ID
-        self.client.delete(self.collection_name, ids=int_ids)
+        try:
+            self.client.delete(self.collection_name, ids=int_ids)
+        except Exception as e:
+            # Re-raise the exception to be handled by the caller
+            raise e
 
     def delete_collection(self, collection_name: str = None) -> None:
         """Delete an entire collection from Milvus."""
