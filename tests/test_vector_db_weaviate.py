@@ -24,6 +24,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 import os
 import sys
 from unittest.mock import MagicMock, patch
+from typing import Any
 
 import pytest
 
@@ -53,7 +54,7 @@ from src.db.vector_db_weaviate import WeaviateVectorDatabase
 class TestWeaviateVectorDatabase:
     """Test cases for the WeaviateVectorDatabase implementation."""
 
-    def test_supported_embeddings(self):
+    def test_supported_embeddings(self) -> None:
         """Test the supported_embeddings method."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -80,7 +81,7 @@ class TestWeaviateVectorDatabase:
             assert "text-embedding-3-small" in embeddings
             assert "text-embedding-3-large" in embeddings
 
-    def test_init_with_collection_name(self):
+    def test_init_with_collection_name(self) -> None:
         """Test WeaviateVectorDatabase initialization with custom collection name."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -100,7 +101,7 @@ class TestWeaviateVectorDatabase:
             assert db.collection_name == "TestCollection"
             assert db.client == mock_client
 
-    def test_init_default_collection_name(self):
+    def test_init_default_collection_name(self) -> None:
         """Test WeaviateVectorDatabase initialization with default collection name."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -120,7 +121,7 @@ class TestWeaviateVectorDatabase:
             assert db.collection_name == "MaestroDocs"
             assert db.client == mock_client
 
-    def test_setup_collection_exists(self):
+    def test_setup_collection_exists(self) -> None:
         """Test setup when collection already exists."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -142,7 +143,7 @@ class TestWeaviateVectorDatabase:
             # Should not create collection since it exists
             mock_client.collections.create.assert_not_called()
 
-    def test_setup_collection_not_exists_default_embedding(self):
+    def test_setup_collection_not_exists_default_embedding(self) -> None:
         """Test setup when collection doesn't exist with default embedding."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -174,7 +175,7 @@ class TestWeaviateVectorDatabase:
             # Should create collection since it doesn't exist
             mock_client.collections.create.assert_called_once()
 
-    def test_setup_collection_not_exists_custom_embedding(self):
+    def test_setup_collection_not_exists_custom_embedding(self) -> None:
         """Test setup when collection doesn't exist with custom embedding."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -206,7 +207,7 @@ class TestWeaviateVectorDatabase:
             # Should create collection since it doesn't exist
             mock_client.collections.create.assert_called_once()
 
-    def test_get_vectorizer_config_default(self):
+    def test_get_vectorizer_config_default(self) -> None:
         """Test getting vectorizer config for default embedding."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -231,7 +232,7 @@ class TestWeaviateVectorDatabase:
             config = db._get_vectorizer_config("default")
             assert config == "vectorizer_config"  # Mocked return value
 
-    def test_get_vectorizer_config_unsupported(self):
+    def test_get_vectorizer_config_unsupported(self) -> None:
         """Test getting vectorizer config for unsupported embedding."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -250,7 +251,7 @@ class TestWeaviateVectorDatabase:
             with pytest.raises(ValueError, match="Unsupported embedding"):
                 db._get_vectorizer_config("unsupported-model")
 
-    def test_write_documents_default_embedding(self):
+    def test_write_documents_default_embedding(self) -> None:
         """Test writing documents to Weaviate with default embedding."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -293,7 +294,7 @@ class TestWeaviateVectorDatabase:
             # Verify batch.add_object was called for each document
             assert mock_batch.add_object.call_count == 2
 
-    def test_write_documents_custom_embedding(self):
+    def test_write_documents_custom_embedding(self) -> None:
         """Test writing documents to Weaviate with custom embedding."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -343,7 +344,7 @@ class TestWeaviateVectorDatabase:
             assert mock_batch.add_object.call_count == 1
 
     # per-document embedding isn't consistent with vector search - removed (api kept for compatibility)
-    def test_write_documents_ignores_per_write_embedding_with_warning(self):
+    def test_write_documents_ignores_per_write_embedding_with_warning(self) -> None:
         """When collection embedding is set, per-write embedding should be ignored and warn (Weaviate)."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -376,7 +377,7 @@ class TestWeaviateVectorDatabase:
                 db.write_documents(docs, embedding="text-embedding-ada-002")
                 assert any("per-collection" in str(x.message) for x in w)
 
-    def test_write_documents_unsupported_embedding(self):
+    def test_write_documents_unsupported_embedding(self) -> None:
         """Test writing documents with unsupported embedding."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -402,7 +403,7 @@ class TestWeaviateVectorDatabase:
             with pytest.raises(ValueError, match="Unsupported embedding"):
                 db.write_documents(documents, embedding="unsupported-model")
 
-    def test_list_documents(self):
+    def test_list_documents(self) -> None:
         """Test listing documents from Weaviate."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -449,7 +450,7 @@ class TestWeaviateVectorDatabase:
             assert documents[1]["id"] == "uuid2"
             assert documents[1]["url"] == "http://test2.com"
 
-    def test_count_documents(self):
+    def test_count_documents(self) -> None:
         """Test counting documents in Weaviate."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -488,7 +489,7 @@ class TestWeaviateVectorDatabase:
 
             assert count == 5
 
-    def test_list_collections(self):
+    def test_list_collections(self) -> None:
         """Test listing collections in Weaviate."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -523,7 +524,7 @@ class TestWeaviateVectorDatabase:
             assert collections == ["Collection1", "Collection2", "MaestroDocs"]
             mock_client.collections.list_all.assert_called_once()
 
-    def test_list_collections_exception(self):
+    def test_list_collections_exception(self) -> None:
         """Test listing collections when an exception occurs."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -548,7 +549,7 @@ class TestWeaviateVectorDatabase:
 
             assert collections == []
 
-    def test_delete_documents(self):
+    def test_delete_documents(self) -> None:
         """Test deleting documents from Weaviate."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -573,7 +574,7 @@ class TestWeaviateVectorDatabase:
             mock_collection.data.delete_by_id.assert_any_call("uuid1")
             mock_collection.data.delete_by_id.assert_any_call("uuid2")
 
-    def test_delete_collection(self):
+    def test_delete_collection(self) -> None:
         """Test deleting a collection from Weaviate."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -598,7 +599,7 @@ class TestWeaviateVectorDatabase:
     @pytest.mark.skipif(
         not WEAVIATE_AGENTS_AVAILABLE, reason="weaviate agents not available"
     )
-    def test_create_query_agent(self):
+    def test_create_query_agent(self) -> None:
         """Test creating a query agent."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -622,7 +623,7 @@ class TestWeaviateVectorDatabase:
             # The actual QueryAgent is created, not the mock, so we just verify it's not None
             assert agent is not None
 
-    def test_cleanup(self):
+    def test_cleanup(self) -> None:
         """Test cleanup method."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -643,7 +644,7 @@ class TestWeaviateVectorDatabase:
             # Verify client is set to None after cleanup
             assert db.client is None
 
-    def test_db_type_property(self):
+    def test_db_type_property(self) -> None:
         """Test the db_type property."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -662,7 +663,7 @@ class TestWeaviateVectorDatabase:
 
             assert db.db_type == "weaviate"
 
-    def test_get_collection_info_includes_chunking(self):
+    def test_get_collection_info_includes_chunking(self) -> None:
         """get_collection_info should include chunking config set at setup time."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -709,7 +710,7 @@ class TestWeaviateVectorDatabase:
                 "text2vec-openai",
             )
 
-    def test_get_document_success(self):
+    def test_get_document_success(self) -> None:
         """Test successfully getting a document by name."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -767,7 +768,7 @@ class TestWeaviateVectorDatabase:
             assert result["metadata"]["doc_name"] == "test_doc"
             assert result["metadata"]["collection_name"] == "test_collection"
 
-    def test_get_document_collection_not_found(self):
+    def test_get_document_collection_not_found(self) -> None:
         """Test getting a document when collection doesn't exist."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -790,7 +791,7 @@ class TestWeaviateVectorDatabase:
             ):
                 db.get_document("test_doc", "test_collection")
 
-    def test_get_document_document_not_found(self):
+    def test_get_document_document_not_found(self) -> None:
         """Test getting a document when document doesn't exist."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
@@ -821,7 +822,7 @@ class TestWeaviateVectorDatabase:
             ):
                 db.get_document("test_doc", "test_collection")
 
-    def test_get_document_no_matching_doc_name(self):
+    def test_get_document_no_matching_doc_name(self) -> None:
         """Test getting a document when no document has the specified name."""
         with (
             patch("weaviate.connect_to_weaviate_cloud") as mock_connect,

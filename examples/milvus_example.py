@@ -12,7 +12,7 @@ This example demonstrates:
 
 import os
 import json
-from typing import List, Dict, Any
+from typing import Any
 
 # Set environment variables for Milvus (optional - these are the defaults)
 os.environ.setdefault("VECTOR_DB_TYPE", "milvus")
@@ -28,7 +28,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.db.vector_db_factory import create_vector_database
 
 
-def create_sample_documents_with_vectors() -> List[Dict[str, Any]]:
+def create_sample_documents_with_vectors() -> list[dict[str, Any]]:
     """Create sample documents with pre-computed vector embeddings."""
     return [
         {
@@ -72,7 +72,7 @@ def create_sample_documents_with_vectors() -> List[Dict[str, Any]]:
     ]
 
 
-def create_sample_documents_without_vectors() -> List[Dict[str, Any]]:
+def create_sample_documents_without_vectors() -> list[dict[str, Any]]:
     """Create sample documents without pre-computed vectors (will use embedding models)."""
     return [
         {
@@ -98,7 +98,7 @@ def create_sample_documents_without_vectors() -> List[Dict[str, Any]]:
     ]
 
 
-def main():
+def main() -> None:
     """Main example function."""
     print("🚀 Maestro Knowledge - Milvus Vector Database Example")
     print("=" * 60)

@@ -17,7 +17,7 @@ from src.maestro_mcp.server import create_mcp_server
 from src.db.vector_db_factory import create_vector_database
 
 
-def demonstrate_mcp_server():
+def demonstrate_mcp_server() -> None:
     """Demonstrate the MCP server functionality."""
     print("Maestro Vector Database MCP Server Example")
     print("=" * 50)
@@ -189,7 +189,7 @@ def demonstrate_mcp_server():
     print("5. Stop the server: ./stop.sh")
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     try:
         demonstrate_mcp_server()

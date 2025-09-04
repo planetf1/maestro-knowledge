@@ -1,9 +1,9 @@
 """None chunking strategy: return a single chunk with full text."""
 
-from typing import Dict, List
+from typing import Any
 
 
-def none_chunk(text: str, **_kwargs) -> List[Dict[str, object]]:
+def none_chunk(text: str, **_kwargs: dict[str, object]) -> list[dict[str, object]]:
     return [
         {
             "text": text,

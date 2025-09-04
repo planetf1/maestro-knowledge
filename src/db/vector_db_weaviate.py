@@ -3,7 +3,12 @@
 
 import json
 import warnings
-from typing import Any, Dict, List
+from typing import Any
+
+import weaviate
+
+# Suppress all deprecation warnings from external packages immediately
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # Suppress Pydantic deprecation warnings from dependencies
 warnings.filterwarnings(
@@ -26,13 +31,13 @@ from .vector_db_base import VectorDatabase
 class WeaviateVectorDatabase(VectorDatabase):
     """Weaviate implementation of the vector database interface."""
 
-    def __init__(self, collection_name: str = "MaestroDocs"):
+    def __init__(self, collection_name: str = "MaestroDocs") -> None:
         super().__init__(collection_name)
         self.client = None
         self.embedding_model = None  # Store the embedding model used
         self._create_client()
 
-    def supported_embeddings(self) -> List[str]:
+    def supported_embeddings(self) -> list[str]:
         """
         Return a list of supported embedding model names for Weaviate.
 
@@ -53,7 +58,7 @@ class WeaviateVectorDatabase(VectorDatabase):
             "text-embedding-3-large",
         ]
 
-    def _create_client(self):
+    def _create_client(self) -> None:
         """Create the Weaviate client."""
         import os
 
@@ -78,7 +83,9 @@ class WeaviateVectorDatabase(VectorDatabase):
             auth_credentials=Auth.api_key(weaviate_api_key),
         )
 
-    def _get_vectorizer_config(self, embedding: str):
+    def _get_vectorizer_config(
+        self, embedding: str
+    ) -> weaviate.classes.config.Configure.Vectorizer:
         """
         Get the appropriate vectorizer configuration for the embedding model.
 
@@ -131,8 +138,8 @@ class WeaviateVectorDatabase(VectorDatabase):
         self,
         embedding: str = "default",
         collection_name: str = None,
-        chunking_config: Dict[str, Any] = None,
-    ):
+        chunking_config: dict[str, Any] = None,
+    ) -> None:
         """
         Set up Weaviate collection if it doesn't exist.
 
@@ -195,10 +202,10 @@ class WeaviateVectorDatabase(VectorDatabase):
 
     def write_documents(
         self,
-        documents: List[Dict[str, Any]],
+        documents: list[dict[str, Any]],
         embedding: str = "default",
         collection_name: str = None,
-    ):
+    ) -> dict[str, Any]:
         # TODO(embedding): Per-write 'embedding' parameter is deprecated. Collection-level embedding
         #                  set via setup() should be used. This parameter will be removed or ignored in a future release.
         """
@@ -244,7 +251,7 @@ class WeaviateVectorDatabase(VectorDatabase):
         # Collect lightweight stats similar to Milvus implementation
         import time
 
-        stats_per_doc: List[Dict[str, Any]] = []
+        stats_per_doc: list[dict[str, Any]] = []
         total_chunks = 0
         build_start = time.perf_counter()
 
@@ -314,10 +321,10 @@ class WeaviateVectorDatabase(VectorDatabase):
 
     def write_documents_to_collection(
         self,
-        documents: List[Dict[str, Any]],
+        documents: list[dict[str, Any]],
         collection_name: str,
         embedding: str = "default",
-    ):
+    ) -> dict[str, Any]:
         """
         Write documents to a specific collection in Weaviate.
 
@@ -330,7 +337,7 @@ class WeaviateVectorDatabase(VectorDatabase):
         """
         return self.write_documents(documents, embedding, collection_name)
 
-    def list_documents(self, limit: int = 10, offset: int = 0) -> List[Dict[str, Any]]:
+    def list_documents(self, limit: int = 10, offset: int = 0) -> list[dict[str, Any]]:
         """List documents from Weaviate."""
         collection = self.client.collections.get(self.collection_name)
 
@@ -363,7 +370,7 @@ class WeaviateVectorDatabase(VectorDatabase):
 
     def list_documents_in_collection(
         self, collection_name: str, limit: int = 10, offset: int = 0
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """List documents from a specific collection in Weaviate."""
         try:
             # Get the specific collection
@@ -418,7 +425,7 @@ class WeaviateVectorDatabase(VectorDatabase):
 
     def get_document(
         self, doc_name: str, collection_name: str = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Reassemble a document from its chunks by doc_name."""
         target_collection = collection_name or self.collection_name
         # Ensure collection exists
@@ -462,7 +469,7 @@ class WeaviateVectorDatabase(VectorDatabase):
 
     def get_document_chunks(
         self, doc_id: str, collection_name: str = None
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         target_collection = collection_name or self.collection_name
         collection = self.client.collections.get(target_collection)
         result = collection.query.fetch_objects(
@@ -506,7 +513,7 @@ class WeaviateVectorDatabase(VectorDatabase):
             warnings.warn(f"Could not get document count for Weaviate collection: {e}")
             return 0
 
-    def list_collections(self) -> List[str]:
+    def list_collections(self) -> list[str]:
         """List all collections in Weaviate."""
         try:
             # Get all collections from the client
@@ -528,7 +535,7 @@ class WeaviateVectorDatabase(VectorDatabase):
             warnings.warn(f"Could not list collections from Weaviate: {e}")
             return []
 
-    def get_collection_info(self, collection_name: str = None) -> Dict[str, Any]:
+    def get_collection_info(self, collection_name: str = None) -> dict[str, Any]:
         """Get detailed information about a collection."""
         target_collection = collection_name or self.collection_name
 
@@ -732,7 +739,7 @@ class WeaviateVectorDatabase(VectorDatabase):
                 "metadata": {"error": str(e)},
             }
 
-    def delete_documents(self, document_ids: List[str]):
+    def delete_documents(self, document_ids: list[str]) -> None:
         """Delete documents from Weaviate by their IDs."""
         collection = self.client.collections.get(self.collection_name)
 
@@ -743,7 +750,7 @@ class WeaviateVectorDatabase(VectorDatabase):
             except Exception as e:
                 warnings.warn(f"Failed to delete document {doc_id}: {e}")
 
-    def delete_collection(self, collection_name: str = None):
+    def delete_collection(self, collection_name: str = None) -> None:
         """Delete an entire collection from Weaviate."""
         target_collection = collection_name or self.collection_name
 
@@ -755,7 +762,9 @@ class WeaviateVectorDatabase(VectorDatabase):
         except Exception as e:
             warnings.warn(f"Failed to delete collection {target_collection}: {e}")
 
-    def create_query_agent(self):
+    # TODO: Type needs consideration
+
+    def create_query_agent(self) -> "QueryAgent":
         """Create a Weaviate query agent."""
         from weaviate.agents.query import QueryAgent
 
@@ -798,8 +807,11 @@ class WeaviateVectorDatabase(VectorDatabase):
             return f"Error querying database: {str(e)}"
 
     def search(
-        self, query: str, limit: int = 5, collection_name: str = None
-    ) -> List[Dict[str, Any]]:
+        self,
+        query: str,
+        limit: int = 5,
+        collection_name: str = None,
+    ) -> list[dict[str, Any]]:
         """
         Search for documents using Weaviate's vector similarity search.
 
@@ -937,8 +949,11 @@ class WeaviateVectorDatabase(VectorDatabase):
             return self._fallback_keyword_search(query, limit, collection_name)
 
     def _fallback_keyword_search(
-        self, query: str, limit: int = 5, collection_name: str = None
-    ) -> List[Dict[str, Any]]:
+        self,
+        query: str,
+        limit: int = 5,
+        collection_name: str = None,
+    ) -> list[dict[str, Any]]:
         """
         Fallback to simple keyword matching if vector search fails.
 
@@ -1008,7 +1023,7 @@ class WeaviateVectorDatabase(VectorDatabase):
             warnings.warn(f"Fallback keyword search also failed: {e}")
             return []
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         """Clean up Weaviate client."""
         if self.client:
             try:

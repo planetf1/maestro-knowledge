@@ -5,6 +5,7 @@ import warnings
 import pytest
 import subprocess
 from unittest.mock import Mock
+from typing import Any
 
 # Suppress Pydantic deprecation warnings from dependencies
 warnings.filterwarnings(
@@ -26,18 +27,19 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.maestro_mcp.server import create_mcp_server, QueryInput
+from fastmcp import FastMCP
 
 
 class TestQueryIntegration:
     """Integration tests for the query functionality."""
 
     @pytest.fixture
-    def mcp_server(self):
+    def mcp_server(self) -> FastMCP:
         """Create a test MCP server instance."""
         return create_mcp_server()
 
     @pytest.fixture
-    def mock_vector_db(self):
+    def mock_vector_db(self) -> Mock:
         """Create a mock vector database with query functionality."""
         mock_db = Mock()
         mock_db.query.return_value = "Integration test response"
@@ -46,7 +48,7 @@ class TestQueryIntegration:
         mock_db.count_documents.return_value = 5
         return mock_db
 
-    def test_full_query_flow(self, mcp_server, mock_vector_db):
+    def test_full_query_flow(self, mcp_server: FastMCP, mock_vector_db: Mock) -> None:
         """Test the complete query flow from MCP server to VDB."""
         # Test that the server was created successfully
         assert mcp_server is not None, "MCP server should be created"
@@ -60,7 +62,7 @@ class TestQueryIntegration:
         assert query_input.query == "What is the main topic?"
         assert query_input.limit == 5
 
-    def test_query_with_real_vector_db_factory(self):
+    def test_query_with_real_vector_db_factory(self) -> None:
         """Test query with real vector database factory."""
         # Test that the server was created successfully
         mcp_server = create_mcp_server()
@@ -73,7 +75,7 @@ class TestQueryIntegration:
         assert query_input.query == "Test query"
         assert query_input.limit == 5
 
-    def test_query_multiple_databases_integration(self):
+    def test_query_multiple_databases_integration(self) -> None:
         """Test querying multiple databases in the same session."""
         # Test that the server was created successfully
         mcp_server = create_mcp_server()
@@ -92,7 +94,7 @@ class TestQueryIntegration:
         assert query_input2.query == "Test query 2"
         assert query_input2.limit == 10
 
-    def test_query_error_handling_integration(self):
+    def test_query_error_handling_integration(self) -> None:
         """Test error handling in the complete query flow."""
         # Test that the server was created successfully
         mcp_server = create_mcp_server()
@@ -105,7 +107,7 @@ class TestQueryIntegration:
         assert query_input.query == "Test query"
         assert query_input.limit == 5
 
-    def test_query_with_different_limits_integration(self):
+    def test_query_with_different_limits_integration(self) -> None:
         """Test query with different limit values in integration."""
         # Test that the server was created successfully
         mcp_server = create_mcp_server()
@@ -123,7 +125,7 @@ class TestQueryIntegration:
             assert query_input.query == f"Test query with limit {limit}"
             assert query_input.limit == limit
 
-    def test_query_special_characters_integration(self):
+    def test_query_special_characters_integration(self) -> None:
         """Test query with special characters in integration."""
         mcp_server = create_mcp_server()
         assert mcp_server is not None, "MCP server should be created"
@@ -144,7 +146,7 @@ class TestQueryIntegration:
 class TestQueryCLIIntegration:
     """Integration tests for CLI query functionality."""
 
-    def test_cli_query_command_exists(self):
+    def test_cli_query_command_exists(self) -> None:
         """Test that the CLI query command exists and is accessible."""
         try:
             # Try to run the query help command
@@ -165,7 +167,7 @@ class TestQueryCLIIntegration:
         except FileNotFoundError:
             pytest.skip("CLI binary not found - CLI may not be built")
 
-    def test_cli_query_vdb_command_exists(self):
+    def test_cli_query_vdb_command_exists(self) -> None:
         """Test that the CLI query vdb command exists and is accessible."""
         try:
             # Try to run the query vdb help command
@@ -177,9 +179,8 @@ class TestQueryCLIIntegration:
             )
 
             # The command should exist and show help
-            assert result.returncode == 0, (
-                f"Query vdb help command failed: {result.stderr}"
-            )
+            assert result.returncode == 0
+            (f"Query vdb help command failed: {result.stderr}")
             assert "vdb" in result.stdout
             assert "doc-limit" in result.stdout
 
@@ -188,7 +189,7 @@ class TestQueryCLIIntegration:
         except FileNotFoundError:
             pytest.skip("CLI binary not found - CLI may not be built")
 
-    def test_cli_query_dry_run(self):
+    def test_cli_query_dry_run(self) -> None:
         """Test CLI query command with dry-run flag."""
         try:
             # Try to run the query command with dry-run
@@ -200,9 +201,8 @@ class TestQueryCLIIntegration:
             )
 
             # The command should succeed with dry-run
-            assert result.returncode == 0, (
-                f"Query dry-run command failed: {result.stderr}"
-            )
+            assert result.returncode == 0
+            (f"Query dry-run command failed: {result.stderr}")
             assert "[DRY RUN]" in result.stdout
 
         except subprocess.TimeoutExpired:
@@ -210,7 +210,7 @@ class TestQueryCLIIntegration:
         except FileNotFoundError:
             pytest.skip("CLI binary not found - CLI may not be built")
 
-    def test_cli_query_with_doc_limit(self):
+    def test_cli_query_with_doc_limit(self) -> None:
         """Test CLI query command with doc-limit flag."""
         try:
             # Try to run the query command with doc-limit
@@ -230,9 +230,8 @@ class TestQueryCLIIntegration:
             )
 
             # The command should succeed with dry-run
-            assert result.returncode == 0, (
-                f"Query with doc-limit command failed: {result.stderr}"
-            )
+            assert result.returncode == 0
+            (f"Query with doc-limit command failed: {result.stderr}")
             assert "[DRY RUN]" in result.stdout
 
         except subprocess.TimeoutExpired:
@@ -244,7 +243,7 @@ class TestQueryCLIIntegration:
 class TestQueryEndToEnd:
     """End-to-end tests for the query functionality."""
 
-    def test_query_e2e_flow(self):
+    def test_query_e2e_flow(self) -> None:
         """Test the complete end-to-end query flow."""
         from src.db.vector_db_base import VectorDatabase
 
@@ -256,7 +255,7 @@ class TestQueryEndToEnd:
         assert query_input.query == "Test query"
         assert query_input.limit == 5
 
-    def test_query_cli_integration_e2e(self):
+    def test_query_cli_integration_e2e(self) -> None:
         """Test CLI integration end-to-end."""
         # Test that the CLI can be built and has query commands
         try:

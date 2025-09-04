@@ -4,7 +4,7 @@
 import warnings
 import pytest
 from unittest.mock import Mock
-from typing import Dict, Any
+from typing import Any
 
 # Suppress Pydantic deprecation warnings from dependencies
 warnings.filterwarnings(
@@ -31,7 +31,7 @@ from src.db.vector_db_base import VectorDatabase
 class TestQueryFunctionality:
     """Test cases for the query functionality in vector databases."""
 
-    def test_query_method_exists_in_base_class(self):
+    def test_query_method_exists_in_base_class(self) -> None:
         """Test that the query method is defined in the base class."""
         # Check that query method exists in the abstract base class
         assert hasattr(VectorDatabase, "query")
@@ -40,7 +40,7 @@ class TestQueryFunctionality:
         with pytest.raises(TypeError):
             VectorDatabase().query("test query")
 
-    def test_query_method_signature(self):
+    def test_query_method_signature(self) -> None:
         """Test that the query method has the correct signature."""
         import inspect
 
@@ -60,7 +60,7 @@ class TestQueryFunctionality:
 class ConcreteQueryVectorDatabase(VectorDatabase):
     """Concrete implementation for testing query functionality."""
 
-    def __init__(self, collection_name: str = "TestCollection"):
+    def __init__(self, collection_name: str = "TestCollection") -> None:
         super().__init__(collection_name)
         self.documents = []
         self.next_id = 0
@@ -70,13 +70,15 @@ class ConcreteQueryVectorDatabase(VectorDatabase):
     def db_type(self) -> str:
         return "test"
 
-    def supported_embeddings(self):
+    def supported_embeddings(self) -> list[str]:
         return ["default", "test-embedding"]
 
-    def setup(self, embedding: str = "default", collection_name: str = None):
+    def setup(self, embedding: str = "default", collection_name: str = None) -> None:
         pass
 
-    def write_documents(self, documents, embedding="default"):
+    def write_documents(
+        self, documents: list[dict[str, Any]], embedding: str = "default"
+    ) -> None:
         for doc in documents:
             doc_copy = doc.copy()
             doc_copy["id"] = str(self.next_id)
@@ -84,18 +86,18 @@ class ConcreteQueryVectorDatabase(VectorDatabase):
             self.documents.append(doc_copy)
             self.next_id += 1
 
-    def list_documents(self, limit=10, offset=0):
+    def list_documents(self, limit: int = 10, offset: int = 0) -> list[dict[str, Any]]:
         return self.documents[offset : offset + limit]
 
     def count_documents(self) -> int:
         return len(self.documents)
 
-    def delete_documents(self, document_ids):
+    def delete_documents(self, document_ids: list[str]) -> None:
         self.documents = [
             doc for doc in self.documents if doc["id"] not in document_ids
         ]
 
-    def delete_collection(self, collection_name=None):
+    def delete_collection(self, collection_name: str = None) -> None:
         target_collection = collection_name or self.collection_name
         if target_collection == self.collection_name:
             self.documents = []
@@ -103,7 +105,7 @@ class ConcreteQueryVectorDatabase(VectorDatabase):
 
     def get_document(
         self, doc_name: str, collection_name: str = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get a specific document by name from the vector database."""
         target_collection = collection_name or self.collection_name
 
@@ -122,10 +124,10 @@ class ConcreteQueryVectorDatabase(VectorDatabase):
             f"Document '{doc_name}' not found in collection '{target_collection}'"
         )
 
-    def list_collections(self):
+    def list_collections(self) -> list[str]:
         return [self.collection_name] if self.collection_name else []
 
-    def get_collection_info(self, collection_name=None):
+    def get_collection_info(self, collection_name: str = None) -> dict[str, Any]:
         target_collection = collection_name or self.collection_name
         return {
             "name": target_collection,
@@ -135,7 +137,7 @@ class ConcreteQueryVectorDatabase(VectorDatabase):
             "metadata": {},
         }
 
-    def create_query_agent(self):
+    def create_query_agent(self) -> Mock:
         return self.query_agent
 
     def query(self, query: str, limit: int = 5, collection_name: str = None) -> str:
@@ -160,14 +162,14 @@ class ConcreteQueryVectorDatabase(VectorDatabase):
         except Exception as e:
             return f"Error querying database: {str(e)}"
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         self.documents = []
 
 
 class TestConcreteQueryVectorDatabase:
     """Test cases for the concrete query implementation."""
 
-    def test_query_basic_functionality(self):
+    def test_query_basic_functionality(self) -> None:
         """Test basic query functionality."""
         db = ConcreteQueryVectorDatabase()
 
@@ -178,7 +180,7 @@ class TestConcreteQueryVectorDatabase:
         # Verify query agent was called
         db.query_agent.run.assert_called_once_with("What is the main topic?")
 
-    def test_query_with_custom_limit(self):
+    def test_query_with_custom_limit(self) -> None:
         """Test query with custom limit."""
         db = ConcreteQueryVectorDatabase()
 
@@ -188,7 +190,7 @@ class TestConcreteQueryVectorDatabase:
         # Verify query agent was called
         db.query_agent.run.assert_called_once_with("Test query")
 
-    def test_query_error_handling(self):
+    def test_query_error_handling(self) -> None:
         """Test query error handling."""
         db = ConcreteQueryVectorDatabase()
 
@@ -198,14 +200,14 @@ class TestConcreteQueryVectorDatabase:
         result = db.query("Test query")
         assert "Error querying database: Test error" in result
 
-    def test_query_empty_string(self):
+    def test_query_empty_string(self) -> None:
         """Test query with empty string."""
         db = ConcreteQueryVectorDatabase()
 
         result = db.query("")
         assert "Response to: " in result
 
-    def test_query_special_characters(self):
+    def test_query_special_characters(self) -> None:
         """Test query with special characters."""
         db = ConcreteQueryVectorDatabase()
 
@@ -217,7 +219,7 @@ class TestConcreteQueryVectorDatabase:
 class TestQueryMethodIntegration:
     """Test integration of query method with other VDB functionality."""
 
-    def test_query_with_documents(self):
+    def test_query_with_documents(self) -> None:
         """Test query functionality when documents are present."""
         db = ConcreteQueryVectorDatabase()
 
@@ -243,7 +245,7 @@ class TestQueryMethodIntegration:
         result = db.query("Find API information")
         assert "Response to: Find API information" in result
 
-    def test_query_after_cleanup(self):
+    def test_query_after_cleanup(self) -> None:
         """Test query functionality after cleanup."""
         db = ConcreteQueryVectorDatabase()
 
@@ -264,7 +266,7 @@ class TestQueryMethodIntegration:
 class TestQueryMethodEdgeCases:
     """Test edge cases for the query method."""
 
-    def test_query_very_long_string(self):
+    def test_query_very_long_string(self) -> None:
         """Test query with very long string."""
         db = ConcreteQueryVectorDatabase()
 
@@ -272,7 +274,7 @@ class TestQueryMethodEdgeCases:
         result = db.query(long_query)
         assert f"Response to: {long_query}" in result
 
-    def test_query_unicode_characters(self):
+    def test_query_unicode_characters(self) -> None:
         """Test query with unicode characters."""
         db = ConcreteQueryVectorDatabase()
 
@@ -280,7 +282,7 @@ class TestQueryMethodEdgeCases:
         result = db.query(unicode_query)
         assert f"Response to: {unicode_query}" in result
 
-    def test_query_none_value(self):
+    def test_query_none_value(self) -> None:
         """Test query with None value (should be converted to string)."""
         db = ConcreteQueryVectorDatabase()
 
@@ -288,7 +290,7 @@ class TestQueryMethodEdgeCases:
         result = db.query(None)
         assert "Response to: None" in result
 
-    def test_query_invalid_limit(self):
+    def test_query_invalid_limit(self) -> None:
         """Test query with invalid limit values."""
         db = ConcreteQueryVectorDatabase()
 

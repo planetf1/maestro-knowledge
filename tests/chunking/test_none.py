@@ -8,7 +8,7 @@ sys.path.append(
 from src.chunking import ChunkingConfig, chunk_text
 
 
-def test_none_chunk():
+def test_none_chunk() -> None:
     text = "Hello world"
     cfg = ChunkingConfig()
     res = chunk_text(text, cfg)

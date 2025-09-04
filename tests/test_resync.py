@@ -3,25 +3,30 @@
 
 import os
 import sys
+from typing import Any
+
+import pytest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.maestro_mcp import server
 
 
-def test_resync_vector_databases_registers_collections(monkeypatch):
+def test_resync_vector_databases_registers_collections(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Mock MilvusVectorDatabase to return a predictable list and verify registration."""
 
     class DummyMilvus:
-        def __init__(self, collection_name=None):
+        def __init__(self, collection_name: str = None) -> None:
             self.collection_name = collection_name
             self.client = True
 
-        def _ensure_client(self):
+        def _ensure_client(self) -> None:
             # no-op
             return
 
-        def list_collections(self):
+        def list_collections(self) -> list[str]:
             return ["coll_a", "coll_b"]
 
     # Patch the MilvusVectorDatabase import inside the server module

@@ -29,7 +29,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 class TestIntegrationExamples:
     """Integration tests that run the example files to ensure they work correctly."""
 
-    def test_milvus_example_structure(self):
+    def test_milvus_example_structure(self) -> None:
         """Test that the Milvus example file exists and has correct structure."""
         example_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -48,7 +48,7 @@ class TestIntegrationExamples:
             assert "milvus" in content, "Should use Milvus database"
             assert "main()" in content, "Should have main function"
 
-    def test_weaviate_example_structure(self):
+    def test_weaviate_example_structure(self) -> None:
         """Test that the Weaviate example file exists and has correct structure."""
         example_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -67,7 +67,7 @@ class TestIntegrationExamples:
             assert "weaviate" in content, "Should use Weaviate database"
             assert "main()" in content, "Should have main function"
 
-    def test_milvus_example_imports_and_runs(self):
+    def test_milvus_example_imports_and_runs(self) -> None:
         """Test that the Milvus example can be imported and runs without errors."""
         # Import the example module
         example_path = os.path.join(
@@ -96,7 +96,7 @@ class TestIntegrationExamples:
         except subprocess.TimeoutExpired:
             pytest.fail("Example execution timed out")
 
-    def test_weaviate_example_imports_and_runs(self):
+    def test_weaviate_example_imports_and_runs(self) -> None:
         """Test that the Weaviate example can be imported and runs without errors."""
         # Import the example module
         example_path = os.path.join(
@@ -131,7 +131,7 @@ class TestIntegrationExamples:
         except subprocess.TimeoutExpired:
             pytest.fail("Example execution timed out")
 
-    def test_examples_environment_validation(self):
+    def test_examples_environment_validation(self) -> None:
         """Test that examples properly validate environment variables."""
         # Test Milvus example without environment variables
         example_path = os.path.join(
@@ -158,7 +158,7 @@ class TestIntegrationExamples:
                 for keyword in ["MILVUS_URI", "pymilvus", "environment variables"]
             ), f"Should provide helpful error message, got: {output}"
 
-    def test_examples_import_structure(self):
+    def test_examples_import_structure(self) -> None:
         """Test that examples use the correct import structure."""
         examples_dir = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "examples"
@@ -181,7 +181,7 @@ class TestIntegrationExamples:
                     f"{example_file} should include sys.path manipulation"
                 )
 
-    def test_examples_error_handling(self):
+    def test_examples_error_handling(self) -> None:
         """Test that examples have proper error handling."""
         examples_dir = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "examples"
@@ -198,7 +198,7 @@ class TestIntegrationExamples:
                 assert "except" in content, f"{example_file} should have error handling"
                 assert "finally:" in content, f"{example_file} should have cleanup"
 
-    def test_examples_cleanup(self):
+    def test_examples_cleanup(self) -> None:
         """Test that examples have proper cleanup."""
         examples_dir = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "examples"
@@ -213,7 +213,7 @@ class TestIntegrationExamples:
                 # Check for cleanup calls
                 assert "db.cleanup()" in content, f"{example_file} should call cleanup"
 
-    def test_examples_document_operations(self):
+    def test_examples_document_operations(self) -> None:
         """Test that examples demonstrate document operations."""
         examples_dir = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "examples"
@@ -239,7 +239,7 @@ class TestIntegrationExamples:
                     f"{example_file} should demonstrate document deletion"
                 )
 
-    def test_examples_output_format(self):
+    def test_examples_output_format(self) -> None:
         """Test that examples have proper output formatting."""
         examples_dir = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "examples"
