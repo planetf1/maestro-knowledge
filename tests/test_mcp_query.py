@@ -4,6 +4,7 @@
 import warnings
 import pytest
 from unittest.mock import Mock, patch
+from typing import Any
 
 # Suppress Pydantic deprecation warnings from dependencies
 warnings.filterwarnings(
@@ -25,18 +26,19 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.maestro_mcp.server import create_mcp_server, QueryInput
+from fastmcp import FastMCP
 
 
 class TestMCPQueryFunctionality:
     """Test cases for the MCP server query functionality."""
 
     @pytest.fixture
-    def mcp_server(self):
+    def mcp_server(self) -> FastMCP:
         """Create a test MCP server instance."""
         return create_mcp_server()
 
     @pytest.fixture
-    def mock_vector_db(self):
+    def mock_vector_db(self) -> Mock:
         """Create a mock vector database."""
         mock_db = Mock()
         mock_db.query.return_value = "Test query response"
@@ -44,7 +46,7 @@ class TestMCPQueryFunctionality:
         mock_db.collection_name = "TestCollection"
         return mock_db
 
-    def test_query_input_model(self):
+    def test_query_input_model(self) -> None:
         """Test the QueryInput Pydantic model."""
         # Test valid input
         query_input = QueryInput(
@@ -55,7 +57,7 @@ class TestMCPQueryFunctionality:
         assert query_input.query == "What is the main topic?"
         assert query_input.limit == 10
 
-    def test_query_input_model_defaults(self):
+    def test_query_input_model_defaults(self) -> None:
         """Test QueryInput model with default values."""
         query_input = QueryInput(db_name="test-db", query="Test query")
 
@@ -63,7 +65,7 @@ class TestMCPQueryFunctionality:
         assert query_input.query == "Test query"
         assert query_input.limit == 5  # Default value
 
-    def test_query_input_model_validation(self):
+    def test_query_input_model_validation(self) -> None:
         """Test QueryInput model validation."""
         # Test missing required fields
         with pytest.raises(ValueError):
@@ -73,7 +75,7 @@ class TestMCPQueryFunctionality:
             QueryInput(db_name="test-db")
 
     @pytest.mark.asyncio
-    async def test_query_tool_exists(self, mcp_server):
+    async def test_query_tool_exists(self, mcp_server: FastMCP) -> None:
         """Test that the query tool exists in the MCP server."""
         # For FastMCP, we can't directly access tools, but we can test that the server was created
         # The query tool should be registered when the server is created
@@ -84,7 +86,9 @@ class TestMCPQueryFunctionality:
         assert True, "Query tool should exist in MCP server"
 
     @pytest.mark.asyncio
-    async def test_query_tool_functionality(self, mcp_server, mock_vector_db):
+    async def test_query_tool_functionality(
+        self, mcp_server: FastMCP, mock_vector_db: Mock
+    ) -> None:
         """Test the query tool functionality."""
         # Mock the vector_databases dictionary
         with patch(
@@ -103,7 +107,7 @@ class TestMCPQueryFunctionality:
             assert query_input.limit == 5
 
     @pytest.mark.asyncio
-    async def test_query_tool_database_not_found(self, mcp_server):
+    async def test_query_tool_database_not_found(self, mcp_server: FastMCP) -> None:
         """Test query tool when database is not found."""
         # Test that the server was created successfully
         assert mcp_server is not None, "MCP server should be created"
@@ -116,7 +120,9 @@ class TestMCPQueryFunctionality:
         assert query_input.limit == 5
 
     @pytest.mark.asyncio
-    async def test_query_tool_database_error(self, mcp_server, mock_vector_db):
+    async def test_query_tool_database_error(
+        self, mcp_server: FastMCP, mock_vector_db: Mock
+    ) -> None:
         """Test query tool when database query raises an error."""
         # Test that the server was created successfully
         assert mcp_server is not None, "MCP server should be created"
@@ -129,7 +135,9 @@ class TestMCPQueryFunctionality:
         assert query_input.limit == 5
 
     @pytest.mark.asyncio
-    async def test_query_tool_with_different_limits(self, mcp_server, mock_vector_db):
+    async def test_query_tool_with_different_limits(
+        self, mcp_server: FastMCP, mock_vector_db: Mock
+    ) -> None:
         """Test query tool with different limit values."""
         # Test that the server was created successfully
         assert mcp_server is not None, "MCP server should be created"
@@ -145,7 +153,9 @@ class TestMCPQueryFunctionality:
             assert query_input.limit == limit
 
     @pytest.mark.asyncio
-    async def test_query_tool_empty_query(self, mcp_server, mock_vector_db):
+    async def test_query_tool_empty_query(
+        self, mcp_server: FastMCP, mock_vector_db: Mock
+    ) -> None:
         """Test query tool with empty query string."""
         # Test that the server was created successfully
         assert mcp_server is not None, "MCP server should be created"
@@ -158,7 +168,9 @@ class TestMCPQueryFunctionality:
         assert query_input.limit == 5
 
     @pytest.mark.asyncio
-    async def test_query_tool_special_characters(self, mcp_server, mock_vector_db):
+    async def test_query_tool_special_characters(
+        self, mcp_server: FastMCP, mock_vector_db: Mock
+    ) -> None:
         """Test query tool with special characters in query."""
         # Test that the server was created successfully
         assert mcp_server is not None, "MCP server should be created"
@@ -176,7 +188,7 @@ class TestMCPQueryIntegration:
     """Integration tests for MCP query functionality."""
 
     @pytest.mark.asyncio
-    async def test_query_tool_with_real_vector_db(self):
+    async def test_query_tool_with_real_vector_db(self) -> None:
         """Test query tool with a real vector database instance."""
         # Test that the server was created successfully
         mcp_server = create_mcp_server()
@@ -190,7 +202,7 @@ class TestMCPQueryIntegration:
         assert query_input.limit == 5
 
     @pytest.mark.asyncio
-    async def test_query_tool_multiple_databases(self):
+    async def test_query_tool_multiple_databases(self) -> None:
         """Test query tool with multiple databases."""
         # Test that the server was created successfully
         mcp_server = create_mcp_server()

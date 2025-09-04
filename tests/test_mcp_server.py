@@ -18,7 +18,7 @@ if str(project_root) not in sys.path:
 from src.maestro_mcp.server import create_mcp_server
 
 
-def test_server_creation():
+def test_server_creation() -> None:
     """Test that the server can be created successfully."""
     print("Testing MCP Server Creation...")
     print("=" * 50)
@@ -34,7 +34,7 @@ def test_server_creation():
         assert False, f"Failed to create server: {e}"
 
 
-def test_tool_definitions():
+def test_tool_definitions() -> None:
     """Test that all expected tools are defined."""
     print("\nTesting Tool Definitions...")
     print("=" * 50)
@@ -73,7 +73,7 @@ def test_tool_definitions():
         assert False, f"Failed to test tool definitions: {e}"
 
 
-def test_imports():
+def test_imports() -> None:
     """Test that all required imports work."""
     print("\nTesting Imports...")
     print("=" * 50)
@@ -88,7 +88,7 @@ def test_imports():
         assert False, f"Import test failed: {e}"
 
 
-def main():
+def main() -> None:
     """Run all tests."""
     print("Maestro Vector Database MCP Server Tests")
     print("=" * 60)

@@ -9,14 +9,15 @@ import pytest
 import yaml
 from pathlib import Path
 from jsonschema import validate, ValidationError
+from typing import Any
 
 
-def replace_env_vars_in_yaml(content):
+def replace_env_vars_in_yaml(content: str) -> str:
     """Replace {{ENV_VAR_NAME}} placeholders with environment variable values."""
     # Regex to match {{ENV_VAR_NAME}} pattern
     pattern = r"\{\{([A-Z_][A-Z0-9_]*)\}\}"
 
-    def replace_match(match):
+    def replace_match(match: re.Match) -> str:
         env_var_name = match.group(1)
         env_value = os.getenv(env_var_name, "")
         if env_value == "":
@@ -30,7 +31,7 @@ def replace_env_vars_in_yaml(content):
 
 
 @pytest.fixture
-def schema():
+def schema() -> dict[str, Any]:
     """Load the vector database JSON schema."""
     schema_path = (
         Path(__file__).parent.parent / "schemas" / "vector-database-schema.json"
@@ -40,7 +41,7 @@ def schema():
 
 
 @pytest.fixture
-def local_milvus_yaml():
+def local_milvus_yaml() -> dict[str, Any]:
     """Load the local Milvus YAML configuration."""
     yaml_path = Path(__file__).parent / "yamls" / "test_local_milvus.yaml"
     with open(yaml_path, "r") as f:
@@ -48,7 +49,7 @@ def local_milvus_yaml():
 
 
 @pytest.fixture
-def remote_weaviate_yaml():
+def remote_weaviate_yaml() -> dict[str, Any]:
     """Load the remote Weaviate YAML configuration."""
     yaml_path = Path(__file__).parent / "yamls" / "test_remote_weaviate.yaml"
     with open(yaml_path, "r") as f:
@@ -64,18 +65,20 @@ class TestVectorDatabaseYAMLValidation:
     """Test class for vector database YAML validation."""
 
     def test_local_milvus_yaml_validates_against_schema(
-        self, schema, local_milvus_yaml
-    ):
+        self, schema: dict[str, Any], local_milvus_yaml: dict[str, Any]
+    ) -> None:
         """Test that local Milvus YAML validates against the schema."""
         validate(instance=local_milvus_yaml, schema=schema)
 
     def test_remote_weaviate_yaml_validates_against_schema(
-        self, schema, remote_weaviate_yaml
-    ):
+        self, schema: dict[str, Any], remote_weaviate_yaml: dict[str, Any]
+    ) -> None:
         """Test that remote Weaviate YAML validates against the schema."""
         validate(instance=remote_weaviate_yaml, schema=schema)
 
-    def test_local_milvus_has_correct_structure(self, local_milvus_yaml):
+    def test_local_milvus_has_correct_structure(
+        self, local_milvus_yaml: dict[str, Any]
+    ) -> None:
         """Test that local Milvus YAML has the expected structure."""
         assert local_milvus_yaml["apiVersion"] == "maestro/v1alpha1"
         assert local_milvus_yaml["kind"] == "VectorDatabase"
@@ -89,7 +92,9 @@ class TestVectorDatabaseYAMLValidation:
         assert local_milvus_yaml["spec"]["embedding"] == "text-embedding-3-small"
         assert local_milvus_yaml["spec"]["mode"] == "local"
 
-    def test_remote_weaviate_has_correct_structure(self, remote_weaviate_yaml):
+    def test_remote_weaviate_has_correct_structure(
+        self, remote_weaviate_yaml: dict[str, Any]
+    ) -> None:
         """Test that remote Weaviate YAML has the expected structure."""
         assert remote_weaviate_yaml["apiVersion"] == "maestro/v1alpha1"
         assert remote_weaviate_yaml["kind"] == "VectorDatabase"
@@ -108,7 +113,7 @@ class TestVectorDatabaseYAMLValidation:
         assert remote_weaviate_yaml["spec"]["embedding"] == "text-embedding-3-small"
         assert remote_weaviate_yaml["spec"]["mode"] == "remote"
 
-    def test_schema_enforces_required_fields(self, schema):
+    def test_schema_enforces_required_fields(self, schema: dict[str, Any]) -> None:
         """Test that the schema enforces all required fields."""
         # Test missing apiVersion
         invalid_config = {
@@ -158,7 +163,7 @@ class TestVectorDatabaseYAMLValidation:
         with pytest.raises(ValidationError, match="'name' is a required property"):
             validate(instance=invalid_config, schema=schema)
 
-    def test_schema_enforces_enum_values(self, schema):
+    def test_schema_enforces_enum_values(self, schema: dict[str, Any]) -> None:
         """Test that the schema enforces enum values for type and mode."""
         # Test invalid type
         invalid_config = {
@@ -192,7 +197,7 @@ class TestVectorDatabaseYAMLValidation:
         with pytest.raises(ValidationError, match="'invalid_mode' is not one of"):
             validate(instance=invalid_config, schema=schema)
 
-    def test_schema_enforces_api_version_pattern(self, schema):
+    def test_schema_enforces_api_version_pattern(self, schema: dict[str, Any]) -> None:
         """Test that the schema enforces the correct API version pattern."""
         invalid_config = {
             "apiVersion": "maestro/v1beta1",  # Wrong version
@@ -209,7 +214,7 @@ class TestVectorDatabaseYAMLValidation:
         with pytest.raises(ValidationError, match="does not match"):
             validate(instance=invalid_config, schema=schema)
 
-    def test_schema_allows_optional_labels(self, schema):
+    def test_schema_allows_optional_labels(self, schema: dict[str, Any]) -> None:
         """Test that the schema allows optional labels."""
         config_with_labels = {
             "apiVersion": "maestro/v1alpha1",
@@ -233,7 +238,9 @@ class TestVectorDatabaseYAMLValidation:
         # Should not raise any validation errors
         validate(instance=config_with_labels, schema=schema)
 
-    def test_schema_prevents_additional_properties(self, schema):
+    def test_schema_prevents_additional_properties(
+        self, schema: dict[str, Any]
+    ) -> None:
         """Test that the schema prevents additional properties at the root level."""
         invalid_config = {
             "apiVersion": "maestro/v1alpha1",

@@ -10,7 +10,7 @@ def parse_version(tag: str) -> tuple[int, ...]:
     return tuple(map(int, version_str.strip().split(".")))
 
 
-def main():
+def main() -> None:
     github_tag = os.environ.get("GITHUB_REF_NAME")
     if not github_tag:
         print("::error::GITHUB_REF_NAME not set.")

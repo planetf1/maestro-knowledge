@@ -9,7 +9,7 @@ sys.path.append(
 from src.chunking import ChunkingConfig, chunk_text
 
 
-def test_unknown_strategy_raises_value_error():
+def test_unknown_strategy_raises_value_error() -> None:
     cfg = ChunkingConfig(strategy="Bogus", parameters={})
     try:
         chunk_text("hi", cfg)
