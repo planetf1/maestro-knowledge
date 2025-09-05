@@ -49,27 +49,27 @@
 ### CLI
 * ✅ add sub-command to return `vector-databases` configured. Usage like:
     ```bash
-    $ maestro-k vectordb list [options]
+    $ maestro vectordb list [options]
     ```
 
 * ✅ add sub-command to return `embeddings` that a vdb supports. Usage like:
     ```bash
-    $ maestro-k embedding list --vdb=VDB_NAME [options]
+    $ maestro embedding list --vdb=VDB_NAME [options]
     ```
 
 * ✅ add sub-command to return `documents` in a collection of a vdb. CLI usage examples:
     ```bash
-    $ maestro-k document list --vdb=VDB_NAME --collection=COLLECTION_NAME [options]
+    $ maestro document list --vdb=VDB_NAME --collection=COLLECTION_NAME [options]
     ```
 
 * ✅ add sub-command to return `collections` in a vdb. Usage like:
     ```bash
-    $ maestro-k collection list --vdb=VDB_NAME [options]
+    $ maestro collection list --vdb=VDB_NAME [options]
     ```
 
 * ✅ add sub-command to `create` a `collection` in a vdb. Usage like:
     ```bash
-    $ maestro-k collection create --name=COLLECTION_NAME --vdb=VDB_NAME [options]
+    $ maestro collection create --name=COLLECTION_NAME --vdb=VDB_NAME [options]
     ```
 
 * ✅ add sub-command to `create` a `document` in a collection of a vdb with a specified embedding or the default if none specified. Some notes for errors:
@@ -80,8 +80,8 @@
 
 Usage like:
     ```bash
-    $ maestro-k document create --name=DOC_NAME --file=DOC_FILE_NAME --vdb=VDB_NAME --collection=COLLECTION_NAME [options] 
-    $ maestro-k document create --name=DOC_NAME --file=DOC_FILE_NAME --vdb=VDB_NAME --collection=COLLECTION_NAME --embedding=EMBEDDING_NAME [options]
+    $ maestro document create --name=DOC_NAME --file=DOC_FILE_NAME --vdb=VDB_NAME --collection=COLLECTION_NAME [options] 
+    $ maestro document create --name=DOC_NAME --file=DOC_FILE_NAME --vdb=VDB_NAME --collection=COLLECTION_NAME --embedding=EMBEDDING_NAME [options]
     ```
 
 * ✅ add sub-command to `delete` a `collection` in a vdb. Some notes for errors:
@@ -90,7 +90,7 @@ Usage like:
 
 Usage like:
     ```bash
-    $ maestro-k collection delete COLLECTION_NAME --vdb=VDB_NAME [options]
+    $ maestro collection delete COLLECTION_NAME --vdb=VDB_NAME [options]
     ```
 
 * ✅ add sub-command to `delete` a `document` in a collection of a vdb. Some notes for errors:
@@ -100,14 +100,14 @@ Usage like:
 
 Usage like:
     ```bash
-    $ maestro-k document delete DOC_NAME --vdb=VDB_NAME --collection=COLLECTION_NAME [options]
+    $ maestro document delete DOC_NAME --vdb=VDB_NAME --collection=COLLECTION_NAME [options]
     ```
 
 * ✅ add sub-command to `list` a `collection` in a vdb. Some notes for errors:
   - VDB_NAME must refer to an existing vdb -- in other words in the list of vdbs
 Usage like:
     ```bash
-    $ maestro-k collection list --vdb=VDB_NAME [options]
+    $ maestro collection list --vdb=VDB_NAME [options]
     ```
 
 * ✅ add sub-command to `list` `documents` in a collection of a vdb. Some notes for errors:
@@ -115,7 +115,7 @@ Usage like:
   - COLLECTION_NAME must refer to an existing collection -- in other words in the list of collections for this vdb
 Usage like:
     ```bash
-    $ maestro-k document list --vdb=VDB_NAME --collection=COLLECTION_NAME [options]
+    $ maestro document list --vdb=VDB_NAME --collection=COLLECTION_NAME [options]
     ```
 
 ### chore

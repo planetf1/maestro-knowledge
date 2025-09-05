@@ -55,10 +55,7 @@ done
 
 # If not found in relative paths, try PATH
 if [ -z "$CLI_PATH" ]; then
-    if command -v maestro-k >/dev/null 2>&1; then
-        CLI_PATH="maestro-k"
-        print_success "maestro-k CLI found in PATH"
-    elif command -v maestro >/dev/null 2>&1; then
+    if command -v maestro >/dev/null 2>&1; then
         # Verify this is the correct maestro CLI by checking if it has vectordb command
         if maestro vectordb --help >/dev/null 2>&1; then
             CLI_PATH="maestro"

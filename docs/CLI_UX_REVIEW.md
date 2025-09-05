@@ -26,7 +26,7 @@ The following major UX improvements have been successfully implemented:
    - Smart display logic (only in interactive terminals)
 
 4. **✅ Status Commands**
-   - Quick system overview with `maestro-k status`
+   - Quick system overview with `maestro status`
    - Detailed resource information and health status
    - Progress indicators during status gathering
 
@@ -47,12 +47,12 @@ The following major UX improvements have been successfully implemented:
 **Current Issue**: Some command redundancy and inconsistent patterns still exist
 ```bash
 # Still has some redundancy:
-maestro-k delete vdb my-vdb
-maestro-k vdb delete my-vdb  # Both work, but inconsistent
+maestro delete vdb my-vdb
+maestro vdb delete my-vdb  # Both work, but inconsistent
 
 # Some inconsistent patterns remain:
-maestro-k create document VDB_NAME COLL_NAME DOC_NAME --file-name=FILE
-maestro-k document create --name=DOC_NAME --file=FILE --vdb=VDB_NAME --collection=COLL_NAME
+maestro create document VDB_NAME COLL_NAME DOC_NAME --file-name=FILE
+maestro document create --name=DOC_NAME --file=FILE --vdb=VDB_NAME --collection=COLL_NAME
 ```
 
 **Recommendation**: 
@@ -65,8 +65,8 @@ maestro-k document create --name=DOC_NAME --file=FILE --vdb=VDB_NAME --collectio
 **Current Issue**: Some mixed naming conventions still exist
 ```bash
 # Still see variations:
-maestro-k list vector-dbs
-maestro-k vectordb list  # Both work, but inconsistent
+maestro list vector-dbs
+maestro vectordb list  # Both work, but inconsistent
 ```
 
 **Recommendation**:
@@ -79,8 +79,8 @@ maestro-k vectordb list  # Both work, but inconsistent
 **Current Issue**: Users must specify VDB name for every operation
 ```bash
 # Currently required for every command:
-maestro-k collection list --vdb=my-vdb
-maestro-k document list --vdb=my-vdb --collection=my-coll
+maestro collection list --vdb=my-vdb
+maestro document list --vdb=my-vdb --collection=my-coll
 ```
 
 **Recommendation**:
@@ -93,7 +93,7 @@ maestro-k document list --vdb=my-vdb --collection=my-coll
 **Current Issue**: Limited output format options
 ```bash
 # Currently only text output:
-maestro-k vectordb list
+maestro vectordb list
 # No JSON, YAML, or table formats available
 ```
 
@@ -153,7 +153,7 @@ maestro-k vectordb list
 - Smart display logic (disabled in tests and non-interactive mode)
 
 ### ✅ **Status Commands**
-- `maestro-k status` for system overview
+- `maestro status` for system overview
 - Detailed resource information and health status
 - Progress indicators during status gathering
 

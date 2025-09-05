@@ -119,28 +119,28 @@ print(f"Found {len(docs)} documents")
 ## Commands (Resource-Based Structure)
 ```bash
 # List databases
-maestro-k vectordb list
+maestro vectordb list
 
 # List embeddings
-maestro-k embedding list --vdb=my-database
+maestro embedding list --vdb=my-database
 
 # List collections
-maestro-k collection list --vdb=my-database
+maestro collection list --vdb=my-database
 
 # List documents
-maestro-k document list --vdb=my-database --collection=my-collection
+maestro document list --vdb=my-database --collection=my-collection
 
 # Create database from YAML
-maestro-k vectordb create config.yaml
+maestro vectordb create config.yaml
 
 # Delete database (with confirmation prompt)
-maestro-k vectordb delete my-db
+maestro vectordb delete my-db
 
 # Delete database without confirmation
-maestro-k vectordb delete my-db --force
+maestro vectordb delete my-db --force
 
 # Validate YAML config
-maestro-k validate config.yaml
+maestro validate config.yaml
 ```
 
 ## Features
@@ -178,7 +178,7 @@ MILVUS_URI=localhost:19530
 WEAVIATE_URL=https://your-cluster.weaviate.network
 
 # CLI automatically substitutes {{ENV_VAR_NAME}}
-./maestro-k vectordb create config.yaml
+./maestro vectordb create config.yaml
 ```
 
 ---
@@ -263,16 +263,12 @@ This comprehensive sequence ensures:
 # Project Structure
 
 ```
-maestro-knowledge/
+maestronowledge/
 ├── src/                    # Python source
 │   ├── db/                # Database backends
 │   ├── maestro_mcp/       # MCP server (FastMCP)
 │   └── vector_db.py       # Factory interface
-├── cli/                   # Go CLI tool
-│   ├── src/              # Go source (plural commands)
-│   ├── tests/            # CLI tests
-│   ├── examples/         # CLI examples
-│   └── lint.sh           # Go linting and code quality
+# CLI tool moved to separate repository: AI4quantum/maestro-cli
 ├── tests/                # Python tests
 ├── examples/             # Usage examples
 ├── schemas/              # YAML schemas
@@ -315,7 +311,7 @@ maestro-knowledge/
 ## Installation
 ```bash
 git clone <repository-url>
-cd maestro-knowledge
+cd maestronowledge
 uv sync
 ```
 
@@ -327,8 +323,8 @@ uv sync
 ## Use CLI
 ```bash
 cd cli
-go build -o maestro-k src/*.go
-./maestro-k vectordb list --help
+go build -o maestro src/*.go
+./maestro vectordb list --help
 ```
 
 ## Environment Setup
