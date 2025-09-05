@@ -151,7 +151,7 @@ class TestQueryCLIIntegration:
         try:
             # Try to run the query help command
             result = subprocess.run(
-                ["../cli/maestro-k", "query", "--help"],
+                ["../maestro-cli/maestro", "query", "--help"],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -172,7 +172,7 @@ class TestQueryCLIIntegration:
         try:
             # Try to run the query vdb help command
             result = subprocess.run(
-                ["../cli/maestro-k", "query", "vdb", "--help"],
+                ["../maestro-cli/maestro", "query", "vdb", "--help"],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -194,7 +194,13 @@ class TestQueryCLIIntegration:
         try:
             # Try to run the query command with dry-run
             result = subprocess.run(
-                ["../cli/maestro-k", "query", "test-db", "test query", "--dry-run"],
+                [
+                    "../maestro-cli/maestro",
+                    "query",
+                    "test query",
+                    "--vdb=test-db",
+                    "--dry-run",
+                ],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -216,10 +222,10 @@ class TestQueryCLIIntegration:
             # Try to run the query command with doc-limit
             result = subprocess.run(
                 [
-                    "../cli/maestro-k",
+                    "../maestro-cli/maestro",
                     "query",
-                    "test-db",
                     "test query",
+                    "--vdb=test-db",
                     "--doc-limit",
                     "10",
                     "--dry-run",
@@ -260,7 +266,7 @@ class TestQueryEndToEnd:
         # Test that the CLI can be built and has query commands
         try:
             # Check if CLI exists
-            cli_path = "../cli/maestro-k"
+            cli_path = "../maestro-cli/maestro"
             if not os.path.exists(cli_path):
                 pytest.skip("CLI binary not found")
 

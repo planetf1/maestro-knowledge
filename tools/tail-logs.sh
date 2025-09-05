@@ -77,13 +77,8 @@ show_status() {
         echo -e "${RED}❌ MCP Server log not found${NC}"
     fi
     
-    # Check for CLI logs
-    if [ -f "$PROJECT_ROOT/cli/cli.log" ]; then
-        local cli_log_size=$(du -h "$PROJECT_ROOT/cli/cli.log" | cut -f1)
-        echo -e "${GREEN}✅ CLI log: $PROJECT_ROOT/cli/cli.log (${cli_log_size})${NC}"
-    else
-        echo -e "${YELLOW}⚠️  CLI log not found (may not be created yet)${NC}"
-    fi
+    # CLI logs are now in the separate repository: AI4quantum/maestro-cli
+    echo -e "${BLUE}ℹ️  CLI logs are now in the separate repository: AI4quantum/maestro-cli${NC}"
 }
 
 # Function to show recent logs
@@ -100,12 +95,8 @@ show_recent_logs() {
         echo ""
     fi
     
-    # Show recent CLI logs if they exist
-    if [ -f "$PROJECT_ROOT/cli/cli.log" ]; then
-        echo -e "${YELLOW}Recent CLI logs:${NC}"
-        tail -50 "$PROJECT_ROOT/cli/cli.log" | while read line; do
-            echo "[CLI] $line"
-        done
+    # CLI logs are now in the separate repository: AI4quantum/maestro-cli
+    echo -e "${BLUE}ℹ️  CLI logs are now in the separate repository: AI4quantum/maestro-cli${NC}"
         echo ""
     fi
     
@@ -134,17 +125,8 @@ tail_mcp_logs() {
 
 # Function to tail CLI logs
 tail_cli_logs() {
-    echo -e "${BLUE}📡 Tailing CLI logs...${NC}"
-    if [ -f "$PROJECT_ROOT/cli/cli.log" ]; then
-        echo -e "${BLUE}Following CLI log file...${NC}"
-        echo -e "${YELLOW}Press Ctrl+C to stop monitoring${NC}"
-        echo ""
-        tail -f "$PROJECT_ROOT/cli/cli.log"
-    else
-        echo -e "${RED}❌ CLI log file not found ($PROJECT_ROOT/cli/cli.log)${NC}"
-        echo -e "${YELLOW}CLI may not have created logs yet${NC}"
-        echo -e "${YELLOW}Try running some CLI commands first${NC}"
-    fi
+    echo -e "${BLUE}📡 CLI logs are now in the separate repository: AI4quantum/maestro-cli${NC}"
+    echo -e "${YELLOW}Please check the maestro-cli repository for CLI logs${NC}"
 }
 
 # Function to tail all logs
@@ -160,9 +142,7 @@ tail_all_logs() {
         log_files+=("$MCP_LOG_FILE")
     fi
     
-    if [ -f "$PROJECT_ROOT/cli/cli.log" ]; then
-        log_files+=("$PROJECT_ROOT/cli/cli.log")
-    fi
+    # CLI logs are now in the separate repository: AI4quantum/maestro-cli
     
     if [ ${#log_files[@]} -gt 0 ]; then
         # Use tail -f with multiple log files

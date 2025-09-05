@@ -668,7 +668,9 @@ class TestMilvusVectorDatabase:
                 db._get_embedding_dimension("custom_local")
 
     @patch("pymilvus.MilvusClient")
-    def test_write_documents_raises_milvus_exception(self, mock_milvus_client):
+    def test_write_documents_raises_milvus_exception(
+        self, mock_milvus_client: MagicMock
+    ) -> None:
         """Test that write_documents raises a MilvusException on client error."""
         mock_client = MagicMock()
         mock_client.insert.side_effect = MilvusException("Insert failed")
@@ -687,7 +689,9 @@ class TestMilvusVectorDatabase:
             db.write_documents(documents)
 
     @patch("pymilvus.MilvusClient")
-    def test_delete_documents_raises_milvus_exception(self, mock_milvus_client):
+    def test_delete_documents_raises_milvus_exception(
+        self, mock_milvus_client: MagicMock
+    ) -> None:
         """Test that delete_documents raises a MilvusException on client error."""
         mock_client = MagicMock()
         mock_client.delete.side_effect = MilvusException("Delete failed")

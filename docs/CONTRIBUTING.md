@@ -103,15 +103,7 @@ maestro-knowledge/
 │   │   ├── mcp_config.json  # MCP client configuration
 │   │   └── README.md        # MCP server documentation
 │   └── vector_db.py         # Vector database compatibility layer
-├── cli/                     # Go CLI tool
-│   ├── src/                 # Go source code
-│   │   ├── main.go          # Main CLI entry point
-│   │   ├── list.go          # List command (plural forms)
-│   │   ├── create.go        # Create command
-│   │   ├── delete.go        # Delete command
-│   │   ├── validate.go      # Validate command
-│   │   └── mcp_client.go    # MCP server client
-│   ├── tests/               # CLI tests
+# CLI tool moved to separate repository: AI4quantum/maestro-cli
 │   ├── examples/            # CLI usage examples
 │   ├── build.sh             # Build script
 │   └── README.md            # CLI documentation
@@ -306,11 +298,13 @@ The CLI uses plural forms for list subcommands:
 
 #### Adding New CLI Commands
 
-1. **Create command file**: Add new command file (e.g., `cli/src/new_command.go`)
+1. **Create command file**: Add new command file (e.g., `src/new_command.go`)
 2. **Define the command**: Use Cobra framework for command definition
-3. **Add to main**: Register the command in `cli/src/main.go`
-4. **Add tests**: Create tests in `cli/tests/`
-5. **Update documentation**: Update `cli/README.md`
+3. **Add to main**: Register the command in `src/main.go`
+4. **Add tests**: Create tests in `tests/`
+5. **Update documentation**: Update `README.md`
+
+**Note**: CLI development is now in the separate repository: AI4quantum/maestro-cli
 
 Example command structure:
 
@@ -676,7 +670,7 @@ The test suite follows the modular structure:
 - **Compatibility tests**: `test_vector_db.py` - Tests for compatibility layer
 - **MCP server tests**: `test_mcp_server.py` - Tests for MCP server functionality
 - **Integration tests**: `test_integration_examples.py` - Tests that validate example files work correctly
-- **CLI tests**: `cli/tests/` - Tests for CLI functionality
+- **CLI tests**: Tests for CLI functionality (now in separate repository: AI4quantum/maestro-cli)
 
 Each test file should:
 - Include appropriate warning filters
