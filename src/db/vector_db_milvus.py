@@ -120,8 +120,9 @@ class MilvusVectorDatabase(VectorDatabase):
             return {}
 
         # Strip leading/trailing quotes that might come from .env files or shell exports
-        if (headers_str.startswith('"') and headers_str.endswith('"')) or \
-           (headers_str.startswith("'") and headers_str.endswith("'")):
+        if (headers_str.startswith('"') and headers_str.endswith('"')) or (
+            headers_str.startswith("'") and headers_str.endswith("'")
+        ):
             headers_str = headers_str[1:-1]
 
         try:
