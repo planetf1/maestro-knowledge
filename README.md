@@ -440,6 +440,16 @@ maestro-knowledge/
 - `OPENAI_API_KEY`: Required for OpenAI embedding models
 - `MAESTRO_KNOWLEDGE_MCP_SERVER_URI`: MCP server URI for CLI tool
 - `MILVUS_URI`: Milvus connection URI. **Important**: Do not use quotes around the URI value in your `.env` file (e.g., `MILVUS_URI=http://localhost:19530` instead of `MILVUS_URI="http://localhost:19530"`).
+- `CUSTOM_EMBEDDING_HEADERS`: Custom headers for your embedding provider when using `embedding: custom_local`.
+  **Important**: Due to shell parsing, the value **must be enclosed in single quotes** in your `.env` file to handle special characters correctly.
+  - **Recommended format (JSON string):**
+    ```
+    CUSTOM_EMBEDDING_HEADERS='{"API_SECRET_KEY": "your-secret-key", "Another-Header": "value"}'
+    ```
+  - **Alternative format (key-value pairs):**
+    ```
+    CUSTOM_EMBEDDING_HEADERS='API_SECRET_KEY=your-secret-key,Another-Header=value'
+    ```
 - Database-specific environment variables for Weaviate and Milvus connections
 
 For detailed environment variable usage in CLI and MCP server, see their respective README files.

@@ -113,6 +113,36 @@ class MilvusVectorDatabase(VectorDatabase):
             if original_milvus_uri:
                 os.environ["MILVUS_URI"] = original_milvus_uri
 
+    def _parse_custom_headers(self) -> dict[str, str]:
+        """Parse CUSTOM_EMBEDDING_HEADERS environment variable into a dictionary."""
+        headers_str = os.getenv("CUSTOM_EMBEDDING_HEADERS")
+        if not headers_str:
+            return {}
+
+        # Strip leading/trailing quotes that might come from .env files or shell exports
+        if (headers_str.startswith('"') and headers_str.endswith('"')) or \
+           (headers_str.startswith("'") and headers_str.endswith("'")):
+            headers_str = headers_str[1:-1]
+
+        try:
+            # Try parsing as JSON first
+            headers = json.loads(headers_str)
+            if isinstance(headers, dict):
+                return headers
+            # If JSON parsing results in a non-dict (e.g. a string),
+            # fall through to key-value parsing.
+        except json.JSONDecodeError:
+            # Not a valid JSON object, so fall back to key=value parsing
+            pass
+
+        headers = {}
+        for item in headers_str.split(","):
+            # Split only on the first '=' to allow for '=' in the value
+            key_value = item.split("=", 1)
+            if len(key_value) == 2:
+                headers[key_value[0].strip()] = key_value[1].strip()
+        return headers
+
     def _generate_embedding(self, text: str, embedding_model: str) -> list[float]:
         """
         Generate embeddings for text using the specified model.
@@ -129,7 +159,6 @@ class MilvusVectorDatabase(VectorDatabase):
 
             client_kwargs = {}
             model_to_use = embedding_model
-
             if embedding_model == "custom_local":
                 custom_endpoint_url = os.getenv("CUSTOM_EMBEDDING_URL")
                 if not custom_endpoint_url:
@@ -144,6 +173,11 @@ class MilvusVectorDatabase(VectorDatabase):
                     raise ValueError(
                         "CUSTOM_EMBEDDING_MODEL must be set for 'custom_local' embedding."
                     )
+
+                # Add custom headers if available
+                custom_headers = self._parse_custom_headers()
+                if custom_headers:
+                    client_kwargs["default_headers"] = custom_headers
             else:
                 # Get OpenAI API key from environment
                 api_key = os.getenv("OPENAI_API_KEY")
@@ -157,6 +191,7 @@ class MilvusVectorDatabase(VectorDatabase):
                     model_to_use = "text-embedding-ada-002"
 
             client = openai.OpenAI(**client_kwargs)
+
             response = client.embeddings.create(model=model_to_use, input=text)
 
             return response.data[0].embedding

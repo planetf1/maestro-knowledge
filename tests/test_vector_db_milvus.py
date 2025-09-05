@@ -668,7 +668,9 @@ class TestMilvusVectorDatabase:
                 db._get_embedding_dimension("custom_local")
 
     @patch("pymilvus.MilvusClient")
-    def test_write_documents_raises_milvus_exception(self, mock_milvus_client):
+    def test_write_documents_raises_milvus_exception(
+        self, mock_milvus_client: MagicMock
+    ) -> None:
         """Test that write_documents raises a MilvusException on client error."""
         mock_client = MagicMock()
         mock_client.insert.side_effect = MilvusException("Insert failed")
@@ -687,7 +689,9 @@ class TestMilvusVectorDatabase:
             db.write_documents(documents)
 
     @patch("pymilvus.MilvusClient")
-    def test_delete_documents_raises_milvus_exception(self, mock_milvus_client):
+    def test_delete_documents_raises_milvus_exception(
+        self, mock_milvus_client: MagicMock
+    ) -> None:
         """Test that delete_documents raises a MilvusException on client error."""
         mock_client = MagicMock()
         mock_client.delete.side_effect = MilvusException("Delete failed")
@@ -696,6 +700,57 @@ class TestMilvusVectorDatabase:
         db.client = mock_client  # Directly set the client for the test
         with pytest.raises(MilvusException, match="Delete failed"):
             db.delete_documents(["1"])
+
+    def test_parse_custom_headers(self) -> None:
+        """Test the _parse_custom_headers method with various formats."""
+        db = MilvusVectorDatabase()
+
+        # Test case 1: No environment variable set
+        with patch.dict(os.environ, {}, clear=True):
+            assert db._parse_custom_headers() == {}
+
+        # Test case 2: Simple key-value string
+        with patch.dict(os.environ, {"CUSTOM_EMBEDDING_HEADERS": "KEY=VALUE"}):
+            assert db._parse_custom_headers() == {"KEY": "VALUE"}
+
+        # Test case 3: Multiple key-value pairs
+        with patch.dict(
+            os.environ, {"CUSTOM_EMBEDDING_HEADERS": "KEY1=VALUE1,KEY2=VALUE2"}
+        ):
+            assert db._parse_custom_headers() == {"KEY1": "VALUE1", "KEY2": "VALUE2"}
+
+        # Test case 4: Key-value with equals sign in value
+        with patch.dict(
+            os.environ, {"CUSTOM_EMBEDDING_HEADERS": "KEY=VALUE_WITH_EQUALS="}
+        ):
+            assert db._parse_custom_headers() == {"KEY": "VALUE_WITH_EQUALS="}
+
+        # Test case 5: Simple JSON string
+        with patch.dict(os.environ, {"CUSTOM_EMBEDDING_HEADERS": '{"KEY": "VALUE"}'}):
+            assert db._parse_custom_headers() == {"KEY": "VALUE"}
+
+        # Test case 6: JSON string with multiple values
+        with patch.dict(
+            os.environ,
+            {"CUSTOM_EMBEDDING_HEADERS": '{"KEY1": "VALUE1", "KEY2": "VALUE2"}'},
+        ):
+            assert db._parse_custom_headers() == {"KEY1": "VALUE1", "KEY2": "VALUE2"}
+
+        # Test case 7: Key-value string with surrounding quotes to be stripped
+        with patch.dict(os.environ, {"CUSTOM_EMBEDDING_HEADERS": '"KEY=VALUE"'}):
+            assert db._parse_custom_headers() == {"KEY": "VALUE"}
+        with patch.dict(os.environ, {"CUSTOM_EMBEDDING_HEADERS": "'KEY=VALUE'"}):
+            assert db._parse_custom_headers() == {"KEY": "VALUE"}
+
+        # Test case 8: Key-value with spaces
+        with patch.dict(os.environ, {"CUSTOM_EMBEDDING_HEADERS": "  KEY = VALUE  "}):
+            assert db._parse_custom_headers() == {"KEY": "VALUE"}
+
+        # Test case 9: JSON that is not a dictionary (should be ignored)
+        with patch.dict(os.environ, {"CUSTOM_EMBEDDING_HEADERS": '"just a string"'}):
+            # This is valid JSON (a string), but not a dict, so our parser should fall back
+            # to key-value parsing, which will fail and return an empty dict.
+            assert db._parse_custom_headers() == {}
 
 
 if __name__ == "__main__":

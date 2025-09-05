@@ -201,7 +201,9 @@ start_http_server() {
     # Load .env file if it exists
     if [ -f "$SCRIPT_DIR/.env" ]; then
         print_status "Loading environment variables from .env file..."
-        export $(grep -v '^#' "$SCRIPT_DIR/.env" | xargs)
+        set -o allexport
+        source "$SCRIPT_DIR/.env"
+        set +o allexport
     fi
 
     if [ -n "$CUSTOM_EMBEDDING_URL" ]; then
@@ -254,7 +256,9 @@ start_stdio_server() {
     # Load .env file if it exists
     if [ -f "$SCRIPT_DIR/.env" ]; then
         print_status "Loading environment variables from .env file..."
-        export $(grep -v '^#' "$SCRIPT_DIR/.env" | xargs)
+        set -o allexport
+        source "$SCRIPT_DIR/.env"
+        set +o allexport
     fi
     
     # Test module import
