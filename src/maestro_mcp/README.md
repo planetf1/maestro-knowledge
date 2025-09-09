@@ -356,6 +356,16 @@ The server respects the following environment variables:
 - `CUSTOM_EMBEDDING_API_KEY`: The API key for the custom embedding endpoint (optional, but recommended for authentication).
 - `CUSTOM_EMBEDDING_MODEL`: The model name for the custom embedding endpoint (required for `custom_local` embedding for Milvus).
 - `CUSTOM_EMBEDDING_VECTORSIZE`: The vector dimension for the `custom_local` embedding model (required when using `custom_local`).
+- `CUSTOM_EMBEDDING_HEADERS`: Custom headers for your embedding provider when using `embedding: custom_local`.
+  **Important**: Due to shell parsing, the value **must be enclosed in single quotes** in your `.env` file to handle special characters correctly.
+  - **Recommended format (JSON string):**
+    ```
+    CUSTOM_EMBEDDING_HEADERS='{"API_SECRET_KEY": "your-secret-key", "Another-Header": "value"}'
+    ```
+  - **Alternative format (key-value pairs):**
+    ```
+    CUSTOM_EMBEDDING_HEADERS='API_SECRET_KEY=your-secret-key,Another-Header=value'
+    ```
 - Database-specific environment variables for Weaviate and Milvus connections
 
 ## Error Handling
