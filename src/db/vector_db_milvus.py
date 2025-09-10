@@ -1041,7 +1041,7 @@ class MilvusVectorDatabase(VectorDatabase):
                 "metadata": {"error": str(e)},
             }
 
-    async def delete_documents(self, document_ids: List[str]) -> None:
+    async def delete_documents(self, document_ids: list[str]) -> None:
         """Delete documents from Milvus by their IDs."""
         self._ensure_client()
         if self.client is None:
