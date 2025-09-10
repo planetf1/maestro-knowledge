@@ -710,11 +710,11 @@ class TestMilvusVectorDatabase:
 
     @pytest.mark.asyncio
     @patch("pymilvus.AsyncMilvusClient")
-    def test_write_documents_raises_milvus_exception(
+    async def test_write_documents_raises_milvus_exception(
         self, mock_milvus_client: AsyncMock
     ) -> None:
         """Test that write_documents raises a MilvusException on client error."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.insert.side_effect = MilvusException("Insert failed")
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
@@ -728,21 +728,21 @@ class TestMilvusVectorDatabase:
             }
         ]
         with pytest.raises(MilvusException, match="Insert failed"):
-            db.write_documents(documents)
+            await db.write_documents(documents)
 
     @pytest.mark.asyncio
     @patch("pymilvus.AsyncMilvusClient")
-    def test_delete_documents_raises_milvus_exception(
+    async def test_delete_documents_raises_milvus_exception(
         self, mock_milvus_client: AsyncMock
     ) -> None:
         """Test that delete_documents raises a MilvusException on client error."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.delete.side_effect = MilvusException("Delete failed")
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
         db.client = mock_client  # Directly set the client for the test
         with pytest.raises(MilvusException, match="Delete failed"):
-            db.delete_documents(["1"])
+            await db.delete_documents(["1"])
 
     def test_parse_custom_headers(self) -> None:
         """Test the _parse_custom_headers method with various formats."""
