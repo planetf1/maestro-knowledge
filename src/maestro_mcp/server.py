@@ -1087,7 +1087,7 @@ async def main() -> None:
 async def run_http_server(host: str = "localhost", port: int = 8030) -> None:
     """Run the MCP server with HTTP interface."""
     # Create the MCP server
-    mcp_app = create_mcp_server()
+    mcp_app = await create_mcp_server()
 
     print(f"Starting FastMCP HTTP server on http://{host}:{port}")
     print(f"Open your browser to http://{host}:{port} to access the MCP server")

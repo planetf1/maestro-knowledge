@@ -525,7 +525,6 @@ class WeaviateVectorDatabase(VectorDatabase):
 
     async def count_documents(self) -> int:
         """Get the current count of documents in the collection."""
-        # collection = await self.client.collections.get(self.collection_name)
         collection = await self.client.collections.get(self.collection_name)
 
         # Query to get the count - use a simple approach
