@@ -766,7 +766,7 @@ class WeaviateVectorDatabase(VectorDatabase):
                 "metadata": {"error": str(e)},
             }
 
-    async def delete_documents(self, document_ids: list[str]):
+    async def delete_documents(self, document_ids: list[str]) -> None:
         """Delete documents from Weaviate by their IDs."""
         collection = await self.client.collections.get(self.collection_name)
 

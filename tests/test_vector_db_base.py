@@ -20,7 +20,7 @@ import sys
 import os
 import pytest
 import asyncio
-from typing import Dict, Any
+from typing import Any
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

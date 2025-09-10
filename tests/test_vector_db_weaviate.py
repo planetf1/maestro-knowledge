@@ -354,7 +354,9 @@ class TestWeaviateVectorDatabase:
 
     # per-document embedding isn't consistent with vector search - removed (api kept for compatibility)
     @pytest.mark.asyncio
-    async def test_write_documents_ignores_per_write_embedding_with_warning(self) -> None:
+    async def test_write_documents_ignores_per_write_embedding_with_warning(
+        self,
+    ) -> None:
         """When collection embedding is set, per-write embedding should be ignored and warn (Weaviate)."""
         with (
             patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
