@@ -223,7 +223,7 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    async def delete_documents(self, document_ids: List[str]) -> None:
+    async def delete_documents(self, document_ids: list[str]) -> None:
         """
         Delete documents from the vector database by their IDs.
 
