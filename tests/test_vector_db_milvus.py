@@ -708,7 +708,8 @@ class TestMilvusVectorDatabase:
             ):
                 db._get_embedding_dimension("custom_local")
 
-    @patch("pymilvus.MilvusClient")
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
     def test_write_documents_raises_milvus_exception(
         self, mock_milvus_client: MagicMock
     ) -> None:
@@ -729,7 +730,8 @@ class TestMilvusVectorDatabase:
         with pytest.raises(MilvusException, match="Insert failed"):
             db.write_documents(documents)
 
-    @patch("pymilvus.MilvusClient")
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
     def test_delete_documents_raises_milvus_exception(
         self, mock_milvus_client: MagicMock
     ) -> None:
