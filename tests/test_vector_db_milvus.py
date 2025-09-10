@@ -711,7 +711,7 @@ class TestMilvusVectorDatabase:
     @pytest.mark.asyncio
     @patch("pymilvus.AsyncMilvusClient")
     def test_write_documents_raises_milvus_exception(
-        self, mock_milvus_client: MagicMock
+        self, mock_milvus_client: AsyncMock
     ) -> None:
         """Test that write_documents raises a MilvusException on client error."""
         mock_client = MagicMock()
@@ -733,7 +733,7 @@ class TestMilvusVectorDatabase:
     @pytest.mark.asyncio
     @patch("pymilvus.AsyncMilvusClient")
     def test_delete_documents_raises_milvus_exception(
-        self, mock_milvus_client: MagicMock
+        self, mock_milvus_client: AsyncMock
     ) -> None:
         """Test that delete_documents raises a MilvusException on client error."""
         mock_client = MagicMock()
