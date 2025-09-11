@@ -306,7 +306,7 @@ class MilvusVectorDatabase(VectorDatabase):
             try:
                 # Use the target collection (not the object's default) when describing
                 info = await self.client.describe_collection(target_collection)
-                for field in await info.get("fields", []):
+                for field in info.get("fields", []):
                     if field.get("name") == "vector":
                         existing_dim = field.get("params", {}).get("dim")
                         if existing_dim != self.dimension:
