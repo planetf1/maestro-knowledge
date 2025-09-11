@@ -77,7 +77,7 @@ class VectorDatabase(ABC):
         """
         pass
 
-    def write_documents_to_collection(
+    async def write_documents_to_collection(
         self,
         documents: list[dict[str, Any]],
         collection_name: str,
@@ -91,9 +91,9 @@ class VectorDatabase(ABC):
                        For Milvus, documents may also include a 'vector' field.
             collection_name: Name of the collection to write to
         """
-        return self.write_documents(documents, embedding, collection_name)
+        return await self.write_documents(documents, embedding, collection_name)
 
-    def write_document(
+    async def write_document(
         self,
         document: dict[str, Any],
         embedding: str = "default",
@@ -107,7 +107,7 @@ class VectorDatabase(ABC):
                      For Milvus, document may also include a 'vector' field.
             collection_name: Name of the collection to write to (optional)
         """
-        return self.write_documents([document], embedding, collection_name)
+        return await self.write_documents([document], embedding, collection_name)
 
     @abstractmethod
     async def list_documents(

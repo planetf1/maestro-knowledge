@@ -621,7 +621,7 @@ async def create_mcp_server() -> FastMCP:
         collection_embedding = (coll_info or {}).get("embedding", "default")
         stats = None
         try:
-            stats = db.write_document(document, embedding=collection_embedding)
+            stats = await db.write_document(document, embedding=collection_embedding)
         except Exception as e:
             return json.dumps(
                 {
@@ -777,7 +777,7 @@ async def create_mcp_server() -> FastMCP:
     async def delete_documents(input: DeleteDocumentsInput) -> str:
         """Delete documents from a vector database by their IDs."""
         db = get_database_by_name(input.db_name)
-        db.delete_documents(input.document_ids)
+        await db.delete_documents(input.document_ids)
 
         return f"Successfully deleted {len(input.document_ids)} documents from vector database '{input.db_name}'"
 
@@ -785,7 +785,7 @@ async def create_mcp_server() -> FastMCP:
     async def delete_document(input: DeleteDocumentInput) -> str:
         """Delete a single document from a vector database."""
         db = get_database_by_name(input.db_name)
-        db.delete_document(input.document_id)
+        await db.delete_document(input.document_id)
 
         return f"Successfully deleted document '{input.document_id}' from vector database '{input.db_name}'"
 
@@ -809,7 +809,7 @@ async def create_mcp_server() -> FastMCP:
 
         try:
             # List documents to find the one with the matching name
-            documents = db.list_documents(
+            documents = await db.list_documents(
                 limit=1000, offset=0
             )  # Get all documents to search by name
             document_id = None
@@ -825,7 +825,7 @@ async def create_mcp_server() -> FastMCP:
                 )
 
             # Delete the document
-            db.delete_document(document_id)
+            await db.delete_document(document_id)
 
             return f"Successfully deleted document '{input.doc_name}' from collection '{input.collection_name}' in vector database '{input.db_name}'"
         finally:
@@ -846,7 +846,7 @@ async def create_mcp_server() -> FastMCP:
 
         try:
             # Get the document using the new get_document method
-            document = db.get_document(input.doc_name, input.collection_name)
+            document = await db.get_document(input.doc_name, input.collection_name)
             return f"Document '{input.doc_name}' from collection '{input.collection_name}' in vector database '{input.db_name}':\n{json.dumps(document, indent=2, default=str)}"
         except ValueError as e:
             # Re-raise ValueError as is (these are user-friendly error messages)
@@ -906,7 +906,7 @@ async def create_mcp_server() -> FastMCP:
             "name": input.db_name,
             "type": db.db_type,
             "collection": db.collection_name,
-            "document_count": db.count_documents(),
+            "document_count": await db.count_documents(),
         }
 
         return (
@@ -995,7 +995,7 @@ async def create_mcp_server() -> FastMCP:
         """Query a vector database using the default query agent."""
         try:
             db = get_database_by_name(input.db_name)
-            response = db.query(
+            response = await db.query(
                 input.query, limit=input.limit, collection_name=input.collection_name
             )
             return response
@@ -1009,7 +1009,7 @@ async def create_mcp_server() -> FastMCP:
         """Search a vector database using vector similarity search."""
         try:
             db = get_database_by_name(input.db_name)
-            response = db.search(
+            response = await db.search(
                 input.query, limit=input.limit, collection_name=input.collection_name
             )
             return response
@@ -1081,7 +1081,7 @@ async def create_mcp_server() -> FastMCP:
 async def main() -> None:
     """Main entry point for the MCP server."""
     app = await create_mcp_server()
-    await app.run()
+    app.run()
 
 
 async def run_http_server(host: str = "localhost", port: int = 8030) -> None:

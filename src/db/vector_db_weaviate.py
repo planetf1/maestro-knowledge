@@ -343,7 +343,7 @@ class WeaviateVectorDatabase(VectorDatabase):
             "duration_ms": total_duration_ms,
         }
 
-    def write_documents_to_collection(
+    async def write_documents_to_collection(
         self,
         documents: list[dict[str, Any]],
         collection_name: str,
@@ -359,7 +359,7 @@ class WeaviateVectorDatabase(VectorDatabase):
                       - "default": Use Weaviate's default text2vec-weaviate
                       - Specific model name: Use the specified embedding model
         """
-        return self.write_documents(documents, embedding, collection_name)
+        return await self.write_documents(documents, embedding, collection_name)
 
     async def list_documents(
         self, limit: int = 10, offset: int = 0
