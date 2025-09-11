@@ -73,6 +73,7 @@ class TestMilvusVectorDatabase:
     async def test_setup_collection_exists(self, mock_milvus_client: AsyncMock) -> None:
         mock_client = AsyncMock()
         mock_client.has_collection = AsyncMock(return_value=True)
+        mock_client.describe_collection = AsyncMock(return_value={"fields": []})
 
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
@@ -158,6 +159,7 @@ class TestMilvusVectorDatabase:
         """Write path should NOT attach chunking policy into per-chunk metadata (kept at collection level)."""
         mock_client = AsyncMock()
         mock_milvus_client.return_value = mock_client
+        mock_client.describe_collection = AsyncMock(return_value={"fields": []})
 
         db = MilvusVectorDatabase("ChunkCol")
         # Configure collection chunking
@@ -211,7 +213,7 @@ class TestMilvusVectorDatabase:
         mock_client = AsyncMock()
         mock_client.has_collection = AsyncMock(return_value=True)
         mock_client.get_collection_stats.return_value = {"row_count": 0}
-        mock_desc = AsyncMock()
+        mock_desc = MagicMock()
         mock_desc.fields = []
         mock_client.describe_collection.return_value = mock_desc
         mock_milvus_client.return_value = mock_client
@@ -475,7 +477,7 @@ class TestMilvusVectorDatabase:
         mock_client.has_collection = AsyncMock(return_value=True)
         mock_client.get_collection_stats.return_value = {"row_count": 7}
         # describe_collection returns an object with attributes used by code
-        mock_desc = AsyncMock()
+        mock_desc = MagicMock()
         mock_desc.fields = []
         mock_desc.description = "Test collection"
         mock_client.describe_collection.return_value = mock_desc
