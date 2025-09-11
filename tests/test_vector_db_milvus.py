@@ -365,7 +365,7 @@ class TestMilvusVectorDatabase:
     @pytest.mark.asyncio
     @patch("pymilvus.AsyncMilvusClient")
     async def test_count_documents(self, mock_milvus_client: AsyncMock) -> None:
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.get_collection_stats.return_value = {"row_count": 5}
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()

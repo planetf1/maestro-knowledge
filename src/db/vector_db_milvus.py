@@ -672,7 +672,7 @@ class MilvusVectorDatabase(VectorDatabase):
 
         try:
             # Get collection statistics
-            stats = self.client.get_collection_stats(self.collection_name)
+            stats = await self.client.get_collection_stats(self.collection_name)
             return stats.get("row_count", 0)
         except Exception as e:
             warnings.warn(f"Could not get collection stats: {e}")
