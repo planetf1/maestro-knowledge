@@ -740,7 +740,7 @@ async def create_mcp_server() -> FastMCP:
     async def list_documents(input: ListDocumentsInput) -> str:
         """List documents from a vector database."""
         db = get_database_by_name(input.db_name)
-        documents = db.list_documents(input.limit, input.offset)
+        documents = await db.list_documents(input.limit, input.offset)
 
         return f"Found {len(documents)} documents in vector database '{input.db_name}':\n{json.dumps(documents, indent=2, default=str)}"
 
