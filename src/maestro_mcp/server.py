@@ -404,7 +404,7 @@ async def create_mcp_server() -> FastMCP:
                     "name": db_name,
                     "type": db.db_type,
                     "collection": db.collection_name,
-                    "document_count": db.count_documents(),
+                    "document_count": await db.count_documents(),
                 }
             )
         return PlainTextResponse(
