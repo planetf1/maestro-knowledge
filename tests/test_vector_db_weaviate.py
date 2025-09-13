@@ -269,7 +269,7 @@ class TestWeaviateVectorDatabase:
         ):
             mock_client = AsyncMock()
             mock_collection = AsyncMock()
-            mock_batch = AsyncMock()
+            mock_batch = MagicMock()
             mock_batch_context = AsyncMock()
 
             mock_client.collections.exists = AsyncMock(return_value=True)
@@ -318,7 +318,7 @@ class TestWeaviateVectorDatabase:
         ):
             mock_client = AsyncMock()
             mock_collection = AsyncMock()
-            mock_batch = AsyncMock()
+            mock_batch = MagicMock()
             mock_batch_context = AsyncMock()
 
             mock_client.collections.exists = AsyncMock(return_value=False)
@@ -370,7 +370,7 @@ class TestWeaviateVectorDatabase:
         ):
             mock_client = AsyncMock()
             mock_collection = AsyncMock()
-            mock_batch = AsyncMock()
+            mock_batch = MagicMock()
             mock_batch_context = AsyncMock()
 
             mock_client.collections.exists = AsyncMock(return_value=True)
