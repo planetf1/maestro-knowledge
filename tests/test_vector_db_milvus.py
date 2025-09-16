@@ -629,6 +629,7 @@ class TestMilvusVectorDatabase:
 
     @pytest.mark.asyncio
     @patch("pymilvus.AsyncMilvusClient")
+    @pytest.mark.filterwarnings("ignore:Failed to connect to Milvus")
     async def test_get_document_no_client(self, mock_milvus_client: AsyncMock) -> None:
         """Test getting a document when client is not available."""
         mock_milvus_client.side_effect = Exception("Connection failed")
