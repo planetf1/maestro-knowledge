@@ -63,16 +63,37 @@ async def resync_vector_databases() -> list[str]:
             # Import here to avoid optional-dependency import at module load time
             from ..db.vector_db_milvus import MilvusVectorDatabase
 
-        # Create a temporary Milvus handle to list collections
-        temp = MilvusVectorDatabase()
-        temp._ensure_client()
-        if temp.client is None:
-            logger.info("Milvus client not available during resync; skipping resync")
-            return added
-
+        # Add timeout protection for the entire resync operation
+        timeout_seconds = int(os.getenv("MILVUS_RESYNC_TIMEOUT", "15"))
+        
         try:
-            collections = await temp.list_collections() or []
+            # Create a temporary Milvus handle to list collections with timeout
+            temp = MilvusVectorDatabase()
+            temp._ensure_client()
+            if temp.client is None:
+                logger.info("Milvus client not available during resync; skipping resync")
+                return added
+
+            # List collections with timeout protection and proper task cleanup
+            list_task = asyncio.create_task(temp.list_collections())
+            try:
+                collections = await asyncio.wait_for(list_task, timeout=timeout_seconds)
+                collections = collections or []
+            except asyncio.TimeoutError:
+                logger.warning(f"Milvus resync timed out after {timeout_seconds} seconds")
+                # Properly cancel the task to avoid orphaned futures
+                list_task.cancel()
+                try:
+                    await list_task
+                except asyncio.CancelledError:
+                    pass  # Expected when we cancel
+                return added
+        except asyncio.TimeoutError:
+            logger.warning(f"Milvus resync timed out after {timeout_seconds} seconds")
+            return added
         except Exception as e:
+            logger.warning(f"Failed to connect to Milvus during resync: {e}")
+            return added
             logger.warning(f"Failed to list Milvus collections during resync: {e}")
             return added
 
@@ -153,18 +174,44 @@ async def resync_weaviate_databases() -> list[str]:
     try:
         # Import lazily to avoid mandatory dependency when Weaviate isn't used
         from ..db.vector_db_weaviate import WeaviateVectorDatabase
-
-        # Attempt to create a temporary client; this will raise if env is missing
-        temp = WeaviateVectorDatabase()
+        
+        # Add timeout protection for the entire resync operation
+        timeout_seconds = int(os.getenv("WEAVIATE_RESYNC_TIMEOUT", "10"))
+        
+        # Attempt to create a temporary client with timeout protection
+        temp = None
         try:
-            collections = await temp.list_collections() or []
+            # WeaviateVectorDatabase constructor is synchronous but may hang on client creation
+            # Wrap it in an executor with timeout
+            loop = asyncio.get_event_loop()
+            temp = await asyncio.wait_for(
+                loop.run_in_executor(None, WeaviateVectorDatabase),
+                timeout=timeout_seconds
+            )
+        except asyncio.TimeoutError:
+            logger.warning(f"Weaviate client creation timed out after {timeout_seconds} seconds")
+            return added
+        except Exception as e:
+            logger.warning(f"Failed to create Weaviate client during resync: {e}")
+            return added
+            
+        try:
+            collections = await asyncio.wait_for(
+                temp.list_collections(),
+                timeout=timeout_seconds
+            )
+            collections = collections or []
+        except asyncio.TimeoutError:
+            logger.warning(f"Weaviate collection listing timed out after {timeout_seconds} seconds")
+            return added
         except Exception as e:
             logger.warning(f"Failed to list Weaviate collections during resync: {e}")
             return added
         finally:
             # Close the temporary connection to avoid resource warnings/leaks
             try:
-                await temp.cleanup()
+                if temp:
+                    await temp.cleanup()
             except Exception:
                 pass
 

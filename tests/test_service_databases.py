@@ -20,8 +20,7 @@ class TestMCPServerServiceIntegration:
         return bool(os.getenv("MILVUS_URI") or os.getenv("MILVUS_HOST"))
 
     def _check_weaviate_available(self) -> bool:
-        """Check if Weaviate is available for testing."""
-        # Check if Weaviate environment variables are set  
+        """Check if Weaviate environment variables are set."""
         return bool(os.getenv("WEAVIATE_URL") and os.getenv("WEAVIATE_API_KEY"))
 
     @pytest.mark.service

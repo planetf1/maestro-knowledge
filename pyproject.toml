@@ -44,6 +44,8 @@ filterwarnings = [
     "ignore::UserWarning:src.db.vector_db_weaviate",
     # Suppress AsyncMock garbage collection warnings - these are harmless but noisy
     "ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited:RuntimeWarning",
+    # Suppress asyncio loop warnings from cancelled database operations - these occur during timeout handling
+    "ignore:.*got Future.*attached to a different loop:UserWarning",
 ]
 # Enable async test support
 asyncio_mode = "auto"
