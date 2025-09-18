@@ -23,7 +23,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 import os
 import sys
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, Mock, patch, AsyncMock
 from typing import Any
 
 import pytest
@@ -703,9 +703,15 @@ class TestWeaviateVectorDatabase:
             mock_connect.return_value = mock_client
             mock_collection = AsyncMock()
             mock_client.collections.exists = AsyncMock(return_value=True)
-            mock_client.collections.get.return_value = mock_collection
-            # config.get returns an object with attributes used in code
-            mock_cfg = AsyncMock()
+            mock_client.collections.get = AsyncMock(return_value=mock_collection)  # This should be AsyncMock since it's awaited
+            
+            # Mock the query.fetch_objects method that's called in get_collection_info
+            mock_result = Mock()
+            mock_result.objects = [Mock(), Mock()]  # Simulate 2 documents
+            mock_collection.query.fetch_objects = AsyncMock(return_value=mock_result)
+            
+            # config.get returns an object with attributes used in code (non-async)
+            mock_cfg = Mock()  # Changed from AsyncMock to Mock since it's not awaited
             mock_cfg.description = "Test collection"
             mock_cfg.vectorizer = "text2vec-openai"
             mock_cfg.properties = []
