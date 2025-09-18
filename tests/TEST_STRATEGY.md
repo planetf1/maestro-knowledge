@@ -169,32 +169,129 @@ uv run pytest -m "unit" -v
 
 ## Environment Setup for Service Tests
 
+### Working Database Combinations
+
+| **Milvus** | **Weaviate** | **Status** | **Setup Time** | **Use Case** |
+|------------|--------------|------------|----------------|--------------|
+| ✅ Local File | ❌ None | ✅ **WORKS** | ~20s | **Development/CI** |
+| ✅ Local File | ✅ Container | ✅ **WORKS** | ~19s | **Full Testing** |
+| ❌ Fake URLs | ❌ Fake URLs | ✅ **WORKS** | ~8s | **Timeout Testing** |
+| ❌ Container | ✅ Container | ❌ **BROKEN** | N/A | Container issues |
+
 ### Milvus Setup
+
+**✅ Option 1: Local File Database (RECOMMENDED)**
 ```bash
-# Using Docker
+# No container needed - uses local file
+# Milvus Lite automatically creates a local database file
+unset MILVUS_URI  # Uses default: milvus_demo.db
+
+# Optional: Use custom file location
+export MILVUS_URI="./my_test.db"
+
+# Optional: Set timeout for operations
+export MILVUS_TIMEOUT=10
+export MILVUS_RESYNC_TIMEOUT=15
+```
+
+**❌ Option 2: Docker Container (CURRENTLY BROKEN)**
+```bash
+# Known Issue: Milvus container has startup problems
+# These commands currently fail with "exec standalone failed"
+
+# Doesn't work:
 docker run -d --name milvus-standalone \
   -p 19530:19530 \
   -e ETCD_USE_EMBED=true \
   milvusdb/milvus:latest standalone
 
-# Set environment variables
+# Also doesn't work:
+docker run -d --name milvus-lite \
+  -p 19530:19530 \
+  milvusdb/milvus:latest
+
+# Set environment variables (if container worked)
 export MILVUS_URI="http://localhost:19530"
 ```
 
 ### Weaviate Setup
+
+**✅ Container Mode (WORKING)**
 ```bash
-# Using Docker
+# Using Docker/Podman
 docker run -d \
-  --name weaviate \
+  --name weaviate-test \
   -p 8080:8080 \
   -e QUERY_DEFAULTS_LIMIT=25 \
   -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true \
+  -e PERSISTENCE_DATA_PATH='/var/lib/weaviate' \
+  -e DEFAULT_VECTORIZER_MODULE='none' \
+  -e ENABLE_MODULES='text2vec-openai,text2vec-cohere,text2vec-huggingface,ref2vec-centroid,generative-openai,qna-openai' \
+  -e CLUSTER_HOSTNAME='node1' \
   semitechnologies/weaviate:latest
 
 # Set environment variables
 export WEAVIATE_URL="http://localhost:8080"
-export WEAVIATE_API_KEY="your-api-key"
+export WEAVIATE_API_KEY="test-key"  # Any value works with anonymous access
+export WEAVIATE_RESYNC_TIMEOUT=10
 ```
+
+### Recommended Configurations
+
+**🎯 Quick Development Testing:**
+```bash
+# Local Milvus only - fastest setup
+unset MILVUS_URI WEAVIATE_URL WEAVIATE_API_KEY
+./test.sh service  # ~20s, no containers
+```
+
+**🎯 Complete Service Testing:**
+```bash
+# Local Milvus + Containerized Weaviate
+podman run -d --name weaviate-test -p 8080:8080 [full-weaviate-command]
+unset MILVUS_URI  # Use local file
+export WEAVIATE_URL="http://localhost:8080"
+export WEAVIATE_API_KEY="test-key"
+./test.sh service  # ~19s
+```
+
+**🎯 Timeout/Robustness Testing:**
+```bash
+# Test with unreachable databases
+export MILVUS_URI="http://fake:19530"
+export WEAVIATE_URL="http://fake:8080"
+export WEAVIATE_API_KEY="fake"
+export MILVUS_RESYNC_TIMEOUT=3
+export WEAVIATE_RESYNC_TIMEOUT=3
+./test.sh service  # ~8s, tests timeout handling
+```
+
+### Verification Commands
+```bash
+# Check containers are running
+docker ps | grep -E "(milvus|weaviate)"
+
+# Test Weaviate API
+curl http://localhost:8080/v1/meta
+
+# Test Milvus (if using container)
+curl http://localhost:19530/health  # May not work - Milvus uses gRPC
+
+# Run service tests
+./test.sh service
+```
+
+### Troubleshooting
+
+**Milvus Issues:**
+- If container fails with "exec standalone failed", try without the `standalone` argument
+- For simple testing, use local file option (no container needed)
+- Local files are created automatically in the working directory
+
+**Weaviate Issues:**  
+- If you see "Invalid port" errors, ensure URL format is exactly `http://localhost:8080`
+- Anonymous access must be enabled for tests to work
+- Container needs a few seconds to start up completely
 
 ## Enhanced Test.sh Script Usage
 

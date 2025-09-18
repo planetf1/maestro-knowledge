@@ -542,6 +542,9 @@ class WeaviateVectorDatabase(VectorDatabase):
     async def list_collections(self) -> list[str]:
         """List all collections in Weaviate."""
         try:
+            # Ensure client is connected
+            await self.client.connect()
+            
             # Get all collections from the client
             collections = await self.client.collections.list_all()
 
