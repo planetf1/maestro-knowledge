@@ -7,8 +7,59 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  test:
+  # Fast feedback job - runs first for quick results
+  fast-tests:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]  # Reduced for speed
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          .uv/cache
+        key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml', '**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-
+
+    - name: Create virtual environment
+      run: |
+        rm -rf .venv
+        uv venv
+
+    - name: Install dependencies
+      run: |
+        uv sync
+
+    - name: Run fast tests (unit + integration)
+      run: |
+        ./test.sh fast
+
+    - name: Upload fast test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: fast-test-results-${{ matrix.python-version }}
+        path: |
+          .pytest_cache/
+        retention-days: 7
+
+  # Comprehensive test job
+  comprehensive-tests:
+    runs-on: ubuntu-latest
+    needs: fast-tests  # Run after fast tests pass
     strategy:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
@@ -35,7 +86,6 @@ jobs:
 
     - name: Create virtual environment
       run: |
-        # Remove any existing broken virtual environment
         rm -rf .venv
         uv venv
 
@@ -43,7 +93,7 @@ jobs:
       run: |
         uv sync
 
-    - name: Run tests
+    - name: Run all tests
       run: |
         ./test.sh mcp
 
@@ -57,8 +107,10 @@ jobs:
           htmlcov/
         retention-days: 7
 
-  test-with-dependencies:
+  # Service test validation (timeout protection)
+  service-tests:
     runs-on: ubuntu-latest
+    needs: fast-tests
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -79,32 +131,36 @@ jobs:
       with:
         path: |
           .uv/cache
-        key: ${{ runner.os }}-uv-deps-${{ hashFiles('**/pyproject.toml', '**/requirements.txt') }}
+        key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml', '**/requirements.txt') }}
         restore-keys: |
-          ${{ runner.os }}-uv-deps-
+          ${{ runner.os }}-uv-
 
     - name: Create virtual environment
       run: |
-        # Remove any existing broken virtual environment
         rm -rf .venv
         uv venv
 
-    - name: Install dependencies with optional packages
+    - name: Install dependencies
       run: |
         uv sync
 
-    - name: Run tests with all dependencies
+    - name: Test service timeout protection
       run: |
-        ./test.sh mcp
+        # Test that service tests handle unreachable databases gracefully
+        export MILVUS_URI="http://fake-server:19530"
+        export WEAVIATE_URL="http://fake-weaviate:8080" 
+        export WEAVIATE_API_KEY="fake-key"
+        export MILVUS_RESYNC_TIMEOUT=3
+        export WEAVIATE_RESYNC_TIMEOUT=3
+        timeout 30s ./test.sh service
 
-    - name: Upload test results with deps
+    - name: Upload service test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: test-results-with-deps-${{ matrix.python-version }}
+        name: service-test-results
         path: |
           .pytest_cache/
-          htmlcov/
         retention-days: 7
 
   lint:
@@ -135,7 +191,6 @@ jobs:
 
     - name: Create virtual environment
       run: |
-        # Remove any existing broken virtual environment
         rm -rf .venv
         uv venv
 
@@ -176,7 +231,6 @@ jobs:
 
     - name: Create virtual environment
       run: |
-        # Remove any existing broken virtual environment
         rm -rf .venv
         uv venv
 
