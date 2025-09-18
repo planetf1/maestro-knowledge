@@ -88,9 +88,13 @@ class TestQueryIntegration:
             assert mcp_server is not None, "MCP server should be created"
 
             # Test QueryInput with different database names
-            query_input1 = QueryInput(db_name="weaviate-db", query="Test query 1", limit=5)
+            query_input1 = QueryInput(
+                db_name="weaviate-db", query="Test query 1", limit=5
+            )
 
-            query_input2 = QueryInput(db_name="milvus-db", query="Test query 2", limit=10)
+            query_input2 = QueryInput(
+                db_name="milvus-db", query="Test query 2", limit=10
+            )
 
             assert query_input1.db_name == "weaviate-db"
             assert query_input1.query == "Test query 1"
@@ -128,7 +132,9 @@ class TestQueryIntegration:
 
             for limit in test_cases:
                 query_input = QueryInput(
-                    db_name="test-db", query=f"Test query with limit {limit}", limit=limit
+                    db_name="test-db",
+                    query=f"Test query with limit {limit}",
+                    limit=limit,
                 )
 
                 assert query_input.db_name == "test-db"

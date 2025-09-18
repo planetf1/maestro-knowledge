@@ -27,11 +27,9 @@ class TestQueryInputModel:
     def test_query_input_valid(self) -> None:
         """Test QueryInput with valid parameters."""
         query_input = QueryInput(
-            db_name="test-db", 
-            query="What is the main topic?", 
-            limit=10
+            db_name="test-db", query="What is the main topic?", limit=10
         )
-        
+
         assert query_input.db_name == "test-db"
         assert query_input.query == "What is the main topic?"
         assert query_input.limit == 10
@@ -40,8 +38,8 @@ class TestQueryInputModel:
     def test_query_input_defaults(self) -> None:
         """Test QueryInput with default values."""
         query_input = QueryInput(db_name="test-db", query="Test query")
-        
-        assert query_input.db_name == "test-db" 
+
+        assert query_input.db_name == "test-db"
         assert query_input.query == "Test query"
         assert query_input.limit == 5  # Default value
 
@@ -62,7 +60,7 @@ class TestQueryInputModel:
         """Test QueryInput handles special characters properly."""
         special_query = "What's the deal with API endpoints? (v2.0) & more!"
         query_input = QueryInput(db_name="test-db", query=special_query, limit=5)
-        
+
         assert query_input.db_name == "test-db"
         assert query_input.query == special_query
         assert query_input.limit == 5
@@ -72,7 +70,7 @@ class TestQueryInputModel:
     def test_query_input_different_limits(self, limit: int) -> None:
         """Test QueryInput with different limit values."""
         query_input = QueryInput(db_name="test-db", query="Test query", limit=limit)
-        
+
         assert query_input.db_name == "test-db"
         assert query_input.query == "Test query"
         assert query_input.limit == limit

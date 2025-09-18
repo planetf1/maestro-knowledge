@@ -15,10 +15,10 @@ from unittest.mock import patch
 def mock_resync_functions() -> Generator[None, None, None]:
     """
     Context manager that mocks both resync functions to prevent database connections during tests.
-    
+
     This prevents tests from hanging when they try to connect to Milvus or Weaviate databases
     that aren't running during the test execution.
-    
+
     Usage:
         with mock_resync_functions():
             server = await create_mcp_server()

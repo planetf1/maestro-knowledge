@@ -31,7 +31,7 @@ class TestMCPServerIntegration:
         """Test that MCP server can be created with mocked database connections."""
         with mock_resync_functions():
             server = await create_mcp_server()
-            
+
             assert server is not None
             assert server.name == "maestro-vector-db"
             assert hasattr(server, "get_tools")
@@ -42,17 +42,17 @@ class TestMCPServerIntegration:
         """Test that expected tools are registered in the server."""
         expected_tools = [
             "create_vector_database",
-            "setup_database", 
+            "setup_database",
             "get_supported_embeddings",
             "query",
             "search",
             "list_databases",
         ]
-        
+
         with mock_resync_functions():
             server = await create_mcp_server()
-            
-            # Note: FastMCP doesn't expose tools directly, 
+
+            # Note: FastMCP doesn't expose tools directly,
             # but we can verify the server was created successfully
             # In a real integration test, we'd invoke the tools
             assert server is not None
@@ -75,42 +75,38 @@ class TestQueryWorkflowIntegration:
         mock_db.query.return_value = "Test query response from mocked DB"
         mock_db.db_type = "test"
         mock_db.collection_name = "TestCollection"
-        
+
         # Mock the vector_databases dictionary
         with patch("src.maestro_mcp.server.vector_databases", {"test-db": mock_db}):
             # Verify server is ready
             assert mcp_server is not None
-            
+
             # Test QueryInput creation (this would be passed to the tool)
             query_input = QueryInput(
-                db_name="test-db",
-                query="What is the main topic?", 
-                limit=5
+                db_name="test-db", query="What is the main topic?", limit=5
             )
-            
+
             assert query_input.db_name == "test-db"
             assert query_input.query == "What is the main topic?"
             assert query_input.limit == 5
-            
+
             # In a real test, we'd invoke the query tool:
             # result = await mcp_server.call_tool("query", query_input.model_dump())
             # assert "Test query response" in result.content
 
-    @pytest.mark.integration 
+    @pytest.mark.integration
     async def test_query_with_nonexistent_database(self, mcp_server: FastMCP) -> None:
         """Test query behavior when database doesn't exist."""
         # Mock empty vector_databases dictionary
         with patch("src.maestro_mcp.server.vector_databases", {}):
             # Create query for non-existent database
             query_input = QueryInput(
-                db_name="nonexistent-db",
-                query="Test query", 
-                limit=5
+                db_name="nonexistent-db", query="Test query", limit=5
             )
-            
+
             # Verify input is valid
             assert query_input.db_name == "nonexistent-db"
-            
+
             # In a real test, we'd verify the tool returns an error:
             # with pytest.raises(ValueError, match="not found"):
             #     await mcp_server.call_tool("query", query_input.model_dump())

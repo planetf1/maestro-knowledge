@@ -65,13 +65,15 @@ async def resync_vector_databases() -> list[str]:
 
         # Add timeout protection for the entire resync operation
         timeout_seconds = int(os.getenv("MILVUS_RESYNC_TIMEOUT", "15"))
-        
+
         try:
             # Create a temporary Milvus handle to list collections with timeout
             temp = MilvusVectorDatabase()
             temp._ensure_client()
             if temp.client is None:
-                logger.info("Milvus client not available during resync; skipping resync")
+                logger.info(
+                    "Milvus client not available during resync; skipping resync"
+                )
                 return added
 
             # List collections with timeout protection and proper task cleanup
@@ -80,7 +82,9 @@ async def resync_vector_databases() -> list[str]:
                 collections = await asyncio.wait_for(list_task, timeout=timeout_seconds)
                 collections = collections or []
             except asyncio.TimeoutError:
-                logger.warning(f"Milvus resync timed out after {timeout_seconds} seconds")
+                logger.warning(
+                    f"Milvus resync timed out after {timeout_seconds} seconds"
+                )
                 # Properly cancel the task to avoid orphaned futures
                 list_task.cancel()
                 try:
@@ -174,10 +178,10 @@ async def resync_weaviate_databases() -> list[str]:
     try:
         # Import lazily to avoid mandatory dependency when Weaviate isn't used
         from ..db.vector_db_weaviate import WeaviateVectorDatabase
-        
+
         # Add timeout protection for the entire resync operation
         timeout_seconds = int(os.getenv("WEAVIATE_RESYNC_TIMEOUT", "10"))
-        
+
         # Attempt to create a temporary client with timeout protection
         temp = None
         try:
@@ -186,23 +190,26 @@ async def resync_weaviate_databases() -> list[str]:
             loop = asyncio.get_event_loop()
             temp = await asyncio.wait_for(
                 loop.run_in_executor(None, WeaviateVectorDatabase),
-                timeout=timeout_seconds
+                timeout=timeout_seconds,
             )
         except asyncio.TimeoutError:
-            logger.warning(f"Weaviate client creation timed out after {timeout_seconds} seconds")
+            logger.warning(
+                f"Weaviate client creation timed out after {timeout_seconds} seconds"
+            )
             return added
         except Exception as e:
             logger.warning(f"Failed to create Weaviate client during resync: {e}")
             return added
-            
+
         try:
             collections = await asyncio.wait_for(
-                temp.list_collections(),
-                timeout=timeout_seconds
+                temp.list_collections(), timeout=timeout_seconds
             )
             collections = collections or []
         except asyncio.TimeoutError:
-            logger.warning(f"Weaviate collection listing timed out after {timeout_seconds} seconds")
+            logger.warning(
+                f"Weaviate collection listing timed out after {timeout_seconds} seconds"
+            )
             return added
         except Exception as e:
             logger.warning(f"Failed to list Weaviate collections during resync: {e}")

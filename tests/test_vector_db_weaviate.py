@@ -7,7 +7,11 @@ import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # Suppress AsyncMock garbage collection warnings - these are harmless but noisy
-warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*coroutine.*AsyncMockMixin.*never awaited.*")
+warnings.filterwarnings(
+    "ignore",
+    category=RuntimeWarning,
+    message=".*coroutine.*AsyncMockMixin.*never awaited.*",
+)
 
 # Suppress Pydantic deprecation warnings from dependencies
 warnings.filterwarnings(
@@ -704,19 +708,19 @@ class TestWeaviateVectorDatabase:
             # Mock client and collection
             mock_client = AsyncMock()
             mock_connect.return_value = mock_client
-            
+
             # Create a regular Mock for the collection but with async methods where needed
             mock_collection = Mock()
             mock_client.collections = Mock()
             mock_client.collections.exists = AsyncMock(return_value=True)
             mock_client.collections.get = AsyncMock(return_value=mock_collection)
-            
+
             # Mock the async query.fetch_objects method
             mock_result = Mock()
             mock_result.objects = [Mock(), Mock()]  # Simulate 2 documents
             mock_collection.query = Mock()
             mock_collection.query.fetch_objects = AsyncMock(return_value=mock_result)
-            
+
             # Mock the config.get method (non-async)
             mock_cfg = Mock()
             mock_cfg.description = "Test collection"
