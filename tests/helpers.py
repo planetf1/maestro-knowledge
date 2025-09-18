@@ -5,7 +5,7 @@ import os
 import asyncio
 
 
-def is_milvus_running():
+def is_milvus_running() -> bool:
     """Check if a Milvus instance is running and accessible."""
     try:
         return asyncio.run(is_milvus_running_async())
@@ -13,7 +13,7 @@ def is_milvus_running():
         return False
 
 
-async def is_milvus_running_async():
+async def is_milvus_running_async() -> bool:
     """Check if a Milvus instance is running and accessible."""
     try:
         from pymilvus import AsyncMilvusClient
