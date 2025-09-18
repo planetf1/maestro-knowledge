@@ -619,11 +619,23 @@ async def create_mcp_server() -> FastMCP:
                 # Get the number of parameters in the setup method
                 param_count = len(db.setup.__code__.co_varnames)
                 if param_count > 2:  # self, embedding, collection_name
-                    await db.setup(embedding=input.embedding)
+                    ok, res = await run_with_timeout(
+                        db.setup(embedding=input.embedding),
+                        "setup_database",
+                        get_timeout("setup_database"),
+                    )
                 elif param_count > 1:  # self, embedding
-                    await db.setup(embedding=input.embedding)
+                    ok, res = await run_with_timeout(
+                        db.setup(embedding=input.embedding),
+                        "setup_database",
+                        get_timeout("setup_database"),
+                    )
                 else:  # self only
-                    await db.setup()
+                    ok, res = await run_with_timeout(
+                        db.setup(), "setup_database", get_timeout("setup_database")
+                    )
+                if not ok:
+                    return str(res)
 
             return f"Successfully set up {db.db_type} vector database '{input.db_name}' with embedding '{input.embedding}'"
         except Exception as e:
@@ -1128,13 +1140,25 @@ async def create_mcp_server() -> FastMCP:
             db = get_database_by_name(input.db_name)
 
             # Check if the collection exists
-            collections = await db.list_collections()
+            ok, colls_any = await run_with_timeout(
+                db.list_collections(), "list_collections", get_timeout("list_collections")
+            )
+            collections = (
+                cast("list[str]", colls_any)
+                if ok and isinstance(colls_any, list)
+                else []
+            )
             if input.collection_name is None or input.collection_name not in collections:
                 raise ValueError(
                     f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
                 )
-
-            await db.delete_collection(input.collection_name)
+            ok, _ = await run_with_timeout(
+                db.delete_collection(input.collection_name),
+                "delete",
+                get_timeout("delete"),
+            )
+            if not ok:
+                return f"Error: Failed to delete collection '{input.collection_name}' from vector database '{input.db_name}'"
 
             return f"Successfully deleted collection '{input.collection_name}' from vector database '{input.db_name}'"
         try:
@@ -1143,7 +1167,13 @@ async def create_mcp_server() -> FastMCP:
             if input.collection_name is None:
                 raise ValueError("collection_name must be provided to delete a collection")
             temp_db = MilvusVectorDatabase(collection_name=input.collection_name)
-            await temp_db.delete_collection(input.collection_name)
+            ok, _ = await run_with_timeout(
+                temp_db.delete_collection(input.collection_name),
+                "delete",
+                get_timeout("delete"),
+            )
+            if not ok:
+                return f"Error: Failed to delete collection '{input.collection_name}' from Milvus (untracked)."
             return f"Successfully dropped collection '{input.collection_name}' from Milvus (untracked)."
         except Exception as e:
             return f"Delete collection failed: {str(e)}"
@@ -1153,7 +1183,11 @@ async def create_mcp_server() -> FastMCP:
         """Clean up resources and close connections for a vector database."""
         if input.db_name in vector_databases:
             db = get_database_by_name(input.db_name)
-            await db.cleanup()
+            ok, _ = await run_with_timeout(
+                db.cleanup(), "cleanup", get_timeout("cleanup")
+            )
+            if not ok:
+                return f"Error: Failed to cleanup vector database '{input.db_name}'"
             del vector_databases[input.db_name]
             return (
                 f"Successfully cleaned up and removed vector database '{input.db_name}'"
@@ -1162,7 +1196,13 @@ async def create_mcp_server() -> FastMCP:
             from ..db.vector_db_milvus import MilvusVectorDatabase
 
             temp_db = MilvusVectorDatabase(collection_name=input.db_name)
-            await temp_db.delete_collection(input.db_name)
+            ok, _ = await run_with_timeout(
+                temp_db.delete_collection(input.db_name),
+                "cleanup",
+                get_timeout("cleanup"),
+            )
+            if not ok:
+                return f"Error: Failed to cleanup (drop) collection '{input.db_name}' from Milvus (untracked)."
             return f"Successfully dropped collection '{input.db_name}' from Milvus (untracked)."
         except Exception as e:
             return f"Cleanup failed: {str(e)}"
@@ -1171,11 +1211,15 @@ async def create_mcp_server() -> FastMCP:
     async def get_database_info(input: GetDatabaseInfoInput) -> str:
         """Get information about a vector database."""
         db = get_database_by_name(input.db_name)
+        ok, cnt_any = await run_with_timeout(
+            db.count_documents(), "count_documents", get_timeout("count_documents")
+        )
+        count = int(cnt_any) if ok else -1
         info = {
             "name": input.db_name,
             "type": db.db_type,
             "collection": db.collection_name,
-            "document_count": await db.count_documents(),
+            "document_count": count,
         }
 
         return (
@@ -1186,7 +1230,12 @@ async def create_mcp_server() -> FastMCP:
     async def list_collections(input: ListCollectionsInput) -> str:
         """List all collections in a vector database."""
         db = get_database_by_name(input.db_name)
-        collections = await db.list_collections()
+        ok, colls_any = await run_with_timeout(
+            db.list_collections(), "list_collections", get_timeout("list_collections")
+        )
+        collections = (
+            cast("list[str]", colls_any) if ok and isinstance(colls_any, list) else []
+        )
 
         if not collections:
             return f"No collections found in vector database '{input.db_name}'"
@@ -1200,9 +1249,18 @@ async def create_mcp_server() -> FastMCP:
         # Always delegate to the backend which can surface metadata even if
         # the collection doesn't exist (including chunking config and errors)
         if input.collection_name is None:
-            info = await db.get_collection_info()
+            ok, info_any = await run_with_timeout(
+                db.get_collection_info(), "get_collection_info", get_timeout("get_collection_info")
+            )
         else:
-            info = await db.get_collection_info(input.collection_name)
+            ok, info_any = await run_with_timeout(
+                db.get_collection_info(input.collection_name),
+                "get_collection_info",
+                get_timeout("get_collection_info"),
+            )
+        if not ok:
+            return str(info_any)
+        info: dict[str, Any] = cast("dict[str, Any]", info_any)
 
         return (
             f"Collection information for '{info.get('name')}' in vector database "
@@ -1216,7 +1274,14 @@ async def create_mcp_server() -> FastMCP:
             db = get_database_by_name(input.db_name)
 
             # Check if collection already exists
-            existing_collections = await db.list_collections()
+            ok, existing_any = await run_with_timeout(
+                db.list_collections(), "list_collections", get_timeout("list_collections")
+            )
+            existing_collections = (
+                cast("list[str]", existing_any)
+                if ok and isinstance(existing_any, list)
+                else []
+            )
             if input.collection_name in existing_collections:
                 return f"Error: Collection '{input.collection_name}' already exists in vector database '{input.db_name}'"
 
@@ -1232,22 +1297,40 @@ async def create_mcp_server() -> FastMCP:
                     # Try to call setup with embedding and chunking_config where supported
                     if (param_count > 3) and (input.chunking_config is not None):
                         # self, embedding, collection_name, chunking_config
-                        await db.setup(
-                            embedding=input.embedding,
-                            collection_name=input.collection_name,
-                            chunking_config=input.chunking_config,
+                        ok, res = await run_with_timeout(
+                            db.setup(
+                                embedding=input.embedding,
+                                collection_name=input.collection_name,
+                                chunking_config=input.chunking_config,
+                            ),
+                            "create_collection",
+                            get_timeout("create_collection"),
                         )
                     elif param_count > 2:  # self, embedding, collection_name
-                        await db.setup(
-                            embedding=input.embedding,
-                            collection_name=input.collection_name,
+                        ok, res = await run_with_timeout(
+                            db.setup(
+                                embedding=input.embedding,
+                                collection_name=input.collection_name,
+                            ),
+                            "create_collection",
+                            get_timeout("create_collection"),
                         )
                     elif param_count > 1:  # self, embedding
-                        await db.setup(embedding=input.embedding)
+                        ok, res = await run_with_timeout(
+                            db.setup(embedding=input.embedding),
+                            "create_collection",
+                            get_timeout("create_collection"),
+                        )
                     else:  # self only
-                        await db.setup()
+                        ok, res = await run_with_timeout(
+                            db.setup(), "create_collection", get_timeout("create_collection")
+                        )
                 else:
-                    await db.setup()
+                    ok, res = await run_with_timeout(
+                        db.setup(), "create_collection", get_timeout("create_collection")
+                    )
+                if not ok:
+                    return str(res)
 
                 # NOTE: Embedding is configured per-collection at creation time.
                 # TODO(deprecate): Remove write-time embedding parameters from write tools in a future release.
@@ -1270,7 +1353,7 @@ async def create_mcp_server() -> FastMCP:
             if input.collection_name is not None:
                 kwargs["collection_name"] = input.collection_name
             ok, response = await run_with_timeout(
-                db.query(input.query, **kwargs), "query"
+                db.query(input.query, **kwargs), "query", get_timeout("query")
             )
             if not ok:
                 return str(response)
@@ -1290,7 +1373,7 @@ async def create_mcp_server() -> FastMCP:
             if input.collection_name is not None:
                 kwargs["collection_name"] = input.collection_name
             ok, response = await run_with_timeout(
-                db.search(input.query, **kwargs), "search"
+                db.search(input.query, **kwargs), "search", get_timeout("search")
             )
             if not ok:
                 return str(response)
@@ -1313,7 +1396,11 @@ async def create_mcp_server() -> FastMCP:
 
         db_list = []
         for db_name, db in vector_databases.items():
-            ok, count = await run_with_timeout(db.count_documents(), "list_databases/count")
+            ok, count = await run_with_timeout(
+                db.count_documents(),
+                "list_databases/count",
+                get_timeout("list_databases"),
+            )
             if not ok:
                 count = -1
             db_list.append(
