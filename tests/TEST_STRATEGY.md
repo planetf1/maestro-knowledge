@@ -169,16 +169,60 @@ uv run pytest -m "unit" -v
 
 ## Environment Setup for Service Tests
 
-### Working Database Combinations
+### Quick Reference: Database Configuration Matrix
 
-| **Milvus** | **Weaviate** | **Status** | **Setup Time** | **Use Case** |
-|------------|--------------|------------|----------------|--------------|
-| ✅ Local File | ❌ None | ✅ **WORKS** | ~20s | **Development/CI** |
-| ✅ Local File | ✅ Container | ✅ **WORKS** | ~19s | **Full Testing** |
-| ❌ Fake URLs | ❌ Fake URLs | ✅ **WORKS** | ~8s | **Timeout Testing** |
-| ❌ Container | ✅ Container | ❌ **BROKEN** | N/A | Container issues |
+| **Configuration** | **Milvus** | **Weaviate** | **Setup Time** | **Test Time** | **Containers** | **Use Case** |
+|-------------------|------------|--------------|----------------|---------------|----------------|--------------|
+| **Development** | Local File | None | 0 min | ~20s | 0 | Quick dev testing |
+| **Mixed** | Local File | Container | 1 min | ~19s | 1 | Partial integration |
+| **Full Remote** | Container v2.4.4 | Container | 2 min | ~8s | 2 | Production-like |
+| **Timeout Test** | Fake URLs | Fake URLs | 0 min | ~8s | 0 | Robustness testing |
 
-### Milvus Setup
+### Expected Test Results by Configuration
+
+| **Configuration** | **Expected Outcome** | **Warnings** | **Skip Reason** |
+|-------------------|---------------------|--------------|-----------------|
+| **Development** | ✅ 3 passed, 2 skipped | None | No external services |
+| **Mixed** | ✅ 3 passed, 2 skipped | Minor connection logs | Partial setup |
+| **Full Remote** | ✅ 3 passed, 2 skipped | None | Both services working |
+| **Timeout Test** | ✅ 3 passed, 2 skipped | Timeout warnings | Unreachable services |
+
+### Container Commands Quick Reference
+
+| **Service** | **Working Command** | **Status** | **Notes** |
+|-------------|-------------------|------------|-----------|
+| **Milvus v2.4.4** | `podman run -d --name milvus-remote -p 19530:19530 -e ETCD_USE_EMBED=true milvusdb/milvus:v2.4.4 /milvus/bin/milvus run standalone` | ✅ **WORKS** | Embedded etcd |
+| **Milvus latest** | `podman run -d --name milvus-latest -p 19530:19530 milvusdb/milvus:latest standalone` | ❌ **BROKEN** | Exec failed |
+| **Weaviate** | `podman run -d --name weaviate-test -p 8080:8080 -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true semitechnologies/weaviate:latest` | ✅ **WORKS** | Anonymous auth |
+
+### Environment Variables by Configuration
+
+| **Configuration** | **MILVUS_URI** | **WEAVIATE_URL** | **WEAVIATE_API_KEY** | **Additional** |
+|-------------------|----------------|------------------|---------------------|----------------|
+| **Development** | *(unset)* | *(unset)* | *(unset)* | Uses local file |
+| **Mixed** | *(unset)* | `http://localhost:8080` | `test-key` | Local + Remote |
+| **Full Remote** | `http://localhost:19530` | `http://localhost:8080` | `test-key` | Both remote |
+| **Timeout Test** | `http://fake:19530` | `http://fake:8080` | `fake` | Unreachable hosts |
+
+### Step-by-Step Setup Guide
+
+| **Step** | **Development** | **Mixed** | **Full Remote** | **Timeout Test** |
+|----------|----------------|-----------|-----------------|------------------|
+| **1. Milvus** | Nothing needed | Nothing needed | `podman run -d --name milvus-remote -p 19530:19530 -e ETCD_USE_EMBED=true milvusdb/milvus:v2.4.4 /milvus/bin/milvus run standalone` | Nothing needed |
+| **2. Weaviate** | Nothing needed | `podman run -d --name weaviate-test -p 8080:8080 -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true semitechnologies/weaviate:latest` | `podman run -d --name weaviate-test -p 8080:8080 -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true semitechnologies/weaviate:latest` | Nothing needed |
+| **3. Environment** | `unset MILVUS_URI WEAVIATE_URL WEAVIATE_API_KEY` | `unset MILVUS_URI && export WEAVIATE_URL="http://localhost:8080" WEAVIATE_API_KEY="test-key"` | `export MILVUS_URI="http://localhost:19530" WEAVIATE_URL="http://localhost:8080" WEAVIATE_API_KEY="test-key"` | `export MILVUS_URI="http://fake:19530" WEAVIATE_URL="http://fake:8080" WEAVIATE_API_KEY="fake"` |
+| **4. Run Tests** | `./test.sh service` | `./test.sh service` | `./test.sh service` | `./test.sh service` |
+| **5. Expected Time** | ~20 seconds | ~19 seconds | ~8 seconds | ~8 seconds |
+
+### Troubleshooting Quick Reference
+
+| **Problem** | **Symptom** | **Solution** |
+|-------------|-------------|--------------|
+| **Tests hang indefinitely** | No output, terminal stuck | Check for `milvus:latest` container - use `v2.4.4` instead |
+| **"exec standalone failed"** | Container exits immediately | Use `/milvus/bin/milvus run standalone` command format |
+| **"Invalid port: 8080:443"** | Weaviate connection error | Ensure `WEAVIATE_URL="http://localhost:8080"` (http, not https) |
+| **"Client is closed"** | Weaviate warnings | Normal - fixed in timeout protection code |
+| **All tests skip** | No services detected | Check environment variables are set correctly |
 
 **✅ Option 1: Local File Database (RECOMMENDED)**
 ```bash
@@ -194,24 +238,38 @@ export MILVUS_TIMEOUT=10
 export MILVUS_RESYNC_TIMEOUT=15
 ```
 
-**❌ Option 2: Docker Container (CURRENTLY BROKEN)**
+**✅ Option 2: Container Mode (WORKING)**
 ```bash
-# Known Issue: Milvus container has startup problems
-# These commands currently fail with "exec standalone failed"
+# ✅ WORKING: Use specific version v2.4.4 with embedded etcd
+docker run -d \
+  --name milvus-remote \
+  -p 19530:19530 \
+  -e ETCD_USE_EMBED=true \
+  milvusdb/milvus:v2.4.4 \
+  /milvus/bin/milvus run standalone
 
-# Doesn't work:
-docker run -d --name milvus-standalone \
+# Set environment variables for remote connection
+export MILVUS_URI="http://localhost:19530"
+export MILVUS_TIMEOUT=10
+export MILVUS_RESYNC_TIMEOUT=15
+```
+
+**❌ Option 3: Container Mode (BROKEN VERSIONS)**
+```bash
+# Known Issue: Latest version has startup problems
+# These commands fail with various errors:
+
+# Doesn't work - exec standalone failed:
+docker run -d --name milvus-latest \
   -p 19530:19530 \
   -e ETCD_USE_EMBED=true \
   milvusdb/milvus:latest standalone
 
-# Also doesn't work:
-docker run -d --name milvus-lite \
+# Doesn't work - missing dependencies:
+docker run -d --name milvus-simple \
   -p 19530:19530 \
-  milvusdb/milvus:latest
-
-# Set environment variables (if container worked)
-export MILVUS_URI="http://localhost:19530"
+  milvusdb/milvus:latest \
+  milvus run standalone
 ```
 
 ### Weaviate Setup
@@ -245,7 +303,7 @@ unset MILVUS_URI WEAVIATE_URL WEAVIATE_API_KEY
 ./test.sh service  # ~20s, no containers
 ```
 
-**🎯 Complete Service Testing:**
+**🎯 Mixed Local/Remote Testing:**
 ```bash
 # Local Milvus + Containerized Weaviate
 podman run -d --name weaviate-test -p 8080:8080 [full-weaviate-command]
@@ -253,6 +311,18 @@ unset MILVUS_URI  # Use local file
 export WEAVIATE_URL="http://localhost:8080"
 export WEAVIATE_API_KEY="test-key"
 ./test.sh service  # ~19s
+```
+
+**🎯 Full Remote Testing (BOTH CONTAINERIZED):**
+```bash
+# Both Milvus and Weaviate in containers
+podman run -d --name milvus-remote -p 19530:19530 -e ETCD_USE_EMBED=true milvusdb/milvus:v2.4.4 /milvus/bin/milvus run standalone
+podman run -d --name weaviate-test -p 8080:8080 [full-weaviate-command]
+
+export MILVUS_URI="http://localhost:19530"
+export WEAVIATE_URL="http://localhost:8080"
+export WEAVIATE_API_KEY="test-key"
+./test.sh service  # ~8s, both databases remote
 ```
 
 **🎯 Timeout/Robustness Testing:**
