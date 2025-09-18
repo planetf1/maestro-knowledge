@@ -701,22 +701,26 @@ class TestWeaviateVectorDatabase:
             # Mock client and collection
             mock_client = AsyncMock()
             mock_connect.return_value = mock_client
-            mock_collection = AsyncMock()
-            mock_client.collections.exists = AsyncMock(return_value=True)
-            mock_client.collections.get = AsyncMock(return_value=mock_collection)  # This should be AsyncMock since it's awaited
             
-            # Mock the query.fetch_objects method that's called in get_collection_info
+            # Create a regular Mock for the collection but with async methods where needed
+            mock_collection = Mock()
+            mock_client.collections.exists = AsyncMock(return_value=True)
+            mock_client.collections.get = AsyncMock(return_value=mock_collection)
+            
+            # Mock the async query.fetch_objects method
             mock_result = Mock()
             mock_result.objects = [Mock(), Mock()]  # Simulate 2 documents
+            mock_collection.query = Mock()
             mock_collection.query.fetch_objects = AsyncMock(return_value=mock_result)
             
-            # config.get returns an object with attributes used in code (non-async)
-            mock_cfg = Mock()  # Changed from AsyncMock to Mock since it's not awaited
+            # Mock the config.get method (non-async)
+            mock_cfg = Mock()
             mock_cfg.description = "Test collection"
             mock_cfg.vectorizer = "text2vec-openai"
             mock_cfg.properties = []
             mock_cfg.module_config = {}
-            mock_collection.config.get.return_value = mock_cfg
+            mock_collection.config = Mock()
+            mock_collection.config.get = Mock(return_value=mock_cfg)
 
             db = WeaviateVectorDatabase()
             chunk_cfg = {
