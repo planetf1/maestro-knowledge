@@ -42,6 +42,8 @@ filterwarnings = [
     "ignore::UserWarning:google.protobuf.runtime_version",
     # Suppress our own warning in test_list_collections_exception test
     "ignore::UserWarning:src.db.vector_db_weaviate",
+    # Suppress AsyncMock garbage collection warnings - these are harmless but noisy
+    "ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited:RuntimeWarning",
 ]
 # Enable async test support
 asyncio_mode = "auto"

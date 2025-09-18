@@ -6,6 +6,9 @@ import warnings
 # Suppress all deprecation warnings from external packages immediately
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
+# Suppress AsyncMock garbage collection warnings - these are harmless but noisy
+warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*coroutine.*AsyncMockMixin.*never awaited.*")
+
 # Suppress Pydantic deprecation warnings from dependencies
 warnings.filterwarnings(
     "ignore", category=DeprecationWarning, message=".*class-based `config`.*"
@@ -704,6 +707,7 @@ class TestWeaviateVectorDatabase:
             
             # Create a regular Mock for the collection but with async methods where needed
             mock_collection = Mock()
+            mock_client.collections = Mock()
             mock_client.collections.exists = AsyncMock(return_value=True)
             mock_client.collections.get = AsyncMock(return_value=mock_collection)
             
