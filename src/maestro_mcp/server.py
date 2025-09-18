@@ -61,7 +61,7 @@ TIMEOUT_DEFAULTS: dict[str, int] = {
     "query": 30,
     "search": 30,
     "write_single": 900,  # 15 minutes
-    "write_bulk": 3600,   # 60 minutes
+    "write_bulk": 3600,  # 60 minutes
     "delete": 60,
     "cleanup": 60,
     "create_collection": 60,
@@ -87,14 +87,18 @@ def get_timeout(category: str, fallback: int | None = None) -> int:
     return TIMEOUT_DEFAULTS.get(category, DEFAULT_TOOL_TIMEOUT)
 
 
-def tool_timeout(seconds: int | None = None) -> Callable[[Callable[..., Awaitable[object]]], Callable[..., Awaitable[object]]]:
+def tool_timeout(
+    seconds: int | None = None,
+) -> Callable[[Callable[..., Awaitable[object]]], Callable[..., Awaitable[object]]]:
     """Decorator to enforce a timeout and guaranteed response for MCP tools.
 
     Ensures that every tool returns a response even if an operation hangs or raises.
     Timeout is configurable via MCP_TOOL_TIMEOUT env var or the decorator argument.
     """
 
-    def decorator(func: Callable[..., Awaitable[object]]) -> Callable[..., Awaitable[object]]:
+    def decorator(
+        func: Callable[..., Awaitable[object]],
+    ) -> Callable[..., Awaitable[object]]:
         async def wrapper(*args: object, **kwargs: object) -> object:
             timeout_s = seconds if seconds is not None else DEFAULT_TOOL_TIMEOUT
             try:
@@ -721,7 +725,9 @@ async def create_mcp_server() -> FastMCP:
         try:
             # Best effort: fetch current collection info to get embedding
             ok, coll_info_any = await run_with_timeout(
-                db.get_collection_info(), "get_collection_info", get_timeout("get_collection_info")
+                db.get_collection_info(),
+                "get_collection_info",
+                get_timeout("get_collection_info"),
             )
             if ok:
                 coll_info = cast("dict[str, Any]", coll_info_any)
@@ -751,7 +757,9 @@ async def create_mcp_server() -> FastMCP:
         post_info: dict[str, Any] | None = None
         try:
             ok, post_info_any = await run_with_timeout(
-                db.get_collection_info(), "get_collection_info", get_timeout("get_collection_info")
+                db.get_collection_info(),
+                "get_collection_info",
+                get_timeout("get_collection_info"),
             )
             post_info = cast("dict[str, Any]", post_info_any) if ok else None
         except Exception:
@@ -806,7 +814,9 @@ async def create_mcp_server() -> FastMCP:
         coll_info: dict[str, Any] | None = None
         try:
             ok, coll_info_any = await run_with_timeout(
-                db.get_collection_info(), "get_collection_info", get_timeout("get_collection_info")
+                db.get_collection_info(),
+                "get_collection_info",
+                get_timeout("get_collection_info"),
             )
             if ok:
                 coll_info = cast("dict[str, Any]", coll_info_any)
@@ -835,7 +845,9 @@ async def create_mcp_server() -> FastMCP:
         post_info: dict[str, Any] | None = None
         try:
             ok, post_info_any = await run_with_timeout(
-                db.get_collection_info(), "get_collection_info", get_timeout("get_collection_info")
+                db.get_collection_info(),
+                "get_collection_info",
+                get_timeout("get_collection_info"),
             )
             post_info = cast("dict[str, Any]", post_info_any) if ok else None
         except Exception:
@@ -907,7 +919,11 @@ async def create_mcp_server() -> FastMCP:
                 "get_collection_info",
                 get_timeout("get_collection_info"),
             )
-            info: dict[str, Any] = cast("dict[str, Any]", info_any) if ok and isinstance(info_any, dict) else {}
+            info: dict[str, Any] = (
+                cast("dict[str, Any]", info_any)
+                if ok and isinstance(info_any, dict)
+                else {}
+            )
             collection_embedding = info.get("embedding", "default")
         except Exception:
             pass
@@ -985,7 +1001,11 @@ async def create_mcp_server() -> FastMCP:
         ok, collections_any = await run_with_timeout(
             db.list_collections(), "list_collections", get_timeout("list_collections")
         )
-        collections = cast("list[str]", collections_any) if ok and isinstance(collections_any, list) else []
+        collections = (
+            cast("list[str]", collections_any)
+            if ok and isinstance(collections_any, list)
+            else []
+        )
         # Use case-sensitive comparison
         if input.collection_name not in collections:
             raise ValueError(
@@ -994,7 +1014,9 @@ async def create_mcp_server() -> FastMCP:
 
         # Use the new list_documents_in_collection method
         ok, documents_any = await run_with_timeout(
-            db.list_documents_in_collection(input.collection_name, input.limit, input.offset),
+            db.list_documents_in_collection(
+                input.collection_name, input.limit, input.offset
+            ),
             "list_documents",
             get_timeout("list_documents"),
         )
@@ -1051,7 +1073,11 @@ async def create_mcp_server() -> FastMCP:
         ok, collections_any = await run_with_timeout(
             db.list_collections(), "list_collections", get_timeout("list_collections")
         )
-        collections = cast("list[str]", collections_any) if ok and isinstance(collections_any, list) else []
+        collections = (
+            cast("list[str]", collections_any)
+            if ok and isinstance(collections_any, list)
+            else []
+        )
         if input.collection_name not in collections:
             raise ValueError(
                 f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
@@ -1141,14 +1167,19 @@ async def create_mcp_server() -> FastMCP:
 
             # Check if the collection exists
             ok, colls_any = await run_with_timeout(
-                db.list_collections(), "list_collections", get_timeout("list_collections")
+                db.list_collections(),
+                "list_collections",
+                get_timeout("list_collections"),
             )
             collections = (
                 cast("list[str]", colls_any)
                 if ok and isinstance(colls_any, list)
                 else []
             )
-            if input.collection_name is None or input.collection_name not in collections:
+            if (
+                input.collection_name is None
+                or input.collection_name not in collections
+            ):
                 raise ValueError(
                     f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
                 )
@@ -1165,7 +1196,9 @@ async def create_mcp_server() -> FastMCP:
             from ..db.vector_db_milvus import MilvusVectorDatabase
 
             if input.collection_name is None:
-                raise ValueError("collection_name must be provided to delete a collection")
+                raise ValueError(
+                    "collection_name must be provided to delete a collection"
+                )
             temp_db = MilvusVectorDatabase(collection_name=input.collection_name)
             ok, _ = await run_with_timeout(
                 temp_db.delete_collection(input.collection_name),
@@ -1250,7 +1283,9 @@ async def create_mcp_server() -> FastMCP:
         # the collection doesn't exist (including chunking config and errors)
         if input.collection_name is None:
             ok, info_any = await run_with_timeout(
-                db.get_collection_info(), "get_collection_info", get_timeout("get_collection_info")
+                db.get_collection_info(),
+                "get_collection_info",
+                get_timeout("get_collection_info"),
             )
         else:
             ok, info_any = await run_with_timeout(
@@ -1275,7 +1310,9 @@ async def create_mcp_server() -> FastMCP:
 
             # Check if collection already exists
             ok, existing_any = await run_with_timeout(
-                db.list_collections(), "list_collections", get_timeout("list_collections")
+                db.list_collections(),
+                "list_collections",
+                get_timeout("list_collections"),
             )
             existing_collections = (
                 cast("list[str]", existing_any)
@@ -1323,11 +1360,15 @@ async def create_mcp_server() -> FastMCP:
                         )
                     else:  # self only
                         ok, res = await run_with_timeout(
-                            db.setup(), "create_collection", get_timeout("create_collection")
+                            db.setup(),
+                            "create_collection",
+                            get_timeout("create_collection"),
                         )
                 else:
                     ok, res = await run_with_timeout(
-                        db.setup(), "create_collection", get_timeout("create_collection")
+                        db.setup(),
+                        "create_collection",
+                        get_timeout("create_collection"),
                     )
                 if not ok:
                     return str(res)
@@ -1488,6 +1529,7 @@ def run_server() -> None:
     except Exception as e:
         print(f"Error running server: {e}")
         sys.exit(1)
+
 
 def run_http_server_sync(host: str = "localhost", port: int = 8030) -> None:
     """Synchronous entry point for running the HTTP server."""
