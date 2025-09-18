@@ -48,6 +48,17 @@ filterwarnings = [
 # Enable async test support
 asyncio_mode = "auto"
 
+# Custom pytest markers
+markers = [
+    "unit: Unit tests - fast, no external dependencies",
+    "integration: Integration tests - components working together with mocked externals", 
+    "service: Service integration tests - requires real databases running",
+    "e2e: End-to-end tests - full environment required",
+    "slow: Tests that take >5 seconds",
+    "requires_milvus: Tests that require Milvus database running",
+    "requires_weaviate: Tests that require Weaviate database running",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=8.4.1",
