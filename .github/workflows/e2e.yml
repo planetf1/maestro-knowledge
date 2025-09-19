@@ -74,12 +74,34 @@ jobs:
         done
         
         echo "Waiting for Milvus to be ready..."
-        for i in {1..60}; do
-          if curl -f http://localhost:19530 2>/dev/null; then
-            echo "Milvus is ready"
+        echo "Checking Milvus container status..."
+        docker ps --filter name=milvus-service
+        echo "Checking Milvus logs..."
+        docker logs milvus-service --tail 20
+        
+        for i in {1..30}; do
+          echo "Attempt $i/30: Checking Milvus readiness..."
+          
+          # Try multiple ways to check if Milvus is ready
+          if curl -f http://localhost:9091/healthz 2>/dev/null; then
+            echo "Milvus health endpoint is ready"
             break
+          elif nc -z localhost 19530 2>/dev/null; then
+            echo "Milvus gRPC port 19530 is open"
+            # Give it a bit more time for the service to be fully ready
+            sleep 5
+            if curl -f http://localhost:9091/healthz 2>/dev/null; then
+              echo "Milvus is ready"
+              break
+            fi
           fi
-          echo "Waiting for Milvus... ($i/60)"
+          
+          if [ $i -eq 15 ]; then
+            echo "Mid-check: Milvus container logs..."
+            docker logs milvus-service --tail 10
+          fi
+          
+          echo "Waiting for Milvus... ($i/30)"
           sleep 10
         done
 
@@ -151,24 +173,6 @@ jobs:
           - 11434:11434
         options: --name ollama-service
 
-      # Weaviate service
-      weaviate:
-        image: semitechnologies/weaviate:1.27.0
-        ports:
-          - 8080:8080
-        env:
-          AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
-          PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
-          DEFAULT_VECTORIZER_MODULE: 'none'
-          ENABLE_MODULES: ''
-          CLUSTER_HOSTNAME: 'node1'
-        options: >-
-          --name weaviate-service
-          --health-cmd "curl -f http://localhost:8080/v1/meta"
-          --health-interval 30s
-          --health-timeout 20s
-          --health-retries 5
-
     steps:
     - uses: actions/checkout@v4
 
@@ -197,6 +201,18 @@ jobs:
     - name: Install dependencies
       run: |
         uv sync
+
+    - name: Start Weaviate
+      run: |
+        echo "Starting Weaviate v1.27.0..."
+        docker run -d --name weaviate-service \
+          -p 8080:8080 \
+          -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true \
+          -e PERSISTENCE_DATA_PATH=/var/lib/weaviate \
+          -e DEFAULT_VECTORIZER_MODULE=none \
+          -e ENABLE_MODULES= \
+          -e CLUSTER_HOSTNAME=node1 \
+          semitechnologies/weaviate:1.27.0
 
     - name: Wait for services to be ready
       run: |
