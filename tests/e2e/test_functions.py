@@ -11,12 +11,15 @@ appropriate backend configuration.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 from tests.e2e.common import get_backend_config, get_db_name_for_test
 
+if TYPE_CHECKING:
+    from fastmcp import Client
 
-async def run_database_management_tests(client: Any, backend_name: str) -> None:
+
+async def run_database_management_tests(client: Client, backend_name: str) -> None:
     """Test database creation, collection management, and list_collections tool."""
     config = get_backend_config(backend_name)
     db_name = get_db_name_for_test(backend_name, "DB_Management")
@@ -60,7 +63,7 @@ async def run_database_management_tests(client: Any, backend_name: str) -> None:
     assert hasattr(res, "data"), f"cleanup failed: {res}"
 
 
-async def run_document_operations_tests(client: Any, backend_name: str) -> None:
+async def run_document_operations_tests(client: Client, backend_name: str) -> None:
     """Test document CRUD operations."""
     config = get_backend_config(backend_name)
     db_name = get_db_name_for_test(backend_name, "Document_Ops")
@@ -161,7 +164,7 @@ async def run_document_operations_tests(client: Any, backend_name: str) -> None:
         assert res, f"cleanup failed: {res}"
 
 
-async def run_query_operations_tests(client: Any, backend_name: str) -> None:
+async def run_query_operations_tests(client: Client, backend_name: str) -> None:
     """Test query and search operations."""
     config = get_backend_config(backend_name)
     db_name = get_db_name_for_test(backend_name, "Query_Ops")
@@ -249,7 +252,7 @@ async def run_query_operations_tests(client: Any, backend_name: str) -> None:
     assert hasattr(res, "data")
 
 
-async def run_configuration_discovery_tests(client: Any, backend_name: str) -> None:
+async def run_configuration_discovery_tests(client: Client, backend_name: str) -> None:
     """Test configuration discovery operations: get_supported_embeddings, get_supported_chunking_strategies."""
     config = get_backend_config(backend_name)
     db_name = get_db_name_for_test(backend_name, "Config_Test")
@@ -294,7 +297,7 @@ async def run_configuration_discovery_tests(client: Any, backend_name: str) -> N
     assert hasattr(res, "data")
 
 
-async def run_document_retrieval_tests(client: Any, backend_name: str) -> None:
+async def run_document_retrieval_tests(client: Client, backend_name: str) -> None:
     """Test document retrieval operations: setup_database, get_document."""
     config = get_backend_config(backend_name)
     db_name = get_db_name_for_test(backend_name, "Doc_Retrieval")
@@ -352,7 +355,7 @@ async def run_document_retrieval_tests(client: Any, backend_name: str) -> None:
     assert hasattr(res, "data")
 
 
-async def run_bulk_operations_tests(client: Any, backend_name: str) -> None:
+async def run_bulk_operations_tests(client: Client, backend_name: str) -> None:
     """Test bulk operations: delete_documents."""
     config = get_backend_config(backend_name)
     db_name = get_db_name_for_test(backend_name, "Bulk_Ops")
@@ -422,7 +425,7 @@ async def run_bulk_operations_tests(client: Any, backend_name: str) -> None:
     assert hasattr(res, "data")
 
 
-async def run_collection_specific_tests(client: Any, backend_name: str) -> None:
+async def run_collection_specific_tests(client: Client, backend_name: str) -> None:
     """Test collection-specific document operations."""
     import pytest
 
@@ -561,7 +564,7 @@ async def run_collection_specific_tests(client: Any, backend_name: str) -> None:
                 pass
 
 
-async def run_resync_operations_tests(client: Any, backend_name: str) -> None:
+async def run_resync_operations_tests(client: Client, backend_name: str) -> None:
     """Test database resynchronization functionality."""
     # Test resync_databases_tool
     res = await client.call_tool("resync_databases_tool")
@@ -576,7 +579,7 @@ async def run_resync_operations_tests(client: Any, backend_name: str) -> None:
     )
 
 
-async def run_full_flow_test(client: Any, backend_name: str) -> None:
+async def run_full_flow_test(client: Client, backend_name: str) -> None:
     """Full flow integration test covering the main workflow."""
     import pytest
     import asyncio

@@ -106,7 +106,7 @@ def _required_env_present(backend: str) -> bool:
 BACKEND_NAME = None
 
 
-def set_backend_name(name: str):
+def set_backend_name(name: str) -> None:
     global BACKEND_NAME
     BACKEND_NAME = name
 
