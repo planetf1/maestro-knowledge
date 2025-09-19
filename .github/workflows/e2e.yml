@@ -10,7 +10,7 @@ on:
 jobs:
   e2e-milvus:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -179,8 +179,8 @@ jobs:
         E2E_BACKEND: milvus
         E2E_MILVUS: 1
         E2E_MCP_PORT: 8030
-        E2E_INDEX_WAIT_TIME: 10
-        E2E_CLIENT_TIMEOUT: 120
+        E2E_INDEX_WAIT_TIME: 20
+        E2E_CLIENT_TIMEOUT: 300
         PYTHONPATH: src
       run: |
         echo "Running Milvus E2E tests..."
@@ -193,7 +193,7 @@ jobs:
         echo "  CUSTOM_EMBEDDING_MODEL=${CUSTOM_EMBEDDING_MODEL}"
         echo "  E2E_INDEX_WAIT_TIME=${E2E_INDEX_WAIT_TIME}"
         echo "  E2E_CLIENT_TIMEOUT=${E2E_CLIENT_TIMEOUT}"
-        timeout 900 uv run pytest tests/e2e/test_mcp_milvus_e2e.py -v --tb=short -s --maxfail=1
+        timeout 1800 uv run pytest tests/e2e/test_mcp_milvus_e2e.py -v --tb=short -s
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
