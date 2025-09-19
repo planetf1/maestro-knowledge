@@ -38,7 +38,8 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          .uv/cache
+          ~/.cache/uv
+          .venv
         key: ${{ runner.os }}-uv-e2e-${{ hashFiles('**/pyproject.toml') }}
         restore-keys: |
           ${{ runner.os }}-uv-e2e-
@@ -190,6 +191,8 @@ jobs:
         name: e2e-test-results-milvus-${{ matrix.python-version }}
         path: |
           .pytest_cache/
+          pytest-*.xml
+          test-results/
         retention-days: 7
 
     - name: Show service logs on failure
@@ -320,6 +323,8 @@ jobs:
         name: e2e-test-results-weaviate-${{ matrix.python-version }}
         path: |
           .pytest_cache/
+          pytest-*.xml
+          test-results/
         retention-days: 7
 
     - name: Show service logs on failure
