@@ -141,7 +141,7 @@ async def test_full_flow(mcp_http_server: dict) -> None:
 # E2E Test Status Summary:
 # ✅ ALL PASSING (8/8):
 #   - test_database_management
-#   - test_document_operations  
+#   - test_document_operations
 #   - test_query_operations
 #   - test_configuration_discovery
 #   - test_bulk_operations

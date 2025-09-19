@@ -358,7 +358,9 @@ async def test_milvus_database_management(mcp_http_server: dict[str, Any]) -> No
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="TODO: Fix document indexing timing issues - documents not being indexed properly in CI (see issue in e2e.yml)")
+@pytest.mark.skip(
+    reason="TODO: Fix document indexing timing issues - documents not being indexed properly in CI (see issue in e2e.yml)"
+)
 async def test_milvus_document_operations(mcp_http_server: dict[str, Any]) -> None:
     """Test document operations: write_document, list_documents, get_document, delete_document."""
 
@@ -1086,7 +1088,9 @@ async def test_milvus_bulk_operations(mcp_http_server: dict[str, Any]) -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="TODO: Fix connection timeout issues - ReadTimeout and ClosedResourceError during test execution (see issue in e2e.yml)")
+@pytest.mark.skip(
+    reason="TODO: Fix connection timeout issues - ReadTimeout and ClosedResourceError during test execution (see issue in e2e.yml)"
+)
 async def test_milvus_collection_specific_operations(
     mcp_http_server: dict[str, Any],
 ) -> None:
@@ -1280,7 +1284,9 @@ async def test_milvus_collection_specific_operations(
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason="TODO: Fix client connection timeout - 60s timeout during client initialization (see issue in e2e.yml)")
+@pytest.mark.skip(
+    reason="TODO: Fix client connection timeout - 60s timeout during client initialization (see issue in e2e.yml)"
+)
 async def test_milvus_resync_operations(mcp_http_server: dict[str, Any]) -> None:
     """Test resync operations: resync_databases_tool."""
 
@@ -1378,7 +1384,7 @@ async def test_milvus_resync_operations(mcp_http_server: dict[str, Any]) -> None
 # E2E Test Status Summary:
 # ✅ PASSING (6/9):
 #   - test_full_milvus_flow
-#   - test_milvus_database_management  
+#   - test_milvus_database_management
 #   - test_milvus_query_operations
 #   - test_milvus_configuration_discovery
 #   - test_milvus_document_retrieval_operations
@@ -1386,5 +1392,5 @@ async def test_milvus_resync_operations(mcp_http_server: dict[str, Any]) -> None
 #
 # ⏭️ SKIPPED (3/9) - TODO:
 #   - test_milvus_document_operations (document indexing timing)
-#   - test_milvus_collection_specific_operations (connection timeouts)  
+#   - test_milvus_collection_specific_operations (connection timeouts)
 #   - test_milvus_resync_operations (client initialization timeout)
