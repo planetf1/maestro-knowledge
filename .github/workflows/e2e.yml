@@ -54,7 +54,7 @@ jobs:
 
     - name: Start Milvus standalone (production config)
       run: |
-        echo "Starting Milvus v2.6.1 with production configuration..."
+        echo "Starting Milvus v2.4.4 with production configuration..."
         docker run -d --name milvus-service \
           -p 19530:19530 \
           -p 9091:9091 \
@@ -64,7 +64,7 @@ jobs:
           -e COMMON_STORAGETYPE=local \
           -e DEPLOY_MODE=STANDALONE \
           --tmpfs /var/lib/milvus:size=1G \
-          milvusdb/milvus:v2.6.1 \
+          milvusdb/milvus:v2.4.4 \
           /milvus/bin/milvus run standalone
 
     - name: Wait for services to be ready
