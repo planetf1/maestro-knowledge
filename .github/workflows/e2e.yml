@@ -1,0 +1,334 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [ main, develop, dev/*/e2e*, dev/*/async-ext-more ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  e2e-milvus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    services:
+      # Ollama service - needed for embeddings
+      ollama:
+        image: ollama/ollama:latest
+        ports:
+          - 11434:11434
+        options: --name ollama-service
+
+      # Milvus dependencies
+      etcd:
+        image: quay.io/coreos/etcd:v3.5.5
+        ports:
+          - 2379:2379
+          - 2380:2380
+        env:
+          ETCD_AUTO_COMPACTION_MODE: revision
+          ETCD_AUTO_COMPACTION_RETENTION: 1000
+          ETCD_QUOTA_BACKEND_BYTES: 4294967296
+          ETCD_SNAPSHOT_COUNT: 50000
+        options: >-
+          --name etcd-service
+          --health-cmd "etcdctl endpoint health"
+          --health-interval 30s
+          --health-timeout 20s
+          --health-retries 3
+
+      minio:
+        image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+        ports:
+          - 9000:9000
+          - 9001:9001
+        env:
+          MINIO_ACCESS_KEY: minioadmin
+          MINIO_SECRET_KEY: minioadmin
+        options: >-
+          --name minio-service
+          --health-cmd "curl -f http://localhost:9000/minio/health/live"
+          --health-interval 30s
+          --health-timeout 20s
+          --health-retries 3
+
+      milvus:
+        image: milvusdb/milvus:v2.3.3
+        ports:
+          - 19530:19530
+        env:
+          ETCD_ENDPOINTS: etcd-service:2379
+          MINIO_ADDRESS: minio-service:9000
+        options: >-
+          --name milvus-service
+          --health-cmd "curl -f http://localhost:9091/healthz"
+          --health-interval 30s
+          --health-timeout 20s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          .uv/cache
+        key: ${{ runner.os }}-uv-e2e-${{ hashFiles('**/pyproject.toml', '**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-e2e-
+
+    - name: Create virtual environment
+      run: |
+        rm -rf .venv
+        uv venv
+
+    - name: Install dependencies
+      run: |
+        uv sync
+
+    - name: Wait for services to be ready
+      run: |
+        echo "Waiting for Ollama service to be ready..."
+        for i in {1..60}; do
+          if curl -f http://localhost:11434/api/tags 2>/dev/null; then
+            echo "Ollama is ready"
+            break
+          fi
+          echo "Waiting for Ollama... ($i/60)"
+          sleep 5
+        done
+        
+        echo "Waiting for etcd to be ready..."
+        for i in {1..30}; do
+          if curl -f http://localhost:2379/health 2>/dev/null; then
+            echo "etcd is ready"
+            break
+          fi
+          echo "Waiting for etcd... ($i/30)"
+          sleep 5
+        done
+        
+        echo "Waiting for MinIO to be ready..."
+        for i in {1..30}; do
+          if curl -f http://localhost:9000/minio/health/live 2>/dev/null; then
+            echo "MinIO is ready"
+            break
+          fi
+          echo "Waiting for MinIO... ($i/30)"
+          sleep 5
+        done
+        
+        echo "Waiting for Milvus to be ready..."
+        for i in {1..60}; do
+          if curl -f http://localhost:19530 2>/dev/null; then
+            echo "Milvus is ready"
+            break
+          fi
+          echo "Waiting for Milvus... ($i/60)"
+          sleep 10
+        done
+
+    - name: Pull Ollama embedding model
+      run: |
+        echo "Pulling nomic-embed-text model..."
+        curl -X POST http://localhost:11434/api/pull -d '{"name":"nomic-embed-text:latest"}' || true
+        # Wait for model to be available
+        for i in {1..30}; do
+          if curl -s http://localhost:11434/api/tags | grep -q "nomic-embed-text"; then
+            echo "nomic-embed-text model is available"
+            break
+          fi
+          echo "Waiting for model download... ($i/30)"
+          sleep 10
+        done
+
+    - name: Test Ollama embedding endpoint
+      run: |
+        echo "Testing Ollama embedding endpoint..."
+        curl -X POST http://localhost:11434/api/embeddings \
+          -H "Content-Type: application/json" \
+          -d '{"model":"nomic-embed-text","prompt":"test"}' \
+          --max-time 30 || echo "Embedding test failed but continuing..."
+
+    - name: Run Milvus E2E tests
+      env:
+        MILVUS_URI: http://localhost:19530
+        CUSTOM_EMBEDDING_URL: http://localhost:11434/api/embeddings
+        CUSTOM_EMBEDDING_MODEL: nomic-embed-text
+        CUSTOM_EMBEDDING_VECTORSIZE: 768
+        E2E_BACKEND: milvus
+        E2E_MILVUS: 1
+        E2E_MCP_PORT: 8030
+        PYTHONPATH: src
+      run: |
+        echo "Running Milvus E2E tests..."
+        timeout 600 uv run pytest tests/e2e/test_mcp_milvus_e2e.py -v --tb=short
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-test-results-milvus-${{ matrix.python-version }}
+        path: |
+          .pytest_cache/
+        retention-days: 7
+
+    - name: Show service logs on failure
+      if: failure()
+      run: |
+        echo "=== Ollama logs ==="
+        docker logs ollama-service || true
+        echo "=== Milvus logs ==="
+        docker logs milvus-service || true
+        echo "=== etcd logs ==="
+        docker logs etcd-service || true
+        echo "=== MinIO logs ==="
+        docker logs minio-service || true
+
+  e2e-weaviate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    services:
+      # Ollama service - needed for embeddings
+      ollama:
+        image: ollama/ollama:latest
+        ports:
+          - 11434:11434
+        options: --name ollama-service
+
+      # Weaviate service
+      weaviate:
+        image: semitechnologies/weaviate:1.27.0
+        ports:
+          - 8080:8080
+        env:
+          AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+          PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+          DEFAULT_VECTORIZER_MODULE: 'none'
+          ENABLE_MODULES: ''
+          CLUSTER_HOSTNAME: 'node1'
+        options: >-
+          --name weaviate-service
+          --health-cmd "curl -f http://localhost:8080/v1/meta"
+          --health-interval 30s
+          --health-timeout 20s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          .uv/cache
+        key: ${{ runner.os }}-uv-e2e-${{ hashFiles('**/pyproject.toml', '**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-e2e-
+
+    - name: Create virtual environment
+      run: |
+        rm -rf .venv
+        uv venv
+
+    - name: Install dependencies
+      run: |
+        uv sync
+
+    - name: Wait for services to be ready
+      run: |
+        echo "Waiting for Ollama service to be ready..."
+        for i in {1..60}; do
+          if curl -f http://localhost:11434/api/tags 2>/dev/null; then
+            echo "Ollama is ready"
+            break
+          fi
+          echo "Waiting for Ollama... ($i/60)"
+          sleep 5
+        done
+        
+        echo "Waiting for Weaviate to be ready..."
+        for i in {1..30}; do
+          if curl -f http://localhost:8080/v1/meta 2>/dev/null; then
+            echo "Weaviate is ready"
+            break
+          fi
+          echo "Waiting for Weaviate... ($i/30)"
+          sleep 5
+        done
+
+    - name: Pull Ollama embedding model
+      run: |
+        echo "Pulling nomic-embed-text model..."
+        curl -X POST http://localhost:11434/api/pull -d '{"name":"nomic-embed-text:latest"}' || true
+        # Wait for model to be available
+        for i in {1..30}; do
+          if curl -s http://localhost:11434/api/tags | grep -q "nomic-embed-text"; then
+            echo "nomic-embed-text model is available"
+            break
+          fi
+          echo "Waiting for model download... ($i/30)"
+          sleep 10
+        done
+
+    - name: Test Ollama embedding endpoint
+      run: |
+        echo "Testing Ollama embedding endpoint..."
+        curl -X POST http://localhost:11434/api/embeddings \
+          -H "Content-Type: application/json" \
+          -d '{"model":"nomic-embed-text","prompt":"test"}' \
+          --max-time 30 || echo "Embedding test failed but continuing..."
+
+    - name: Run Weaviate E2E tests
+      env:
+        WEAVIATE_URL: http://localhost:8080
+        WEAVIATE_API_KEY: test-key
+        E2E_BACKEND: weaviate
+        E2E_WEAVIATE: 1
+        E2E_MCP_PORT: 8031
+        PYTHONPATH: src
+      run: |
+        echo "Running Weaviate E2E tests..."
+        timeout 600 uv run pytest tests/e2e/test_mcp_weaviate_e2e.py -v --tb=short
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-test-results-weaviate-${{ matrix.python-version }}
+        path: |
+          .pytest_cache/
+        retention-days: 7
+
+    - name: Show service logs on failure
+      if: failure()
+      run: |
+        echo "=== Ollama logs ==="
+        docker logs ollama-service || true
+        echo "=== Weaviate logs ==="
+        docker logs weaviate-service || true
