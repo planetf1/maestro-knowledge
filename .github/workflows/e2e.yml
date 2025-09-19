@@ -40,7 +40,7 @@ jobs:
         path: |
           ~/.cache/uv
           .venv
-        key: ${{ runner.os }}-uv-e2e-${{ hashFiles('**/pyproject.toml') }}
+        key: ${{ runner.os }}-uv-e2e-milvus-${{ github.run_id }}-${{ github.run_attempt }}
         restore-keys: |
           ${{ runner.os }}-uv-e2e-
 
@@ -182,7 +182,14 @@ jobs:
         PYTHONPATH: src
       run: |
         echo "Running Milvus E2E tests..."
-        timeout 600 uv run pytest tests/e2e/test_mcp_milvus_e2e.py -v --tb=short
+        echo "Environment check:"
+        echo "  E2E_BACKEND=${E2E_BACKEND}"
+        echo "  E2E_MILVUS=${E2E_MILVUS}"
+        echo "  E2E_WEAVIATE=${E2E_WEAVIATE:-<not set>}"
+        echo "  MILVUS_URI=${MILVUS_URI}"
+        echo "  CUSTOM_EMBEDDING_URL=${CUSTOM_EMBEDDING_URL}"
+        echo "  CUSTOM_EMBEDDING_MODEL=${CUSTOM_EMBEDDING_MODEL}"
+        timeout 600 uv run pytest tests/e2e/test_mcp_milvus_e2e.py -v --tb=short -s
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
@@ -235,7 +242,7 @@ jobs:
         path: |
           ~/.cache/uv
           .venv
-        key: ${{ runner.os }}-uv-e2e-${{ hashFiles('**/pyproject.toml') }}
+        key: ${{ runner.os }}-uv-e2e-weaviate-${{ github.run_id }}-${{ github.run_attempt }}
         restore-keys: |
           ${{ runner.os }}-uv-e2e-
 
