@@ -63,7 +63,8 @@ jobs:
           -e ETCD_USE_EMBED=true \
           -e ETCD_DATA_DIR=/var/lib/milvus/etcd \
           -v $(pwd)/milvus-data:/var/lib/milvus \
-          milvusdb/milvus:v2.4.4
+          milvusdb/milvus:v2.4.4 \
+          milvus run standalone
 
     - name: Wait for services to be ready
       run: |
