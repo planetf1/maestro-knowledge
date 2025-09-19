@@ -54,7 +54,7 @@ jobs:
 
     - name: Start Milvus standalone (production config)
       run: |
-        echo "Starting Milvus v2.4.4 with production configuration..."
+        echo "Starting Milvus v2.6.1 with production configuration matching Kubernetes..."
         # Create a directory on the host runner for Milvus data
         mkdir -p milvus-data
         docker run -d --name milvus-service \
@@ -62,9 +62,11 @@ jobs:
           -p 9091:9091 \
           -e ETCD_USE_EMBED=true \
           -e ETCD_DATA_DIR=/var/lib/milvus/etcd \
+          -e COMMON_STORAGETYPE=local \
+          -e DEPLOY_MODE=STANDALONE \
           -v $(pwd)/milvus-data:/var/lib/milvus \
-          milvusdb/milvus:v2.4.4 \
-          milvus run standalone
+          milvusdb/milvus:v2.6.1 \
+          /milvus/bin/milvus run standalone
 
     - name: Wait for services to be ready
       run: |
