@@ -34,9 +34,9 @@ class TestQueryIntegration:
     """Integration tests for the query functionality."""
 
     @pytest.fixture
-    def mcp_server(self) -> FastMCP:
+    async def mcp_server(self) -> FastMCP:
         """Create a test MCP server instance."""
-        return create_mcp_server()
+        return await create_mcp_server()
 
     @pytest.fixture
     def mock_vector_db(self) -> Mock:
@@ -62,10 +62,11 @@ class TestQueryIntegration:
         assert query_input.query == "What is the main topic?"
         assert query_input.limit == 5
 
-    def test_query_with_real_vector_db_factory(self) -> None:
+    @pytest.mark.asyncio
+    async def test_query_with_real_vector_db_factory(self) -> None:
         """Test query with real vector database factory."""
         # Test that the server was created successfully
-        mcp_server = create_mcp_server()
+        mcp_server = await create_mcp_server()
         assert mcp_server is not None, "MCP server should be created"
 
         # Test QueryInput model
@@ -75,10 +76,11 @@ class TestQueryIntegration:
         assert query_input.query == "Test query"
         assert query_input.limit == 5
 
-    def test_query_multiple_databases_integration(self) -> None:
+    @pytest.mark.asyncio
+    async def test_query_multiple_databases_integration(self) -> None:
         """Test querying multiple databases in the same session."""
         # Test that the server was created successfully
-        mcp_server = create_mcp_server()
+        mcp_server = await create_mcp_server()
         assert mcp_server is not None, "MCP server should be created"
 
         # Test QueryInput with different database names
@@ -94,10 +96,11 @@ class TestQueryIntegration:
         assert query_input2.query == "Test query 2"
         assert query_input2.limit == 10
 
-    def test_query_error_handling_integration(self) -> None:
+    @pytest.mark.asyncio
+    async def test_query_error_handling_integration(self) -> None:
         """Test error handling in the complete query flow."""
         # Test that the server was created successfully
-        mcp_server = create_mcp_server()
+        mcp_server = await create_mcp_server()
         assert mcp_server is not None, "MCP server should be created"
 
         # Test QueryInput model
@@ -107,10 +110,11 @@ class TestQueryIntegration:
         assert query_input.query == "Test query"
         assert query_input.limit == 5
 
-    def test_query_with_different_limits_integration(self) -> None:
+    @pytest.mark.asyncio
+    async def test_query_with_different_limits_integration(self) -> None:
         """Test query with different limit values in integration."""
         # Test that the server was created successfully
-        mcp_server = create_mcp_server()
+        mcp_server = await create_mcp_server()
         assert mcp_server is not None, "MCP server should be created"
 
         # Test QueryInput with different limit values
@@ -125,9 +129,10 @@ class TestQueryIntegration:
             assert query_input.query == f"Test query with limit {limit}"
             assert query_input.limit == limit
 
-    def test_query_special_characters_integration(self) -> None:
+    @pytest.mark.asyncio
+    async def test_query_special_characters_integration(self) -> None:
         """Test query with special characters in integration."""
-        mcp_server = create_mcp_server()
+        mcp_server = await create_mcp_server()
         assert mcp_server is not None, "MCP server should be created"
 
         special_queries = [
@@ -249,12 +254,13 @@ class TestQueryCLIIntegration:
 class TestQueryEndToEnd:
     """End-to-end tests for the query functionality."""
 
-    def test_query_e2e_flow(self) -> None:
+    @pytest.mark.asyncio
+    async def test_query_e2e_flow(self) -> None:
         """Test the complete end-to-end query flow."""
         from src.db.vector_db_base import VectorDatabase
 
         assert hasattr(VectorDatabase, "query")
-        mcp_server = create_mcp_server()
+        mcp_server = await create_mcp_server()
         assert mcp_server is not None, "MCP server should be created"
         query_input = QueryInput(db_name="test-db", query="Test query", limit=5)
         assert query_input.db_name == "test-db"

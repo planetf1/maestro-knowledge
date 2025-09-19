@@ -78,7 +78,7 @@ class WeaviateVectorDatabase(VectorDatabase):
         if openai_api_key:
             os.environ["OPENAI_APIKEY"] = openai_api_key
 
-        self.client = weaviate.connect_to_weaviate_cloud(
+        self.client = weaviate.use_async_with_weaviate_cloud(
             cluster_url=weaviate_url,
             auth_credentials=Auth.api_key(weaviate_api_key),
         )
@@ -134,7 +134,7 @@ class WeaviateVectorDatabase(VectorDatabase):
 
         return vectorizer_mapping[embedding]
 
-    def setup(
+    async def setup(
         self,
         embedding: str = "default",
         collection_name: str = None,
@@ -165,11 +165,11 @@ class WeaviateVectorDatabase(VectorDatabase):
             "chunking": chunking_config or {"strategy": "None", "parameters": {}},
         }
         self._collections_metadata[target_collection] = target_meta
-
-        if not self.client.collections.exists(target_collection):
+        await self.client.connect()
+        if not await self.client.collections.exists(target_collection):
             vectorizer_config = self._get_vectorizer_config(embedding)
 
-            self.client.collections.create(
+            await self.client.collections.create(
                 target_collection,
                 description="A dataset with the contents of Maestro Knowledge docs and website",
                 vectorizer_config=vectorizer_config,
@@ -194,13 +194,13 @@ class WeaviateVectorDatabase(VectorDatabase):
             # Optionally store meta in client if supported
             try:
                 if hasattr(self.client.collections, "set_metadata"):
-                    self.client.collections.set_metadata(
+                    await self.client.collections.set_metadata(
                         target_collection, self._collections_metadata[target_collection]
                     )
             except Exception:
                 pass
 
-    def write_documents(
+    async def write_documents(
         self,
         documents: list[dict[str, Any]],
         embedding: str = "default",
@@ -230,8 +230,8 @@ class WeaviateVectorDatabase(VectorDatabase):
             )
 
         # Ensure collection exists with the correct embedding configuration
-        if not self.client.collections.exists(target_collection):
-            self.setup(embedding, target_collection)
+        if not await self.client.collections.exists(target_collection):
+            await self.setup(embedding, target_collection)
 
         # If the collection has an embedding set and the caller provided a different one,
         # ignore the per-write parameter and warn (deprecation path).
@@ -241,7 +241,7 @@ class WeaviateVectorDatabase(VectorDatabase):
                 stacklevel=2,
             )
 
-        collection = self.client.collections.get(target_collection)
+        collection = await self.client.collections.get(target_collection)
         # Determine chunking config for this collection
         coll_meta = getattr(self, "_collections_metadata", {}).get(
             target_collection, {}
@@ -256,7 +256,7 @@ class WeaviateVectorDatabase(VectorDatabase):
         build_start = time.perf_counter()
 
         try:
-            with collection.batch.dynamic() as batch:
+            with await collection.batch.dynamic() as batch:
                 for idx, doc in enumerate(documents):
                     doc_start = time.perf_counter()
                     orig_metadata = dict(doc.get("metadata", {}))
@@ -343,7 +343,7 @@ class WeaviateVectorDatabase(VectorDatabase):
             "duration_ms": total_duration_ms,
         }
 
-    def write_documents_to_collection(
+    async def write_documents_to_collection(
         self,
         documents: list[dict[str, Any]],
         collection_name: str,
@@ -359,14 +359,16 @@ class WeaviateVectorDatabase(VectorDatabase):
                       - "default": Use Weaviate's default text2vec-weaviate
                       - Specific model name: Use the specified embedding model
         """
-        return self.write_documents(documents, embedding, collection_name)
+        return await self.write_documents(documents, embedding, collection_name)
 
-    def list_documents(self, limit: int = 10, offset: int = 0) -> list[dict[str, Any]]:
+    async def list_documents(
+        self, limit: int = 10, offset: int = 0
+    ) -> list[dict[str, Any]]:
         """List documents from Weaviate."""
-        collection = self.client.collections.get(self.collection_name)
+        collection = await self.client.collections.get(self.collection_name)
 
         # Query the collection
-        result = collection.query.fetch_objects(
+        result = await collection.query.fetch_objects(
             limit=limit,
             offset=offset,
             include_vector=False,  # Don't include vector data in response
@@ -392,16 +394,16 @@ class WeaviateVectorDatabase(VectorDatabase):
 
         return documents
 
-    def list_documents_in_collection(
+    async def list_documents_in_collection(
         self, collection_name: str, limit: int = 10, offset: int = 0
     ) -> list[dict[str, Any]]:
         """List documents from a specific collection in Weaviate."""
         try:
             # Get the specific collection
-            collection = self.client.collections.get(collection_name)
+            collection = await self.client.collections.get(collection_name)
 
             # Query documents from the collection
-            result = collection.query.fetch_objects(
+            result = await collection.query.fetch_objects(
                 limit=limit,
                 offset=offset,
                 include_vector=False,
@@ -432,14 +434,14 @@ class WeaviateVectorDatabase(VectorDatabase):
             )
             return []
 
-    def count_documents_in_collection(self, collection_name: str) -> int:
+    async def count_documents_in_collection(self, collection_name: str) -> int:
         """Get the current count of documents in a specific collection in Weaviate."""
         try:
             # Get the specific collection
-            collection = self.client.collections.get(collection_name)
+            collection = await self.client.collections.get(collection_name)
 
             # Query to get the count - use a simple approach
-            result = collection.query.fetch_objects(limit=10000)
+            result = await collection.query.fetch_objects(limit=10000)
             return len(result.objects)
         except Exception as e:
             warnings.warn(
@@ -447,19 +449,19 @@ class WeaviateVectorDatabase(VectorDatabase):
             )
             return 0
 
-    def get_document(
+    async def get_document(
         self, doc_name: str, collection_name: str = None
     ) -> dict[str, Any]:
         """Reassemble a document from its chunks by doc_name."""
         target_collection = collection_name or self.collection_name
         # Ensure collection exists
-        if not self.client.collections.exists(target_collection):
+        if not await self.client.collections.exists(target_collection):
             raise ValueError(f"Collection '{target_collection}' not found")
 
         # Fetch all objects with metadata containing the doc_name
-        collection = self.client.collections.get(target_collection)
-        result = collection.query.fetch_objects(
-            where=collection.query.filter.by_property("metadata").contains_any(
+        collection = await self.client.collections.get(target_collection)
+        result = await collection.query.fetch_objects(
+            where=(await collection.query.filter.by_property("metadata")).contains_any(
                 [doc_name]
             ),
             limit=10000,
@@ -491,13 +493,13 @@ class WeaviateVectorDatabase(VectorDatabase):
             )
         return doc
 
-    def get_document_chunks(
+    async def get_document_chunks(
         self, doc_id: str, collection_name: str = None
     ) -> list[dict[str, Any]]:
         target_collection = collection_name or self.collection_name
-        collection = self.client.collections.get(target_collection)
-        result = collection.query.fetch_objects(
-            where=collection.query.filter.by_property("metadata").contains_any(
+        collection = await self.client.collections.get(target_collection)
+        result = await collection.query.fetch_objects(
+            where=(await collection.query.filter.by_property("metadata")).contains_any(
                 [doc_id]
             ),
             limit=10000,
@@ -521,14 +523,14 @@ class WeaviateVectorDatabase(VectorDatabase):
                 )
         return chunks
 
-    def count_documents(self) -> int:
+    async def count_documents(self) -> int:
         """Get the current count of documents in the collection."""
-        collection = self.client.collections.get(self.collection_name)
+        collection = await self.client.collections.get(self.collection_name)
 
         # Query to get the count - use a simple approach
         try:
             # Get all objects and count them (with a reasonable limit)
-            result = collection.query.fetch_objects(limit=10000)
+            result = await collection.query.fetch_objects(limit=10000)
             return len(result.objects)
         except Exception as e:
             # If we can't get the count, return 0
@@ -537,11 +539,11 @@ class WeaviateVectorDatabase(VectorDatabase):
             warnings.warn(f"Could not get document count for Weaviate collection: {e}")
             return 0
 
-    def list_collections(self) -> list[str]:
+    async def list_collections(self) -> list[str]:
         """List all collections in Weaviate."""
         try:
             # Get all collections from the client
-            collections = self.client.collections.list_all()
+            collections = await self.client.collections.list_all()
 
             # Handle both object collections and string collections
             collection_names = []
@@ -559,13 +561,13 @@ class WeaviateVectorDatabase(VectorDatabase):
             warnings.warn(f"Could not list collections from Weaviate: {e}")
             return []
 
-    def get_collection_info(self, collection_name: str = None) -> dict[str, Any]:
+    async def get_collection_info(self, collection_name: str = None) -> dict[str, Any]:
         """Get detailed information about a collection."""
         target_collection = collection_name or self.collection_name
 
         try:
             # Check if collection exists
-            if not self.client.collections.exists(target_collection):
+            if not await self.client.collections.exists(target_collection):
                 return {
                     "name": target_collection,
                     "document_count": 0,
@@ -612,11 +614,11 @@ class WeaviateVectorDatabase(VectorDatabase):
                 }
 
             # Get collection object
-            collection = self.client.collections.get(target_collection)
+            collection = await self.client.collections.get(target_collection)
 
             # Get document count
             try:
-                result = collection.query.fetch_objects(limit=10000)
+                result = await collection.query.fetch_objects(limit=10000)
                 document_count = len(result.objects)
             except Exception as e:
                 import warnings
@@ -763,24 +765,24 @@ class WeaviateVectorDatabase(VectorDatabase):
                 "metadata": {"error": str(e)},
             }
 
-    def delete_documents(self, document_ids: list[str]) -> None:
+    async def delete_documents(self, document_ids: list[str]) -> None:
         """Delete documents from Weaviate by their IDs."""
-        collection = self.client.collections.get(self.collection_name)
+        collection = await self.client.collections.get(self.collection_name)
 
         # Delete documents by UUID
         for doc_id in document_ids:
             try:
-                collection.data.delete_by_id(doc_id)
+                await collection.data.delete_by_id(doc_id)
             except Exception as e:
                 warnings.warn(f"Failed to delete document {doc_id}: {e}")
 
-    def delete_collection(self, collection_name: str = None) -> None:
+    async def delete_collection(self, collection_name: str = None) -> None:
         """Delete an entire collection from Weaviate."""
         target_collection = collection_name or self.collection_name
 
         try:
-            if self.client.collections.exists(target_collection):
-                self.client.collections.delete(target_collection)
+            if await self.client.collections.exists(target_collection):
+                await self.client.collections.delete(target_collection)
                 if target_collection == self.collection_name:
                     self.collection_name = None
         except Exception as e:
@@ -794,7 +796,9 @@ class WeaviateVectorDatabase(VectorDatabase):
 
         return QueryAgent(client=self.client, collections=[self.collection_name])
 
-    def query(self, query: str, limit: int = 5, collection_name: str = None) -> str:
+    async def query(
+        self, query: str, limit: int = 5, collection_name: str = None
+    ) -> str:
         """
         Query the vector database using Weaviate's vector similarity search.
 
@@ -808,7 +812,7 @@ class WeaviateVectorDatabase(VectorDatabase):
         """
         try:
             # Use vector similarity search as the primary method
-            documents = self.search(query, limit, collection_name)
+            documents = await self.search(query, limit, collection_name)
 
             if not documents:
                 return f"No relevant documents found for query: '{query}'"
@@ -830,11 +834,8 @@ class WeaviateVectorDatabase(VectorDatabase):
             warnings.warn(f"Failed to query Weaviate: {e}")
             return f"Error querying database: {str(e)}"
 
-    def search(
-        self,
-        query: str,
-        limit: int = 5,
-        collection_name: str = None,
+    async def search(
+        self, query: str, limit: int = 5, collection_name: str = None
     ) -> list[dict[str, Any]]:
         """
         Search for documents using Weaviate's vector similarity search.
@@ -851,7 +852,7 @@ class WeaviateVectorDatabase(VectorDatabase):
             target_collection = (
                 collection_name if collection_name is not None else self.collection_name
             )
-            collection = self.client.collections.get(target_collection)
+            collection = await self.client.collections.get(target_collection)
 
             # Use Weaviate's near_text search for vector similarity and request scoring metadata
             try:
@@ -863,14 +864,14 @@ class WeaviateVectorDatabase(VectorDatabase):
                 metadata_query = None
 
             if metadata_query is not None:
-                result = collection.query.near_text(
+                result = await collection.query.near_text(
                     query=query,
                     limit=limit,
                     include_vector=False,
                     return_metadata=metadata_query,
                 )
             else:
-                result = collection.query.near_text(
+                result = await collection.query.near_text(
                     query=query,
                     limit=limit,
                     include_vector=False,
@@ -970,13 +971,10 @@ class WeaviateVectorDatabase(VectorDatabase):
         except Exception as e:
             warnings.warn(f"Failed to perform vector search for query '{query}': {e}")
             # Fallback to simple keyword matching if vector search fails
-            return self._fallback_keyword_search(query, limit, collection_name)
+            return await self._fallback_keyword_search(query, limit, collection_name)
 
-    def _fallback_keyword_search(
-        self,
-        query: str,
-        limit: int = 5,
-        collection_name: str = None,
+    async def _fallback_keyword_search(
+        self, query: str, limit: int = 5, collection_name: str = None
     ) -> list[dict[str, Any]]:
         """
         Fallback to simple keyword matching if vector search fails.
@@ -994,7 +992,7 @@ class WeaviateVectorDatabase(VectorDatabase):
             target_collection = (
                 collection_name if collection_name is not None else self.collection_name
             )
-            documents = self.list_documents_in_collection(
+            documents = await self.list_documents_in_collection(
                 target_collection, limit=100, offset=0
             )
 
@@ -1047,18 +1045,18 @@ class WeaviateVectorDatabase(VectorDatabase):
             warnings.warn(f"Fallback keyword search also failed: {e}")
             return []
 
-    def cleanup(self) -> None:
+    async def cleanup(self) -> None:
         """Clean up Weaviate client."""
         if self.client:
             try:
                 # Close any open connections
                 if hasattr(self.client, "close"):
-                    self.client.close()
+                    await self.client.close()
                 # Also try to close the underlying connection if it exists
                 if hasattr(self.client, "_connection") and self.client._connection:
                     if hasattr(self.client._connection, "close"):
                         try:
-                            self.client._connection.close()
+                            await self.client._connection.close()
                         except TypeError:
                             # Some connection objects don't take arguments
                             pass

@@ -44,7 +44,7 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def setup(
+    async def setup(
         self,
         embedding: str = "default",
         collection_name: str = None,
@@ -61,7 +61,7 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def write_documents(
+    async def write_documents(
         self,
         documents: list[dict[str, Any]],
         embedding: str = "default",
@@ -77,7 +77,7 @@ class VectorDatabase(ABC):
         """
         pass
 
-    def write_documents_to_collection(
+    async def write_documents_to_collection(
         self,
         documents: list[dict[str, Any]],
         collection_name: str,
@@ -91,9 +91,9 @@ class VectorDatabase(ABC):
                        For Milvus, documents may also include a 'vector' field.
             collection_name: Name of the collection to write to
         """
-        return self.write_documents(documents, embedding, collection_name)
+        return await self.write_documents(documents, embedding, collection_name)
 
-    def write_document(
+    async def write_document(
         self,
         document: dict[str, Any],
         embedding: str = "default",
@@ -107,10 +107,12 @@ class VectorDatabase(ABC):
                      For Milvus, document may also include a 'vector' field.
             collection_name: Name of the collection to write to (optional)
         """
-        return self.write_documents([document], embedding, collection_name)
+        return await self.write_documents([document], embedding, collection_name)
 
     @abstractmethod
-    def list_documents(self, limit: int = 10, offset: int = 0) -> list[dict[str, Any]]:
+    async def list_documents(
+        self, limit: int = 10, offset: int = 0
+    ) -> list[dict[str, Any]]:
         """
         List documents from the vector database.
 
@@ -123,7 +125,7 @@ class VectorDatabase(ABC):
         """
         pass
 
-    def list_documents_in_collection(
+    async def list_documents_in_collection(
         self, collection_name: str, limit: int = 10, offset: int = 0
     ) -> list[dict[str, Any]]:
         """
@@ -141,12 +143,12 @@ class VectorDatabase(ABC):
         original_collection = self.collection_name
         self.collection_name = collection_name
         try:
-            return self.list_documents(limit, offset)
+            return await self.list_documents(limit, offset)
         finally:
             self.collection_name = original_collection
 
     @abstractmethod
-    def get_document(
+    async def get_document(
         self, doc_name: str, collection_name: str = None
     ) -> dict[str, Any]:
         """
@@ -165,7 +167,7 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def count_documents(self) -> int:
+    async def count_documents(self) -> int:
         """
         Get the current count of documents in the collection.
 
@@ -174,7 +176,7 @@ class VectorDatabase(ABC):
         """
         pass
 
-    def count_documents_in_collection(self, collection_name: str) -> int:
+    async def count_documents_in_collection(self, collection_name: str) -> int:
         """
         Get the current count of documents in a specific collection.
 
@@ -188,12 +190,12 @@ class VectorDatabase(ABC):
         original_collection = self.collection_name
         self.collection_name = collection_name
         try:
-            return self.count_documents()
+            return await self.count_documents()
         finally:
             self.collection_name = original_collection
 
     @abstractmethod
-    def list_collections(self) -> list[str]:
+    async def list_collections(self) -> list[str]:
         """
         List all collections in the vector database.
 
@@ -203,7 +205,7 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def get_collection_info(self, collection_name: str = None) -> dict[str, Any]:
+    async def get_collection_info(self, collection_name: str = None) -> dict[str, Any]:
         """
         Get detailed information about a collection.
 
@@ -221,7 +223,7 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def delete_documents(self, document_ids: list[str]) -> None:
+    async def delete_documents(self, document_ids: list[str]) -> None:
         """
         Delete documents from the vector database by their IDs.
 
@@ -230,17 +232,17 @@ class VectorDatabase(ABC):
         """
         pass
 
-    def delete_document(self, document_id: str) -> None:
+    async def delete_document(self, document_id: str) -> None:
         """
         Delete a single document from the vector database by its ID.
 
         Args:
             document_id: Document ID to delete
         """
-        return self.delete_documents([document_id])
+        return await self.delete_documents([document_id])
 
     @abstractmethod
-    def delete_collection(self, collection_name: str = None) -> None:
+    async def delete_collection(self, collection_name: str = None) -> None:
         """
         Delete an entire collection from the database.
 
@@ -256,7 +258,9 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def query(self, query: str, limit: int = 5, collection_name: str = None) -> str:
+    async def query(
+        self, query: str, limit: int = 5, collection_name: str = None
+    ) -> str:
         """
         Query the vector database using the default query agent.
 
@@ -271,7 +275,7 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def search(
+    async def search(
         self, query: str, limit: int = 5, collection_name: str = None
     ) -> list[dict]:
         """
@@ -288,11 +292,11 @@ class VectorDatabase(ABC):
         pass
 
     @abstractmethod
-    def cleanup(self) -> None:
+    async def cleanup(self) -> None:
         """Clean up resources and close connections."""
         pass
 
-    def get_document_chunks(
+    async def get_document_chunks(
         self, doc_id: str, collection_name: str = None
     ) -> list[dict[str, Any]]:
         """

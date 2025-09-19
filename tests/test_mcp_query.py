@@ -3,6 +3,8 @@
 
 import warnings
 import pytest
+import pytest_asyncio
+
 from unittest.mock import Mock, patch
 from typing import Any
 
@@ -32,10 +34,10 @@ from fastmcp import FastMCP
 class TestMCPQueryFunctionality:
     """Test cases for the MCP server query functionality."""
 
-    @pytest.fixture
-    def mcp_server(self) -> FastMCP:
+    @pytest_asyncio.fixture
+    async def mcp_server(self) -> FastMCP:
         """Create a test MCP server instance."""
-        return create_mcp_server()
+        return await create_mcp_server()
 
     @pytest.fixture
     def mock_vector_db(self) -> Mock:
@@ -191,7 +193,7 @@ class TestMCPQueryIntegration:
     async def test_query_tool_with_real_vector_db(self) -> None:
         """Test query tool with a real vector database instance."""
         # Test that the server was created successfully
-        mcp_server = create_mcp_server()
+        mcp_server = await create_mcp_server()
         assert mcp_server is not None, "MCP server should be created"
 
         # Test QueryInput model
@@ -205,7 +207,7 @@ class TestMCPQueryIntegration:
     async def test_query_tool_multiple_databases(self) -> None:
         """Test query tool with multiple databases."""
         # Test that the server was created successfully
-        mcp_server = create_mcp_server()
+        mcp_server = await create_mcp_server()
         assert mcp_server is not None, "MCP server should be created"
 
         # Test QueryInput with different database names

@@ -23,7 +23,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 import os
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 from typing import Any
 
 import pytest
@@ -57,7 +57,7 @@ class TestWeaviateVectorDatabase:
     def test_supported_embeddings(self) -> None:
         """Test the supported_embeddings method."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -84,7 +84,7 @@ class TestWeaviateVectorDatabase:
     def test_init_with_collection_name(self) -> None:
         """Test WeaviateVectorDatabase initialization with custom collection name."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -104,7 +104,7 @@ class TestWeaviateVectorDatabase:
     def test_init_default_collection_name(self) -> None:
         """Test WeaviateVectorDatabase initialization with default collection name."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -121,10 +121,11 @@ class TestWeaviateVectorDatabase:
             assert db.collection_name == "MaestroDocs"
             assert db.client == mock_client
 
-    def test_setup_collection_exists(self) -> None:
+    @pytest.mark.asyncio
+    async def test_setup_collection_exists(self) -> None:
         """Test setup when collection already exists."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -133,20 +134,21 @@ class TestWeaviateVectorDatabase:
                 },
             ),
         ):
-            mock_client = MagicMock()
-            mock_client.collections.exists.return_value = True
+            mock_client = AsyncMock()
+            mock_client.collections.exists = AsyncMock(return_value=True)
             mock_connect.return_value = mock_client
 
             db = WeaviateVectorDatabase()
-            db.setup()
+            await db.setup()
 
             # Should not create collection since it exists
             mock_client.collections.create.assert_not_called()
 
-    def test_setup_collection_not_exists_default_embedding(self) -> None:
+    @pytest.mark.asyncio
+    async def test_setup_collection_not_exists_default_embedding(self) -> None:
         """Test setup when collection doesn't exist with default embedding."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch("weaviate.classes.config.Configure") as mock_configure,
             patch("weaviate.classes.config.Property") as mock_property,
             patch("weaviate.classes.config.DataType") as mock_datatype,
@@ -158,8 +160,8 @@ class TestWeaviateVectorDatabase:
                 },
             ),
         ):
-            mock_client = MagicMock()
-            mock_client.collections.exists.return_value = False
+            mock_client = AsyncMock()
+            mock_client.collections.exists = AsyncMock(return_value=False)
             mock_connect.return_value = mock_client
 
             # Mock the configuration objects
@@ -170,15 +172,16 @@ class TestWeaviateVectorDatabase:
             mock_datatype.TEXT = "TEXT"
 
             db = WeaviateVectorDatabase()
-            db.setup()
+            await db.setup()
 
             # Should create collection since it doesn't exist
             mock_client.collections.create.assert_called_once()
 
-    def test_setup_collection_not_exists_custom_embedding(self) -> None:
+    @pytest.mark.asyncio
+    async def test_setup_collection_not_exists_custom_embedding(self) -> None:
         """Test setup when collection doesn't exist with custom embedding."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch("weaviate.classes.config.Configure") as mock_configure,
             patch("weaviate.classes.config.Property") as mock_property,
             patch("weaviate.classes.config.DataType") as mock_datatype,
@@ -190,8 +193,8 @@ class TestWeaviateVectorDatabase:
                 },
             ),
         ):
-            mock_client = MagicMock()
-            mock_client.collections.exists.return_value = False
+            mock_client = AsyncMock()
+            mock_client.collections.exists = AsyncMock(return_value=False)
             mock_connect.return_value = mock_client
 
             # Mock the configuration objects
@@ -202,7 +205,7 @@ class TestWeaviateVectorDatabase:
             mock_datatype.TEXT = "TEXT"
 
             db = WeaviateVectorDatabase()
-            db.setup(embedding="text-embedding-ada-002")
+            await db.setup(embedding="text-embedding-ada-002")
 
             # Should create collection since it doesn't exist
             mock_client.collections.create.assert_called_once()
@@ -210,7 +213,7 @@ class TestWeaviateVectorDatabase:
     def test_get_vectorizer_config_default(self) -> None:
         """Test getting vectorizer config for default embedding."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch("weaviate.classes.config.Configure") as mock_configure,
             patch.dict(
                 os.environ,
@@ -235,7 +238,7 @@ class TestWeaviateVectorDatabase:
     def test_get_vectorizer_config_unsupported(self) -> None:
         """Test getting vectorizer config for unsupported embedding."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -251,10 +254,11 @@ class TestWeaviateVectorDatabase:
             with pytest.raises(ValueError, match="Unsupported embedding"):
                 db._get_vectorizer_config("unsupported-model")
 
-    def test_write_documents_default_embedding(self) -> None:
+    @pytest.mark.asyncio
+    async def test_write_documents_default_embedding(self) -> None:
         """Test writing documents to Weaviate with default embedding."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -263,12 +267,12 @@ class TestWeaviateVectorDatabase:
                 },
             ),
         ):
-            mock_client = MagicMock()
-            mock_collection = MagicMock()
+            mock_client = AsyncMock()
+            mock_collection = AsyncMock()
             mock_batch = MagicMock()
-            mock_batch_context = MagicMock()
+            mock_batch_context = AsyncMock()
 
-            mock_client.collections.exists.return_value = True
+            mock_client.collections.exists = AsyncMock(return_value=True)
             mock_client.collections.get.return_value = mock_collection
             mock_collection.batch.dynamic.return_value = mock_batch_context
             mock_batch_context.__enter__.return_value = mock_batch
@@ -291,15 +295,16 @@ class TestWeaviateVectorDatabase:
                 },
             ]
 
-            db.write_documents(documents, embedding="default")
+            await db.write_documents(documents, embedding="default")
 
             # Verify batch.add_object was called for each document
             assert mock_batch.add_object.call_count == 2
 
-    def test_write_documents_custom_embedding(self) -> None:
+    @pytest.mark.asyncio
+    async def test_write_documents_custom_embedding(self) -> None:
         """Test writing documents to Weaviate with custom embedding."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch("weaviate.classes.config.Configure") as mock_configure,
             patch("weaviate.classes.config.Property") as mock_property,
             patch("weaviate.classes.config.DataType") as mock_datatype,
@@ -311,12 +316,12 @@ class TestWeaviateVectorDatabase:
                 },
             ),
         ):
-            mock_client = MagicMock()
-            mock_collection = MagicMock()
+            mock_client = AsyncMock()
+            mock_collection = AsyncMock()
             mock_batch = MagicMock()
-            mock_batch_context = MagicMock()
+            mock_batch_context = AsyncMock()
 
-            mock_client.collections.exists.return_value = False
+            mock_client.collections.exists = AsyncMock(return_value=False)
             mock_client.collections.get.return_value = mock_collection
             mock_collection.batch.dynamic.return_value = mock_batch_context
             mock_batch_context.__enter__.return_value = mock_batch
@@ -341,17 +346,20 @@ class TestWeaviateVectorDatabase:
                 }
             ]
 
-            db.write_documents(documents, embedding="text-embedding-ada-002")
+            await db.write_documents(documents, embedding="text-embedding-ada-002")
 
             # Verify collection was created and batch.add_object was called
             mock_client.collections.create.assert_called_once()
             assert mock_batch.add_object.call_count == 1
 
     # per-document embedding isn't consistent with vector search - removed (api kept for compatibility)
-    def test_write_documents_ignores_per_write_embedding_with_warning(self) -> None:
+    @pytest.mark.asyncio
+    async def test_write_documents_ignores_per_write_embedding_with_warning(
+        self,
+    ) -> None:
         """When collection embedding is set, per-write embedding should be ignored and warn (Weaviate)."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -360,12 +368,12 @@ class TestWeaviateVectorDatabase:
                 },
             ),
         ):
-            mock_client = MagicMock()
-            mock_collection = MagicMock()
+            mock_client = AsyncMock()
+            mock_collection = AsyncMock()
             mock_batch = MagicMock()
-            mock_batch_context = MagicMock()
+            mock_batch_context = AsyncMock()
 
-            mock_client.collections.exists.return_value = True
+            mock_client.collections.exists = AsyncMock(return_value=True)
             mock_client.collections.get.return_value = mock_collection
             mock_collection.batch.dynamic.return_value = mock_batch_context
             mock_batch_context.__enter__.return_value = mock_batch
@@ -380,13 +388,14 @@ class TestWeaviateVectorDatabase:
             docs = [{"url": "u", "text": "abc", "metadata": {}}]
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
-                db.write_documents(docs, embedding="text-embedding-ada-002")
+                await db.write_documents(docs, embedding="text-embedding-ada-002")
                 assert any("per-collection" in str(x.message) for x in w)
 
-    def test_write_documents_unsupported_embedding(self) -> None:
+    @pytest.mark.asyncio
+    async def test_write_documents_unsupported_embedding(self) -> None:
         """Test writing documents with unsupported embedding."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -407,12 +416,13 @@ class TestWeaviateVectorDatabase:
                 }
             ]
             with pytest.raises(ValueError, match="Unsupported embedding"):
-                db.write_documents(documents, embedding="unsupported-model")
+                await db.write_documents(documents, embedding="unsupported-model")
 
-    def test_list_documents(self) -> None:
+    @pytest.mark.asyncio
+    async def test_list_documents(self) -> None:
         """Test listing documents from Weaviate."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -421,9 +431,9 @@ class TestWeaviateVectorDatabase:
                 },
             ),
         ):
-            mock_client = MagicMock()
-            mock_collection = MagicMock()
-            mock_result = MagicMock()
+            mock_client = AsyncMock()
+            mock_collection = AsyncMock()
+            mock_result = AsyncMock()
             mock_object1 = MagicMock()
             mock_object2 = MagicMock()
 
@@ -448,7 +458,7 @@ class TestWeaviateVectorDatabase:
 
             db = WeaviateVectorDatabase()
 
-            documents = db.list_documents(limit=2, offset=0)
+            documents = await db.list_documents(limit=2, offset=0)
 
             assert len(documents) == 2
             assert documents[0]["id"] == "uuid1"
@@ -456,10 +466,11 @@ class TestWeaviateVectorDatabase:
             assert documents[1]["id"] == "uuid2"
             assert documents[1]["url"] == "http://test2.com"
 
-    def test_count_documents(self) -> None:
+    @pytest.mark.asyncio
+    async def test_count_documents(self) -> None:
         """Test counting documents in Weaviate."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -468,9 +479,9 @@ class TestWeaviateVectorDatabase:
                 },
             ),
         ):
-            mock_client = MagicMock()
-            mock_collection = MagicMock()
-            mock_result = MagicMock()
+            mock_client = AsyncMock()
+            mock_collection = AsyncMock()
+            mock_result = AsyncMock()
 
             # Create mock objects to simulate the fetch_objects result
             mock_object1 = MagicMock()
@@ -491,14 +502,15 @@ class TestWeaviateVectorDatabase:
             mock_connect.return_value = mock_client
 
             db = WeaviateVectorDatabase()
-            count = db.count_documents()
+            count = await db.count_documents()
 
             assert count == 5
 
-    def test_list_collections(self) -> None:
+    @pytest.mark.asyncio
+    async def test_list_collections(self) -> None:
         """Test listing collections in Weaviate."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -507,7 +519,7 @@ class TestWeaviateVectorDatabase:
                 },
             ),
         ):
-            mock_client = MagicMock()
+            mock_client = AsyncMock()
 
             # Create mock collections
             mock_collection1 = MagicMock()
@@ -525,15 +537,16 @@ class TestWeaviateVectorDatabase:
             mock_connect.return_value = mock_client
 
             db = WeaviateVectorDatabase()
-            collections = db.list_collections()
+            collections = await db.list_collections()
 
             assert collections == ["Collection1", "Collection2", "MaestroDocs"]
             mock_client.collections.list_all.assert_called_once()
 
-    def test_list_collections_exception(self) -> None:
+    @pytest.mark.asyncio
+    async def test_list_collections_exception(self) -> None:
         """Test listing collections when an exception occurs."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -551,14 +564,15 @@ class TestWeaviateVectorDatabase:
             with pytest.warns(
                 UserWarning, match="Could not list collections from Weaviate"
             ):
-                collections = db.list_collections()
+                collections = await db.list_collections()
 
             assert collections == []
 
-    def test_delete_documents(self) -> None:
+    @pytest.mark.asyncio
+    async def test_delete_documents(self) -> None:
         """Test deleting documents from Weaviate."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -567,23 +581,24 @@ class TestWeaviateVectorDatabase:
                 },
             ),
         ):
-            mock_client = MagicMock()
-            mock_collection = MagicMock()
+            mock_client = AsyncMock()
+            mock_collection = AsyncMock()
             mock_client.collections.get.return_value = mock_collection
             mock_connect.return_value = mock_client
 
             db = WeaviateVectorDatabase()
-            db.delete_documents(["uuid1", "uuid2"])
+            await db.delete_documents(["uuid1", "uuid2"])
 
             # Verify delete_by_id was called for each document
             assert mock_collection.data.delete_by_id.call_count == 2
             mock_collection.data.delete_by_id.assert_any_call("uuid1")
             mock_collection.data.delete_by_id.assert_any_call("uuid2")
 
-    def test_delete_collection(self) -> None:
+    @pytest.mark.asyncio
+    async def test_delete_collection(self) -> None:
         """Test deleting a collection from Weaviate."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -592,12 +607,12 @@ class TestWeaviateVectorDatabase:
                 },
             ),
         ):
-            mock_client = MagicMock()
-            mock_client.collections.exists.return_value = True
+            mock_client = AsyncMock()
+            mock_client.collections.exists = AsyncMock(return_value=True)
             mock_connect.return_value = mock_client
 
             db = WeaviateVectorDatabase("TestCollection")
-            db.delete_collection()
+            await db.delete_collection()
 
             mock_client.collections.delete.assert_called_once_with("TestCollection")
             assert db.collection_name is None
@@ -608,7 +623,7 @@ class TestWeaviateVectorDatabase:
     def test_create_query_agent(self) -> None:
         """Test creating a query agent."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch("weaviate.agents.query.QueryAgent") as mock_query_agent,
             patch.dict(
                 os.environ,
@@ -629,10 +644,11 @@ class TestWeaviateVectorDatabase:
             # The actual QueryAgent is created, not the mock, so we just verify it's not None
             assert agent is not None
 
-    def test_cleanup(self) -> None:
+    @pytest.mark.asyncio
+    async def test_cleanup(self) -> None:
         """Test cleanup method."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -645,7 +661,7 @@ class TestWeaviateVectorDatabase:
             mock_connect.return_value = mock_client
 
             db = WeaviateVectorDatabase()
-            db.cleanup()
+            await db.cleanup()
 
             # Verify client is set to None after cleanup
             assert db.client is None
@@ -653,7 +669,7 @@ class TestWeaviateVectorDatabase:
     def test_db_type_property(self) -> None:
         """Test the db_type property."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -669,10 +685,11 @@ class TestWeaviateVectorDatabase:
 
             assert db.db_type == "weaviate"
 
-    def test_get_collection_info_includes_chunking(self) -> None:
+    @pytest.mark.asyncio
+    async def test_get_collection_info_includes_chunking(self) -> None:
         """get_collection_info should include chunking config set at setup time."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -682,13 +699,13 @@ class TestWeaviateVectorDatabase:
             ),
         ):
             # Mock client and collection
-            mock_client = MagicMock()
+            mock_client = AsyncMock()
             mock_connect.return_value = mock_client
-            mock_collection = MagicMock()
-            mock_client.collections.exists.return_value = True
+            mock_collection = AsyncMock()
+            mock_client.collections.exists = AsyncMock(return_value=True)
             mock_client.collections.get.return_value = mock_collection
             # config.get returns an object with attributes used in code
-            mock_cfg = MagicMock()
+            mock_cfg = AsyncMock()
             mock_cfg.description = "Test collection"
             mock_cfg.vectorizer = "text2vec-openai"
             mock_cfg.properties = []
@@ -700,13 +717,13 @@ class TestWeaviateVectorDatabase:
                 "strategy": "Fixed",
                 "parameters": {"chunk_size": 512, "overlap": 0},
             }
-            db.setup(
+            await db.setup(
                 embedding="text-embedding-3-small",
                 collection_name="InfoCol",
                 chunking_config=chunk_cfg,
             )
 
-            info = db.get_collection_info("InfoCol")
+            info = await db.get_collection_info("InfoCol")
             assert info["name"] == "InfoCol"
             assert info["db_type"] == "weaviate"
             assert info.get("chunking") == chunk_cfg
@@ -716,10 +733,11 @@ class TestWeaviateVectorDatabase:
                 "text2vec-openai",
             )
 
-    def test_get_document_success(self) -> None:
+    @pytest.mark.asyncio
+    async def test_get_document_success(self) -> None:
         """Test successfully getting a document by name."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -728,9 +746,9 @@ class TestWeaviateVectorDatabase:
                 },
             ),
         ):
-            mock_client = MagicMock()
-            mock_collection = MagicMock()
-            mock_result = MagicMock()
+            mock_client = AsyncMock()
+            mock_collection = AsyncMock()
+            mock_result = AsyncMock()
 
             # Create mock objects representing two chunks for the same document
             mock_object1 = MagicMock()
@@ -761,12 +779,12 @@ class TestWeaviateVectorDatabase:
 
             mock_result.objects = [mock_object1, mock_object2]
             mock_collection.query.fetch_objects.return_value = mock_result
-            mock_client.collections.exists.return_value = True
+            mock_client.collections.exists = AsyncMock(return_value=True)
             mock_client.collections.get.return_value = mock_collection
             mock_connect.return_value = mock_client
 
             db = WeaviateVectorDatabase()
-            result = db.get_document("test_doc", "test_collection")
+            result = await db.get_document("test_doc", "test_collection")
 
             assert result["id"] in ("chunk1", "chunk2")
             assert result["url"] == "test_url"
@@ -774,10 +792,11 @@ class TestWeaviateVectorDatabase:
             assert result["metadata"]["doc_name"] == "test_doc"
             assert result["metadata"]["collection_name"] == "test_collection"
 
-    def test_get_document_collection_not_found(self) -> None:
+    @pytest.mark.asyncio
+    async def test_get_document_collection_not_found(self) -> None:
         """Test getting a document when collection doesn't exist."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -786,8 +805,8 @@ class TestWeaviateVectorDatabase:
                 },
             ),
         ):
-            mock_client = MagicMock()
-            mock_client.collections.exists.return_value = False
+            mock_client = AsyncMock()
+            mock_client.collections.exists = AsyncMock(return_value=False)
             mock_connect.return_value = mock_client
 
             db = WeaviateVectorDatabase()
@@ -795,12 +814,13 @@ class TestWeaviateVectorDatabase:
             with pytest.raises(
                 ValueError, match="Collection 'test_collection' not found"
             ):
-                db.get_document("test_doc", "test_collection")
+                await db.get_document("test_doc", "test_collection")
 
-    def test_get_document_document_not_found(self) -> None:
+    @pytest.mark.asyncio
+    async def test_get_document_document_not_found(self) -> None:
         """Test getting a document when document doesn't exist."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -809,14 +829,14 @@ class TestWeaviateVectorDatabase:
                 },
             ),
         ):
-            mock_client = MagicMock()
-            mock_collection = MagicMock()
-            mock_result = MagicMock()
+            mock_client = AsyncMock()
+            mock_collection = AsyncMock()
+            mock_result = AsyncMock()
 
             # No objects returned
             mock_result.objects = []
             mock_collection.query.fetch_objects.return_value = mock_result
-            mock_client.collections.exists.return_value = True
+            mock_client.collections.exists = AsyncMock(return_value=True)
             mock_client.collections.get.return_value = mock_collection
             mock_connect.return_value = mock_client
 
@@ -826,12 +846,13 @@ class TestWeaviateVectorDatabase:
                 ValueError,
                 match="Document 'test_doc' not found in collection 'test_collection'",
             ):
-                db.get_document("test_doc", "test_collection")
+                await db.get_document("test_doc", "test_collection")
 
-    def test_get_document_no_matching_doc_name(self) -> None:
+    @pytest.mark.asyncio
+    async def test_get_document_no_matching_doc_name(self) -> None:
         """Test getting a document when no document has the specified name."""
         with (
-            patch("weaviate.connect_to_weaviate_cloud") as mock_connect,
+            patch("weaviate.use_async_with_weaviate_cloud") as mock_connect,
             patch.dict(
                 os.environ,
                 {
@@ -840,9 +861,9 @@ class TestWeaviateVectorDatabase:
                 },
             ),
         ):
-            mock_client = MagicMock()
-            mock_collection = MagicMock()
-            mock_result = MagicMock()
+            mock_client = AsyncMock()
+            mock_collection = AsyncMock()
+            mock_result = AsyncMock()
 
             # Create mock object with different doc_name
             mock_object = MagicMock()
@@ -857,7 +878,7 @@ class TestWeaviateVectorDatabase:
 
             mock_result.objects = [mock_object]
             mock_collection.query.fetch_objects.return_value = mock_result
-            mock_client.collections.exists.return_value = True
+            mock_client.collections.exists = AsyncMock(return_value=True)
             mock_client.collections.get.return_value = mock_collection
             mock_connect.return_value = mock_client
 
@@ -867,4 +888,4 @@ class TestWeaviateVectorDatabase:
                 ValueError,
                 match="Document 'test_doc' not found in collection 'test_collection'",
             ):
-                db.get_document("test_doc", "test_collection")
+                await db.get_document("test_doc", "test_collection")

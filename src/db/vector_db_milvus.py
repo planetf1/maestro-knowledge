@@ -74,7 +74,7 @@ class MilvusVectorDatabase(VectorDatabase):
 
         try:
             # Import pymilvus after unsetting the environment variable
-            from pymilvus import MilvusClient
+            from pymilvus import AsyncMilvusClient
 
             milvus_uri = original_milvus_uri or "milvus_demo.db"
             milvus_token = os.getenv("MILVUS_TOKEN", None)
@@ -82,18 +82,20 @@ class MilvusVectorDatabase(VectorDatabase):
             # For local Milvus Lite, try different URI formats
             try:
                 if milvus_token:
-                    self.client = MilvusClient(uri=milvus_uri, token=milvus_token)
+                    self.client = AsyncMilvusClient(uri=milvus_uri, token=milvus_token)
                 else:
-                    self.client = MilvusClient(uri=milvus_uri)
+                    self.client = AsyncMilvusClient(uri=milvus_uri)
             except Exception as e:
                 # If the URI format fails, try with file:// prefix
                 if not milvus_uri.startswith(("http://", "https://", "file://")):
                     file_uri = f"file://{milvus_uri}"
                     try:
                         if milvus_token:
-                            self.client = MilvusClient(uri=file_uri, token=milvus_token)
+                            self.client = AsyncMilvusClient(
+                                uri=file_uri, token=milvus_token
+                            )
                         else:
-                            self.client = MilvusClient(uri=file_uri)
+                            self.client = AsyncMilvusClient(uri=file_uri)
                     except Exception as file_e:
                         # If both attempts fail, create a mock client that warns about connection issues
                         warnings.warn(
@@ -242,7 +244,7 @@ class MilvusVectorDatabase(VectorDatabase):
 
         return dimension
 
-    def setup(
+    async def setup(
         self,
         embedding: str = "default",
         collection_name: str = None,
@@ -298,12 +300,12 @@ class MilvusVectorDatabase(VectorDatabase):
 
         # Create collection if it doesn't exist
 
-        collection_exists = self.client.has_collection(target_collection)
+        collection_exists = await self.client.has_collection(target_collection)
 
         if collection_exists:
             try:
                 # Use the target collection (not the object's default) when describing
-                info = self.client.describe_collection(target_collection)
+                info = await self.client.describe_collection(target_collection)
                 for field in info.get("fields", []):
                     if field.get("name") == "vector":
                         existing_dim = field.get("params", {}).get("dim")
@@ -319,7 +321,7 @@ class MilvusVectorDatabase(VectorDatabase):
                 print(f"Using embedding model: {self.embedding_model}")
 
         if not collection_exists:
-            self.client.create_collection(
+            await self.client.create_collection(
                 collection_name=target_collection,
                 dimension=self.dimension,  # Vector dimension
                 primary_field_name="id",
@@ -337,14 +339,16 @@ class MilvusVectorDatabase(VectorDatabase):
                         ).get("chunking"),
                     }
                     try:
-                        self.client.set_collection_metadata(target_collection, meta)
+                        await self.client.set_collection_metadata(
+                            target_collection, meta
+                        )
                     except Exception:
                         # not critical; ignore if client doesn't support
                         pass
             except Exception:
                 pass
 
-    def write_documents(
+    async def write_documents(
         self,
         documents: list[dict[str, Any]],
         embedding: str = "default",
@@ -503,7 +507,7 @@ class MilvusVectorDatabase(VectorDatabase):
         if data:
             insert_start = time.perf_counter()
             try:
-                self.client.insert(target_collection, data)
+                await self.client.insert(target_collection, data)
             except Exception as e:
                 # Re-raise the exception to be handled by the caller
                 raise e
@@ -517,24 +521,24 @@ class MilvusVectorDatabase(VectorDatabase):
                 # pymilvus-style flush
                 if hasattr(self.client, "flush"):
                     try:
-                        self.client.flush([target_collection])
+                        await self.client.flush([target_collection])
                     except Exception:
                         # Some clients accept a single collection name
                         try:
-                            self.client.flush(target_collection)
+                            await self.client.flush(target_collection)
                         except Exception:
                             pass
 
                 # load collection into queryable memory (client-specific)
                 if hasattr(self.client, "load_collection"):
                     try:
-                        self.client.load_collection(target_collection)
+                        await self.client.load_collection(target_collection)
                     except Exception:
                         pass
                 elif hasattr(self.client, "load"):
                     try:
                         # some wrappers provide a load method
-                        self.client.load(target_collection)
+                        await self.client.load(target_collection)
                     except Exception:
                         pass
             except Exception:
@@ -552,7 +556,7 @@ class MilvusVectorDatabase(VectorDatabase):
             "duration_ms": total_duration_ms,
         }
 
-    def get_document_chunks(
+    async def get_document_chunks(
         self, doc_id: str, collection_name: str = None
     ) -> list[dict[str, Any]]:
         """Retrieve all chunks for a specific document (by doc_name)."""
@@ -590,7 +594,7 @@ class MilvusVectorDatabase(VectorDatabase):
         except Exception as e:
             raise ValueError(f"Failed to retrieve chunks for document '{doc_id}': {e}")
 
-    def get_document(
+    async def get_document(
         self, doc_name: str, collection_name: str = None
     ) -> dict[str, Any]:
         """Reassemble a document from its chunks by doc_name."""
@@ -601,10 +605,10 @@ class MilvusVectorDatabase(VectorDatabase):
 
         # Ensure collection exists first
         target_collection = collection_name or self.collection_name
-        if not self.client.has_collection(target_collection):
+        if not await self.client.has_collection(target_collection):
             raise ValueError(f"Collection '{target_collection}' not found")
 
-        chunks = self.get_document_chunks(doc_name, collection_name)
+        chunks = await self.get_document_chunks(doc_name, collection_name)
         doc = self.reassemble_document(chunks)
         if doc is None:
             raise ValueError(
@@ -612,7 +616,9 @@ class MilvusVectorDatabase(VectorDatabase):
             )
         return doc
 
-    def list_documents(self, limit: int = 10, offset: int = 0) -> list[dict[str, Any]]:
+    async def list_documents(
+        self, limit: int = 10, offset: int = 0
+    ) -> list[dict[str, Any]]:
         """List documents from Milvus."""
         self._ensure_client()
         if self.client is None:
@@ -652,7 +658,7 @@ class MilvusVectorDatabase(VectorDatabase):
             warnings.warn(f"Could not list documents: {e}")
             return []
 
-    def count_documents(self) -> int:
+    async def count_documents(self) -> int:
         """Get the current count of documents in the collection."""
         self._ensure_client()
         if self.client is None:
@@ -666,13 +672,13 @@ class MilvusVectorDatabase(VectorDatabase):
 
         try:
             # Get collection statistics
-            stats = self.client.get_collection_stats(self.collection_name)
+            stats = await self.client.get_collection_stats(self.collection_name)
             return stats.get("row_count", 0)
         except Exception as e:
             warnings.warn(f"Could not get collection stats: {e}")
             return 0
 
-    def list_collections(self) -> list[str]:
+    async def list_collections(self) -> list[str]:
         """List all collections in Milvus."""
         self._ensure_client()
         if self.client is None:
@@ -681,13 +687,13 @@ class MilvusVectorDatabase(VectorDatabase):
 
         try:
             # Get all collections from the client
-            collections = self.client.list_collections()
+            collections = await self.client.list_collections()
             return collections
         except Exception as e:
             warnings.warn(f"Could not list collections from Milvus: {e}")
             return []
 
-    def list_documents_in_collection(
+    async def list_documents_in_collection(
         self, collection_name: str, limit: int = 10, offset: int = 0
     ) -> list[dict[str, Any]]:
         """List documents from a specific collection in Milvus."""
@@ -698,7 +704,7 @@ class MilvusVectorDatabase(VectorDatabase):
 
         try:
             # Check if collection exists first
-            if not self.client.has_collection(collection_name):
+            if not await self.client.has_collection(collection_name):
                 return []
 
             # Query documents from the specific collection
@@ -730,7 +736,7 @@ class MilvusVectorDatabase(VectorDatabase):
             )
             return []
 
-    def count_documents_in_collection(self, collection_name: str) -> int:
+    async def count_documents_in_collection(self, collection_name: str) -> int:
         """Get the current count of documents in a specific collection in Milvus."""
         self._ensure_client()
         if self.client is None:
@@ -739,11 +745,11 @@ class MilvusVectorDatabase(VectorDatabase):
 
         try:
             # Check if collection exists first
-            if not self.client.has_collection(collection_name):
+            if not await self.client.has_collection(collection_name):
                 return 0
 
             # Get collection statistics for the specific collection
-            stats = self.client.get_collection_stats(collection_name)
+            stats = await self.client.get_collection_stats(collection_name)
             return stats.get("row_count", 0)
         except Exception as e:
             warnings.warn(
@@ -751,7 +757,7 @@ class MilvusVectorDatabase(VectorDatabase):
             )
             return 0
 
-    def get_collection_info(self, collection_name: str = None) -> dict[str, Any]:
+    async def get_collection_info(self, collection_name: str = None) -> dict[str, Any]:
         """Get detailed information about a collection."""
         self._ensure_client()
         if self.client is None:
@@ -801,7 +807,7 @@ class MilvusVectorDatabase(VectorDatabase):
 
         try:
             # Check if collection exists
-            if not self.client.has_collection(target_collection):
+            if not await self.client.has_collection(target_collection):
                 return {
                     "name": target_collection,
                     "document_count": 0,
@@ -838,7 +844,7 @@ class MilvusVectorDatabase(VectorDatabase):
                 }
 
             # Get collection statistics
-            stats = self.client.get_collection_stats(target_collection)
+            stats = await self.client.get_collection_stats(target_collection)
             try:
                 if isinstance(stats, dict):
                     document_count = stats.get("row_count", 0)
@@ -849,7 +855,7 @@ class MilvusVectorDatabase(VectorDatabase):
                 document_count = 0
 
             # Get collection schema information (dict or object depending on client)
-            collection_info = self.client.describe_collection(target_collection)
+            collection_info = await self.client.describe_collection(target_collection)
 
             # Use stored embedding model if available, otherwise try to extract from schema
             if self.embedding_model:
@@ -1035,7 +1041,7 @@ class MilvusVectorDatabase(VectorDatabase):
                 "metadata": {"error": str(e)},
             }
 
-    def delete_documents(self, document_ids: list[str]) -> None:
+    async def delete_documents(self, document_ids: list[str]) -> None:
         """Delete documents from Milvus by their IDs."""
         self._ensure_client()
         if self.client is None:
@@ -1050,12 +1056,12 @@ class MilvusVectorDatabase(VectorDatabase):
 
         # Delete documents by ID
         try:
-            self.client.delete(self.collection_name, ids=int_ids)
+            await self.client.delete(self.collection_name, ids=int_ids)
         except Exception as e:
             # Re-raise the exception to be handled by the caller
             raise e
 
-    def delete_collection(self, collection_name: str = None) -> None:
+    async def delete_collection(self, collection_name: str = None) -> None:
         """Delete an entire collection from Milvus."""
         self._ensure_client()
         if self.client is None:
@@ -1064,8 +1070,8 @@ class MilvusVectorDatabase(VectorDatabase):
 
         target_collection = collection_name or self.collection_name
 
-        if self.client.has_collection(target_collection):
-            self.client.drop_collection(target_collection)
+        if await self.client.has_collection(target_collection):
+            await self.client.drop_collection(target_collection)
             if target_collection == self.collection_name:
                 self.collection_name = None
 
@@ -1076,7 +1082,9 @@ class MilvusVectorDatabase(VectorDatabase):
         # You would implement your own search logic here
         return self
 
-    def query(self, query: str, limit: int = 5, collection_name: str = None) -> str:
+    async def query(
+        self, query: str, limit: int = 5, collection_name: str = None
+    ) -> str:
         """
         Query the vector database using Milvus vector similarity search.
 
@@ -1089,7 +1097,7 @@ class MilvusVectorDatabase(VectorDatabase):
         """
         try:
             # Perform vector similarity search
-            documents = self._search_documents(query, limit, collection_name)
+            documents = await self._search_documents(query, limit, collection_name)
 
             if not documents:
                 return f"No relevant documents found for query: '{query}'"
@@ -1117,7 +1125,7 @@ class MilvusVectorDatabase(VectorDatabase):
             warnings.warn(f"Failed to query Milvus: {e}")
             return f"Error querying database: {str(e)}"
 
-    def _search_documents(
+    async def _search_documents(
         self, query: str, limit: int = 5, collection_name: str = None
     ) -> list[dict[str, Any]]:
         """
@@ -1174,13 +1182,13 @@ class MilvusVectorDatabase(VectorDatabase):
                 if "output_fields" in params:
                     kwargs["output_fields"] = ["id", "url", "text", "metadata"]
 
-                results = self.client.search(target_collection, **kwargs)
+                results = await self.client.search(target_collection, **kwargs)
             except Exception as e:
                 # If signature introspection or the call itself fails, try a
                 # positional fallback as a last resort. Do not re-raise to
                 # keep the server running; we'll fall back to keyword search.
                 try:
-                    results = self.client.search(
+                    results = await self.client.search(
                         target_collection,
                         [query_vector],
                         "vector",
@@ -1382,18 +1390,18 @@ class MilvusVectorDatabase(VectorDatabase):
         except Exception as e:
             warnings.warn(f"Failed to perform vector search for query '{query}': {e}")
             # Fallback to simple keyword matching if vector search fails
-            return self._fallback_keyword_search(query, limit)
+            return await self._fallback_keyword_search(query, limit)
 
-    def search(
+    async def search(
         self, query: str, limit: int = 5, collection_name: str = None
     ) -> list[dict[str, Any]]:
         """
         Public search method required by the abstract base class. Delegates
         to the internal _search_documents implementation.
         """
-        return self._search_documents(query, limit, collection_name)
+        return await self._search_documents(query, limit, collection_name)
 
-    def _fallback_keyword_search(
+    async def _fallback_keyword_search(
         self, query: str, limit: int = 5
     ) -> list[dict[str, Any]]:
         """
@@ -1408,7 +1416,7 @@ class MilvusVectorDatabase(VectorDatabase):
         """
         try:
             # Get all documents and perform keyword matching
-            documents = self.list_documents(limit=100, offset=0)
+            documents = await self.list_documents(limit=100, offset=0)
 
             query_lower = query.lower()
             query_words = query_lower.split()
@@ -1458,11 +1466,11 @@ class MilvusVectorDatabase(VectorDatabase):
             warnings.warn(f"Fallback keyword search also failed: {e}")
             return []
 
-    def cleanup(self) -> None:
+    async def cleanup(self) -> None:
         """Clean up Milvus client."""
         if self.client is not None:
             if self.collection_name:
-                if self.client.has_collection(self.collection_name):
+                if await self.client.has_collection(self.collection_name):
                     self.client.drop_collection(self.collection_name)
         self.client = None
 

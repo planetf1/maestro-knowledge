@@ -31,7 +31,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 import os
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 from typing import Any
 
 import pytest
@@ -56,8 +56,8 @@ class TestMilvusVectorDatabase:
         assert "text-embedding-3-small" in embeddings
         assert "text-embedding-3-large" in embeddings
 
-    @patch("pymilvus.MilvusClient")
-    def test_init_with_collection_name(self, mock_milvus_client: MagicMock) -> None:
+    @patch("pymilvus.AsyncMilvusClient")
+    def test_init_with_collection_name(self, mock_milvus_client: AsyncMock) -> None:
         mock_client = MagicMock()
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase("TestCollection")
@@ -68,23 +68,30 @@ class TestMilvusVectorDatabase:
         db._ensure_client()
         assert db.client == mock_client
 
-    @patch("pymilvus.MilvusClient")
-    def test_setup_collection_exists(self, mock_milvus_client: MagicMock) -> None:
-        mock_client = MagicMock()
-        mock_client.has_collection.return_value = True
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_setup_collection_exists(self, mock_milvus_client: AsyncMock) -> None:
+        mock_client = AsyncMock()
+        mock_client.has_collection = AsyncMock(return_value=True)
+        mock_client.describe_collection = AsyncMock(return_value={"fields": []})
+
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
-        db.setup()
+        await db.setup()
         mock_client.create_collection.assert_not_called()
 
-    @patch("pymilvus.MilvusClient")
-    def test_setup_collection_not_exists(self, mock_milvus_client: MagicMock) -> None:
-        mock_client = MagicMock()
-        mock_client.has_collection.return_value = False
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_setup_collection_not_exists(
+        self, mock_milvus_client: AsyncMock
+    ) -> None:
+        mock_client = AsyncMock()
+        mock_client.has_collection = AsyncMock(return_value=False)
+
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
         db.dimension = 1536
-        db.setup()
+        await db.setup()
         mock_client.create_collection.assert_called_once_with(
             collection_name="MaestroDocs",
             dimension=1536,
@@ -92,12 +99,13 @@ class TestMilvusVectorDatabase:
             vector_field_name="vector",
         )
 
-    @patch("pymilvus.MilvusClient")
-    def test_write_documents_with_precomputed_vector(
-        self, mock_milvus_client: MagicMock
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_write_documents_with_precomputed_vector(
+        self, mock_milvus_client: AsyncMock
     ) -> None:
         """Test writing documents with pre-computed vectors."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
         documents = [
@@ -114,15 +122,16 @@ class TestMilvusVectorDatabase:
                 "vector": [0.2] * 1536,
             },
         ]
-        db.write_documents(documents, embedding="default")
+        await db.write_documents(documents, embedding="default")
         assert mock_client.insert.called
 
-    @patch("pymilvus.MilvusClient")
-    def test_write_documents_with_embedding_model(
-        self, mock_milvus_client: MagicMock
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_write_documents_with_embedding_model(
+        self, mock_milvus_client: AsyncMock
     ) -> None:
         """Test writing documents with embedding model generation."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_milvus_client.return_value = mock_client
 
         db = MilvusVectorDatabase()
@@ -139,16 +148,18 @@ class TestMilvusVectorDatabase:
 
             # Set environment variable for OpenAI API key
             with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-                db.write_documents(documents, embedding="text-embedding-ada-002")
+                await db.write_documents(documents, embedding="text-embedding-ada-002")
                 assert mock_client.insert.called
 
-    @patch("pymilvus.MilvusClient")
-    def test_write_documents_excludes_chunking_metadata(
-        self, mock_milvus_client: MagicMock
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_write_documents_excludes_chunking_metadata(
+        self, mock_milvus_client: AsyncMock
     ) -> None:
         """Write path should NOT attach chunking policy into per-chunk metadata (kept at collection level)."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_milvus_client.return_value = mock_client
+        mock_client.describe_collection = AsyncMock(return_value={"fields": []})
 
         db = MilvusVectorDatabase("ChunkCol")
         # Configure collection chunking
@@ -157,7 +168,7 @@ class TestMilvusVectorDatabase:
             "parameters": {"chunk_size": 16, "overlap": 0},
         }
         # Also set embedding to avoid openai dependency by mocking _generate_embedding
-        db.setup(
+        await db.setup(
             embedding="text-embedding-ada-002",
             collection_name="ChunkCol",
             chunking_config=chunk_cfg,
@@ -174,7 +185,7 @@ class TestMilvusVectorDatabase:
                     "metadata": {"doc_name": "doc1"},
                 }
             ]
-            db.write_documents(documents, embedding="default")
+            await db.write_documents(documents, embedding="default")
 
         # Verify insert was called and metadata contains chunking
         assert mock_client.insert.called
@@ -193,13 +204,14 @@ class TestMilvusVectorDatabase:
         assert "offset_start" in parsed and "offset_end" in parsed
         assert "chunk_sequence_number" in parsed and "total_chunks" in parsed
 
-    @patch("pymilvus.MilvusClient")
-    def test_get_collection_info_custom_local_includes_config(
-        self, mock_milvus_client: MagicMock
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_get_collection_info_custom_local_includes_config(
+        self, mock_milvus_client: AsyncMock
     ) -> None:
         """For custom_local embedding, collection info should include URL/model config."""
-        mock_client = MagicMock()
-        mock_client.has_collection.return_value = True
+        mock_client = AsyncMock()
+        mock_client.has_collection = AsyncMock(return_value=True)
         mock_client.get_collection_stats.return_value = {"row_count": 0}
         mock_desc = MagicMock()
         mock_desc.fields = []
@@ -216,7 +228,7 @@ class TestMilvusVectorDatabase:
             },
             clear=True,
         ):
-            db.setup(
+            await db.setup(
                 embedding="custom_local",
                 collection_name="CfgCol",
                 chunking_config={
@@ -224,16 +236,17 @@ class TestMilvusVectorDatabase:
                     "parameters": {"chunk_size": 512, "overlap": 0},
                 },
             )
-            info = db.get_collection_info("CfgCol")
+            info = await db.get_collection_info("CfgCol")
 
         ed = info.get("embedding_details", {})
         cfg = ed.get("config", {})
         assert cfg.get("url") == "http://localhost:11434/v1"
         assert cfg.get("model") == "nomic-embed-text"
 
-    @patch("pymilvus.MilvusClient")
-    def test_write_documents_unsupported_embedding(
-        self, mock_milvus_client: MagicMock
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_write_documents_unsupported_embedding(
+        self, mock_milvus_client: AsyncMock
     ) -> None:
         """Test writing documents with unsupported embedding model."""
         mock_client = MagicMock()
@@ -247,11 +260,12 @@ class TestMilvusVectorDatabase:
             }
         ]
         with pytest.raises(ValueError, match="Unsupported embedding"):
-            db.write_documents(documents, embedding="unsupported-model")
+            await db.write_documents(documents, embedding="unsupported-model")
 
-    @patch("pymilvus.MilvusClient")
-    def test_write_documents_missing_openai_key(
-        self, mock_milvus_client: MagicMock
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_write_documents_missing_openai_key(
+        self, mock_milvus_client: AsyncMock
     ) -> None:
         """Test writing documents without OpenAI API key."""
         mock_client = MagicMock()
@@ -278,14 +292,17 @@ class TestMilvusVectorDatabase:
                     ValueError,
                     match="OPENAI_API_KEY is required for OpenAI embeddings.",
                 ):
-                    db.write_documents(documents, embedding="text-embedding-ada-002")
+                    await db.write_documents(
+                        documents, embedding="text-embedding-ada-002"
+                    )
 
-    @patch("pymilvus.MilvusClient")
-    def test_write_documents_real_openai_integration(
-        self, mock_milvus_client: MagicMock
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_write_documents_real_openai_integration(
+        self, mock_milvus_client: AsyncMock
     ) -> None:
         """Test writing documents with real OpenAI integration when available."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
 
@@ -313,7 +330,7 @@ class TestMilvusVectorDatabase:
 
             # Set environment variable for OpenAI API key
             with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
-                db.write_documents(documents, embedding="text-embedding-ada-002")
+                await db.write_documents(documents, embedding="text-embedding-ada-002")
                 assert mock_client.insert.called
                 # Verify that the OpenAI client was called correctly
                 mock_openai.assert_called_once_with(api_key="test-key")
@@ -321,8 +338,9 @@ class TestMilvusVectorDatabase:
                     model="text-embedding-ada-002", input="test content 1"
                 )
 
-    @patch("pymilvus.MilvusClient")
-    def test_list_documents(self, mock_milvus_client: MagicMock) -> None:
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_list_documents(self, mock_milvus_client: AsyncMock) -> None:
         mock_client = MagicMock()
         # Milvus query returns a list of dictionaries directly
         mock_client.query.return_value = [
@@ -341,23 +359,25 @@ class TestMilvusVectorDatabase:
         ]
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
-        docs = db.list_documents(limit=2)
+        docs = await db.list_documents(limit=2)
         assert len(docs) == 2
         assert docs[0]["id"] == 1
         assert docs[0]["url"] == "http://test1.com"
 
-    @patch("pymilvus.MilvusClient")
-    def test_count_documents(self, mock_milvus_client: MagicMock) -> None:
-        mock_client = MagicMock()
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_count_documents(self, mock_milvus_client: AsyncMock) -> None:
+        mock_client = AsyncMock()
         mock_client.get_collection_stats.return_value = {"row_count": 5}
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
-        count = db.count_documents()
+        count = await db.count_documents()
         assert count == 5
 
-    @patch("pymilvus.MilvusClient")
-    def test_list_collections(self, mock_milvus_client: MagicMock) -> None:
-        mock_client = MagicMock()
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_list_collections(self, mock_milvus_client: AsyncMock) -> None:
+        mock_client = AsyncMock()
         mock_client.list_collections.return_value = [
             "Collection1",
             "Collection2",
@@ -365,64 +385,76 @@ class TestMilvusVectorDatabase:
         ]
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
-        collections = db.list_collections()
+        collections = await db.list_collections()
         assert collections == ["Collection1", "Collection2", "MaestroDocs"]
         mock_client.list_collections.assert_called_once()
 
-    @patch("pymilvus.MilvusClient")
-    def test_list_collections_exception(self, mock_milvus_client: MagicMock) -> None:
-        mock_client = MagicMock()
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_list_collections_exception(
+        self, mock_milvus_client: AsyncMock
+    ) -> None:
+        mock_client = AsyncMock()
         mock_client.list_collections.side_effect = Exception("Connection error")
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
         # Suppress the expected warning for this test
         with pytest.warns(UserWarning, match="Could not list collections from Milvus"):
-            collections = db.list_collections()
+            collections = await db.list_collections()
         assert collections == []
 
-    @patch("pymilvus.MilvusClient")
-    def test_list_collections_no_client(self, mock_milvus_client: MagicMock) -> None:
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_list_collections_no_client(
+        self, mock_milvus_client: AsyncMock
+    ) -> None:
         mock_milvus_client.return_value = None
         db = MilvusVectorDatabase()
         # Suppress the expected warning for this test
         with pytest.warns(UserWarning, match="Milvus client is not available"):
-            collections = db.list_collections()
+            collections = await db.list_collections()
         assert collections == []
 
-    @patch("pymilvus.MilvusClient")
-    def test_delete_documents(self, mock_milvus_client: MagicMock) -> None:
-        mock_client = MagicMock()
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_delete_documents(self, mock_milvus_client: AsyncMock) -> None:
+        mock_client = AsyncMock()
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
-        db.delete_documents(["1", "2", "3"])
+        await db.delete_documents(["1", "2", "3"])
         mock_client.delete.assert_called_once_with(db.collection_name, ids=[1, 2, 3])
 
-    @patch("pymilvus.MilvusClient")
-    def test_delete_documents_invalid_ids(self, mock_milvus_client: MagicMock) -> None:
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_delete_documents_invalid_ids(
+        self, mock_milvus_client: AsyncMock
+    ) -> None:
         mock_client = MagicMock()
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
         with pytest.raises(
             ValueError, match="Milvus document IDs must be convertible to integers"
         ):
-            db.delete_documents(["1", "invalid", "3"])
+            await db.delete_documents(["1", "invalid", "3"])
 
-    @patch("pymilvus.MilvusClient")
-    def test_delete_collection(self, mock_milvus_client: MagicMock) -> None:
-        mock_client = MagicMock()
-        mock_client.has_collection.return_value = True
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_delete_collection(self, mock_milvus_client: AsyncMock) -> None:
+        mock_client = AsyncMock()
+        mock_client.has_collection = AsyncMock(return_value=True)
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase("TestCollection")
-        db.delete_collection()
+        await db.delete_collection()
         mock_client.drop_collection.assert_called_once_with("TestCollection")
         assert db.collection_name is None
 
-    @patch("pymilvus.MilvusClient")
-    def test_cleanup(self, mock_milvus_client: MagicMock) -> None:
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_cleanup(self, mock_milvus_client: AsyncMock) -> None:
         mock_client = MagicMock()
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
-        db.cleanup()
+        await db.cleanup()
         assert db.client is None
 
     def test_db_type_property(self) -> None:
@@ -435,13 +467,14 @@ class TestMilvusVectorDatabase:
         db = MilvusVectorDatabase()
         assert db.reassemble_document([]) is None
 
-    @patch("pymilvus.MilvusClient")
-    def test_get_collection_info_includes_chunking(
-        self, mock_milvus_client: MagicMock
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_get_collection_info_includes_chunking(
+        self, mock_milvus_client: AsyncMock
     ) -> None:
         """get_collection_info should include the chunking config after setup."""
-        mock_client = MagicMock()
-        mock_client.has_collection.return_value = True
+        mock_client = AsyncMock()
+        mock_client.has_collection = AsyncMock(return_value=True)
         mock_client.get_collection_stats.return_value = {"row_count": 7}
         # describe_collection returns an object with attributes used by code
         mock_desc = MagicMock()
@@ -455,13 +488,13 @@ class TestMilvusVectorDatabase:
             "strategy": "Fixed",
             "parameters": {"chunk_size": 512, "overlap": 0},
         }
-        db.setup(
+        await db.setup(
             embedding="text-embedding-3-small",
             collection_name="InfoCol",
             chunking_config=chunk_cfg,
         )
 
-        info = db.get_collection_info("InfoCol")
+        info = await db.get_collection_info("InfoCol")
         assert info["name"] == "InfoCol"
         assert info["db_type"] == "milvus"
         assert info["document_count"] == 7
@@ -470,34 +503,37 @@ class TestMilvusVectorDatabase:
         # embedding should be whatever we set in setup
         assert info.get("embedding") == "text-embedding-3-small"
 
-    @patch("pymilvus.MilvusClient")
-    def test_get_collection_info_nonexistent_still_returns_chunking_meta(
-        self, mock_milvus_client: MagicMock
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_get_collection_info_nonexistent_still_returns_chunking_meta(
+        self, mock_milvus_client: AsyncMock
     ) -> None:
         """If collection does not exist, info should still surface stored chunking metadata."""
-        mock_client = MagicMock()
-        mock_client.has_collection.return_value = False
+        mock_client = AsyncMock()
+
+        mock_client.has_collection = AsyncMock(return_value=False)
         mock_milvus_client.return_value = mock_client
 
         db = MilvusVectorDatabase()
         chunk_cfg = {"strategy": "Sentence", "parameters": {"max_chars": 500}}
         # Store metadata via setup
-        db.setup(
+        await db.setup(
             embedding="default", collection_name="NoSuchCol", chunking_config=chunk_cfg
         )
 
-        info = db.get_collection_info("NoSuchCol")
+        info = await db.get_collection_info("NoSuchCol")
         assert info["name"] == "NoSuchCol"
         assert info["db_type"] == "milvus"
         assert info["document_count"] == 0
         assert info.get("chunking") == chunk_cfg
         assert info.get("metadata", {}).get("error") == "Collection does not exist"
 
-    @patch("pymilvus.MilvusClient")
-    def test_get_document_success(self, mock_milvus_client: MagicMock) -> None:
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_get_document_success(self, mock_milvus_client: AsyncMock) -> None:
         """Test successfully getting a document by name."""
         mock_client = MagicMock()
-        mock_client.has_collection.return_value = True
+        mock_client.has_collection = AsyncMock(return_value=True)
         mock_client.query.return_value = [
             {
                 "id": "chunk1",
@@ -515,7 +551,7 @@ class TestMilvusVectorDatabase:
         mock_milvus_client.return_value = mock_client
 
         db = MilvusVectorDatabase()
-        result = db.get_document("test_doc", "test_collection")
+        result = await db.get_document("test_doc", "test_collection")
 
         assert result["id"] in ("chunk1", "chunk2")
         assert result["url"] == "test_url"
@@ -531,14 +567,15 @@ class TestMilvusVectorDatabase:
             limit=10000,
         )
 
-    @patch("pymilvus.MilvusClient")
-    def test_write_documents_ignores_per_write_embedding_with_warning(
-        self, mock_milvus_client: MagicMock
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_write_documents_ignores_per_write_embedding_with_warning(
+        self, mock_milvus_client: AsyncMock
     ) -> None:
         """When collection embedding is set, per-write embedding should be ignored and warn."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_milvus_client.return_value = mock_client
-        mock_client.has_collection.return_value = True
+        mock_client.has_collection = AsyncMock(return_value=True)
 
         db = MilvusVectorDatabase()
         # Simulate prior setup setting embedding model and dimension
@@ -550,33 +587,35 @@ class TestMilvusVectorDatabase:
             docs = [{"url": "u", "text": "abc", "metadata": {}}]
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
-                db.write_documents(docs, embedding="text-embedding-ada-002")
+                await db.write_documents(docs, embedding="text-embedding-ada-002")
                 # one warning emitted
                 assert any("per-collection" in str(x.message) for x in w)
             # Should have used effective (collection) model, not the per-write arg
             gen.assert_called()
 
-    @patch("pymilvus.MilvusClient")
-    def test_get_document_collection_not_found(
-        self, mock_milvus_client: MagicMock
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_get_document_collection_not_found(
+        self, mock_milvus_client: AsyncMock
     ) -> None:
         """Test getting a document when collection doesn't exist."""
         mock_client = MagicMock()
-        mock_client.has_collection.return_value = False
+        mock_client.has_collection = AsyncMock(return_value=False)
         mock_milvus_client.return_value = mock_client
 
         db = MilvusVectorDatabase()
 
         with pytest.raises(ValueError, match="Collection 'test_collection' not found"):
-            db.get_document("test_doc", "test_collection")
+            await db.get_document("test_doc", "test_collection")
 
-    @patch("pymilvus.MilvusClient")
-    def test_get_document_document_not_found(
-        self, mock_milvus_client: MagicMock
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_get_document_document_not_found(
+        self, mock_milvus_client: AsyncMock
     ) -> None:
         """Test getting a document when document doesn't exist."""
         mock_client = MagicMock()
-        mock_client.has_collection.return_value = True
+        mock_client.has_collection = AsyncMock(return_value=True)
         mock_client.query.return_value = []  # No documents found
         mock_milvus_client.return_value = mock_client
 
@@ -586,24 +625,28 @@ class TestMilvusVectorDatabase:
             ValueError,
             match="Document 'test_doc' not found in collection 'test_collection'",
         ):
-            db.get_document("test_doc", "test_collection")
+            await db.get_document("test_doc", "test_collection")
 
-    @patch("pymilvus.MilvusClient")
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
     @pytest.mark.filterwarnings("ignore:Failed to connect to Milvus")
-    def test_get_document_no_client(self, mock_milvus_client: MagicMock) -> None:
+    async def test_get_document_no_client(self, mock_milvus_client: AsyncMock) -> None:
         """Test getting a document when client is not available."""
         mock_milvus_client.side_effect = Exception("Connection failed")
 
         db = MilvusVectorDatabase()
 
         with pytest.raises(ValueError, match="Milvus client is not available"):
-            db.get_document("test_doc", "test_collection")
+            await db.get_document("test_doc", "test_collection")
 
-    @patch("pymilvus.MilvusClient")
-    def test_get_document_invalid_metadata(self, mock_milvus_client: MagicMock) -> None:
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_get_document_invalid_metadataxb(
+        self, mock_milvus_client: AsyncMock
+    ) -> None:
         """Test getting a document with invalid metadata JSON."""
         mock_client = MagicMock()
-        mock_client.has_collection.return_value = True
+        mock_client.has_collection = AsyncMock(return_value=True)
         mock_client.query.return_value = [
             {
                 "id": "doc123",
@@ -615,7 +658,7 @@ class TestMilvusVectorDatabase:
         mock_milvus_client.return_value = mock_client
 
         db = MilvusVectorDatabase()
-        result = db.get_document("test_doc", "test_collection")
+        result = await db.get_document("test_doc", "test_collection")
 
         # Should handle invalid JSON gracefully
         assert result["id"] == "doc123"
@@ -668,12 +711,13 @@ class TestMilvusVectorDatabase:
             ):
                 db._get_embedding_dimension("custom_local")
 
-    @patch("pymilvus.MilvusClient")
-    def test_write_documents_raises_milvus_exception(
-        self, mock_milvus_client: MagicMock
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_write_documents_raises_milvus_exception(
+        self, mock_milvus_client: AsyncMock
     ) -> None:
         """Test that write_documents raises a MilvusException on client error."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.insert.side_effect = MilvusException("Insert failed")
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
@@ -687,20 +731,21 @@ class TestMilvusVectorDatabase:
             }
         ]
         with pytest.raises(MilvusException, match="Insert failed"):
-            db.write_documents(documents)
+            await db.write_documents(documents)
 
-    @patch("pymilvus.MilvusClient")
-    def test_delete_documents_raises_milvus_exception(
-        self, mock_milvus_client: MagicMock
+    @pytest.mark.asyncio
+    @patch("pymilvus.AsyncMilvusClient")
+    async def test_delete_documents_raises_milvus_exception(
+        self, mock_milvus_client: AsyncMock
     ) -> None:
         """Test that delete_documents raises a MilvusException on client error."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.delete.side_effect = MilvusException("Delete failed")
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
         db.client = mock_client  # Directly set the client for the test
         with pytest.raises(MilvusException, match="Delete failed"):
-            db.delete_documents(["1"])
+            await db.delete_documents(["1"])
 
     def test_parse_custom_headers(self) -> None:
         """Test the _parse_custom_headers method with various formats."""
