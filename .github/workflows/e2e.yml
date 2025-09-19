@@ -172,7 +172,7 @@ jobs:
 
     - name: Run Milvus E2E tests
       env:
-        MILVUS_URI: localhost:19530
+        MILVUS_URI: http://localhost:19530
         CUSTOM_EMBEDDING_URL: http://localhost:11434/api/embeddings
         CUSTOM_EMBEDDING_MODEL: nomic-embed-text
         CUSTOM_EMBEDDING_VECTORSIZE: 768
