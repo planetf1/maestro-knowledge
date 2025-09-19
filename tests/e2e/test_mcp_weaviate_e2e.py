@@ -27,7 +27,6 @@ Note: These tests start the MCP HTTP server in-process on a local port and then
 use fastmcp.Client to call the server tools end-to-end.
 """
 
-
 from __future__ import annotations
 import pytest
 
@@ -50,72 +49,88 @@ from tests.e2e.test_functions import (
 set_backend_name("weaviate")
 BACKEND_NAME = "weaviate"
 
+
 @pytest.mark.asyncio
 async def test_database_management(mcp_http_server: dict) -> None:
     from fastmcp import Client
+
     host = mcp_http_server["host"]
     port = mcp_http_server["port"]
     base_mcp_url = f"http://{host}:{port}/mcp/"
     async with Client(base_mcp_url, timeout=300) as client:
         await run_database_management_tests(client, BACKEND_NAME)
 
+
 @pytest.mark.asyncio
 async def test_document_operations(mcp_http_server: dict) -> None:
     from fastmcp import Client
+
     host = mcp_http_server["host"]
     port = mcp_http_server["port"]
     base_mcp_url = f"http://{host}:{port}/mcp/"
     async with Client(base_mcp_url, timeout=300) as client:
         await run_document_operations_tests(client, BACKEND_NAME)
 
+
 @pytest.mark.asyncio
 async def test_query_operations(mcp_http_server: dict) -> None:
     from fastmcp import Client
+
     host = mcp_http_server["host"]
     port = mcp_http_server["port"]
     base_mcp_url = f"http://{host}:{port}/mcp/"
     async with Client(base_mcp_url, timeout=300) as client:
         await run_query_operations_tests(client, BACKEND_NAME)
 
+
 @pytest.mark.asyncio
 async def test_configuration_discovery(mcp_http_server: dict) -> None:
     from fastmcp import Client
+
     host = mcp_http_server["host"]
     port = mcp_http_server["port"]
     base_mcp_url = f"http://{host}:{port}/mcp/"
     async with Client(base_mcp_url, timeout=300) as client:
         await run_configuration_discovery_tests(client, BACKEND_NAME)
 
+
 @pytest.mark.asyncio
 async def test_bulk_operations(mcp_http_server: dict) -> None:
     from fastmcp import Client
+
     host = mcp_http_server["host"]
     port = mcp_http_server["port"]
     base_mcp_url = f"http://{host}:{port}/mcp/"
     async with Client(base_mcp_url, timeout=300) as client:
         await run_bulk_operations_tests(client, BACKEND_NAME)
 
+
 @pytest.mark.asyncio
 async def test_collection_specific_operations(mcp_http_server: dict) -> None:
     from fastmcp import Client
+
     host = mcp_http_server["host"]
     port = mcp_http_server["port"]
     base_mcp_url = f"http://{host}:{port}/mcp/"
     async with Client(base_mcp_url, timeout=300) as client:
         await run_collection_specific_tests(client, BACKEND_NAME)
 
+
 @pytest.mark.asyncio
 async def test_resync_operations(mcp_http_server: dict) -> None:
     from fastmcp import Client
+
     host = mcp_http_server["host"]
     port = mcp_http_server["port"]
     base_mcp_url = f"http://{host}:{port}/mcp/"
     async with Client(base_mcp_url, timeout=300) as client:
         await run_resync_operations_tests(client, BACKEND_NAME)
 
+
 @pytest.mark.asyncio
 async def test_full_flow(mcp_http_server: dict) -> None:
     from fastmcp import Client
+
     host = mcp_http_server["host"]
     port = mcp_http_server["port"]
     base_mcp_url = f"http://{host}:{port}/mcp/"

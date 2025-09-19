@@ -51,17 +51,11 @@ async def run_database_management_tests(client: "Client", backend_name: str) -> 
     assert hasattr(res, "data"), f"create_collection failed: {res}"
 
     # Test list_collections
-    res = await client.call_tool(
-        "list_collections",
-        {"input": {"db_name": db_name}}
-    )
+    res = await client.call_tool("list_collections", {"input": {"db_name": db_name}})
     assert hasattr(res, "data"), f"list_collections failed: {res}"
 
     # Test get_collection_info
-    res = await client.call_tool(
-        "get_collection_info",
-        {"input": {"db_name": db_name}}
-    )
+    res = await client.call_tool("get_collection_info", {"input": {"db_name": db_name}})
     assert hasattr(res, "data"), f"get_collection_info failed: {res}"
 
     # Cleanup
@@ -77,10 +71,14 @@ async def run_resync_operations_tests(client: "Client") -> None:
 
     # Validate the response indicates successful execution
     result_data = res.data if hasattr(res, "data") else ""
-    assert isinstance(result_data, (str, dict, list)), f"Unexpected response format: {result_data}"
+    assert isinstance(result_data, (str, dict, list)), (
+        f"Unexpected response format: {result_data}"
+    )
 
 
-async def run_configuration_discovery_tests(client: "Client", backend_name: str) -> None:
+async def run_configuration_discovery_tests(
+    client: "Client", backend_name: str
+) -> None:
     """Test configuration discovery operations: get_supported_embeddings, get_supported_chunking_strategies."""
     config = get_backend_config(backend_name)
     db_name = get_db_name_for_test(backend_name, "Config_Test")
@@ -113,7 +111,9 @@ async def run_configuration_discovery_tests(client: "Client", backend_name: str)
     strategies_mentioned = any(
         strategy in res.data for strategy in ["Fixed", "Sentence", "Semantic"]
     )
-    assert strategies_mentioned, f"Expected chunking strategies not found in: {res.data}"
+    assert strategies_mentioned, (
+        f"Expected chunking strategies not found in: {res.data}"
+    )
 
     # Cleanup
     res = await client.call_tool("cleanup", {"input": {"db_name": db_name}})

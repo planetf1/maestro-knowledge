@@ -27,18 +27,23 @@ if TYPE_CHECKING:
 BACKEND_CONFIGS = {
     "milvus": {
         "env_flag": "E2E_MILVUS",
-        "required_env": ["MILVUS_URI", "CUSTOM_EMBEDDING_URL", "CUSTOM_EMBEDDING_MODEL", "CUSTOM_EMBEDDING_VECTORSIZE"],
+        "required_env": [
+            "MILVUS_URI",
+            "CUSTOM_EMBEDDING_URL",
+            "CUSTOM_EMBEDDING_MODEL",
+            "CUSTOM_EMBEDDING_VECTORSIZE",
+        ],
         "db_type": "milvus",
         "service_check": lambda: _check_milvus_service(),
-        "skip_reason": "E2E Milvus env not present or E2E_MILVUS/E2E_BACKEND not enabled; skipping end-to-end tests"
+        "skip_reason": "E2E Milvus env not present or E2E_MILVUS/E2E_BACKEND not enabled; skipping end-to-end tests",
     },
     "weaviate": {
-        "env_flag": "E2E_WEAVIATE", 
+        "env_flag": "E2E_WEAVIATE",
         "required_env": ["WEAVIATE_API_KEY", "WEAVIATE_URL"],
         "db_type": "weaviate",
         "service_check": lambda: _check_weaviate_service(),
-        "skip_reason": "E2E Weaviate env not present or E2E_WEAVIATE/E2E_BACKEND not enabled; skipping end-to-end tests"
-    }
+        "skip_reason": "E2E Weaviate env not present or E2E_WEAVIATE/E2E_BACKEND not enabled; skipping end-to-end tests",
+    },
 }
 
 
@@ -46,7 +51,10 @@ def _check_milvus_service() -> bool:
     """Check if Milvus service is available."""
     try:
         from pymilvus import connections, utility
-        connections.connect(alias="test_config", host="localhost", port="19530", timeout=5)
+
+        connections.connect(
+            alias="test_config", host="localhost", port="19530", timeout=5
+        )
         utility.list_collections(using="test_config")
         connections.disconnect("test_config")
         return True
@@ -58,6 +66,7 @@ def _check_weaviate_service() -> bool:
     """Check if Weaviate service is available."""
     try:
         import httpx
+
         weaviate_url = os.getenv("WEAVIATE_URL", "http://localhost:8080")
         with httpx.Client(timeout=5) as client:
             resp = client.get(f"{weaviate_url}/v1/meta")
@@ -68,14 +77,14 @@ def _check_weaviate_service() -> bool:
 
 def _required_env_present(backend: str) -> bool:
     """Return True if the required environment for a backend is present.
-    
+
     Rules:
     - If E2E_BACKEND is set, it must equal the backend name (case-insensitive)
     - Backward-compat: if E2E_BACKEND is NOT set, we fall back to requiring E2E_{BACKEND}=1
     - In all cases, the backend-specific env vars must be present.
     """
     config = BACKEND_CONFIGS[backend]
-    
+
     e2e_backend = (os.getenv("E2E_BACKEND") or "").strip().lower()
     if e2e_backend and e2e_backend != backend:
         return False
@@ -96,9 +105,11 @@ def _required_env_present(backend: str) -> bool:
 
 BACKEND_NAME = None
 
+
 def set_backend_name(name: str):
     global BACKEND_NAME
     BACKEND_NAME = name
+
 
 @pytest.fixture(scope="function")
 async def mcp_http_server() -> "AsyncGenerator[dict[str, Any], None]":
@@ -111,7 +122,9 @@ async def mcp_http_server() -> "AsyncGenerator[dict[str, Any], None]":
         config = BACKEND_CONFIGS[backend_name]
         e2e_backend = os.getenv("E2E_BACKEND")
         if e2e_backend and e2e_backend.strip().lower() != backend_name:
-            pytest.skip(f"E2E_BACKEND is set to a non-{backend_name} value; skipping {backend_name.title()} E2E")
+            pytest.skip(
+                f"E2E_BACKEND is set to a non-{backend_name} value; skipping {backend_name.title()} E2E"
+            )
         pytest.skip(config["skip_reason"])
 
     # Check service availability
@@ -129,7 +142,7 @@ async def mcp_http_server() -> "AsyncGenerator[dict[str, Any], None]":
     # Use uv to run the server with proper environment
     cmd = [
         "uv",
-        "run", 
+        "run",
         "python",
         "-c",
         f"from maestro_mcp.server import run_http_server_sync; run_http_server_sync('{host}', {port})",

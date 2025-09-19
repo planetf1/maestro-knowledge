@@ -65,8 +65,12 @@ async def mcp_http_server() -> "AsyncGenerator[dict[str, Any], None]":
     if not _required_env_present():
         backend = os.getenv("E2E_BACKEND")
         if backend and backend.strip().lower() != "weaviate":
-            pytest.skip("E2E_BACKEND is set to a non-weaviate value; skipping Weaviate E2E")
-        pytest.skip("E2E Weaviate env not present or E2E_WEAVIATE/E2E_BACKEND not enabled; skipping end-to-end tests")
+            pytest.skip(
+                "E2E_BACKEND is set to a non-weaviate value; skipping Weaviate E2E"
+            )
+        pytest.skip(
+            "E2E Weaviate env not present or E2E_WEAVIATE/E2E_BACKEND not enabled; skipping end-to-end tests"
+        )
 
     import subprocess
     import sys
@@ -80,9 +84,17 @@ async def mcp_http_server() -> "AsyncGenerator[dict[str, Any], None]":
     env["PYTHONPATH"] = "src"
 
     # Use uv to run the server with proper environment
-    cmd = ["uv", "run", "python", "-c", f"from maestro_mcp.server import run_http_server_sync; run_http_server_sync('{host}', {port})"]
+    cmd = [
+        "uv",
+        "run",
+        "python",
+        "-c",
+        f"from maestro_mcp.server import run_http_server_sync; run_http_server_sync('{host}', {port})",
+    ]
 
-    process = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=os.getcwd())
+    process = subprocess.Popen(
+        cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=os.getcwd()
+    )
 
     # Wait for health endpoint to be ready (up to ~20s)
     base = f"http://{host}:{port}"
@@ -147,11 +159,15 @@ async def test_weaviate_database_management(mcp_http_server: dict[str, Any]) -> 
         assert hasattr(res, "data")
 
         # Test get_database_info
-        res = await client.call_tool("get_database_info", {"input": {"db_name": db_name}})
+        res = await client.call_tool(
+            "get_database_info", {"input": {"db_name": db_name}}
+        )
         assert hasattr(res, "data")
 
         # Test list_collections
-        res = await client.call_tool("list_collections", {"input": {"db_name": db_name}})
+        res = await client.call_tool(
+            "list_collections", {"input": {"db_name": db_name}}
+        )
         assert hasattr(res, "data")
 
         # Cleanup
@@ -160,22 +176,29 @@ async def test_weaviate_database_management(mcp_http_server: dict[str, Any]) -> 
 
 
 @pytest.mark.asyncio
-async def test_weaviate_configuration_discovery(mcp_http_server: dict[str, Any]) -> None:
+async def test_weaviate_configuration_discovery(
+    mcp_http_server: dict[str, Any],
+) -> None:
     """Test configuration discovery operations (exact copy of Milvus structure)."""
-    
+
     # Skip if Weaviate not available
     try:
         import httpx
+
         weaviate_url = os.getenv("WEAVIATE_URL", "http://localhost:8080")
         with httpx.Client(timeout=5) as client:
             resp = client.get(f"{weaviate_url}/v1/meta")
             if resp.status_code >= 500:
-                pytest.skip("Weaviate service not available for configuration discovery testing")
+                pytest.skip(
+                    "Weaviate service not available for configuration discovery testing"
+                )
     except Exception:
-        pytest.skip("Weaviate service not available for configuration discovery testing")
+        pytest.skip(
+            "Weaviate service not available for configuration discovery testing"
+        )
 
     from fastmcp import Client
-    
+
     host = mcp_http_server["host"]
     port = mcp_http_server["port"]
     base_mcp_url = f"http://{host}:{port}/mcp/"
@@ -201,18 +224,26 @@ async def test_weaviate_configuration_discovery(mcp_http_server: dict[str, Any])
             print("✓ Created test database for configuration testing")
 
             # Test get_supported_embeddings
-            res = await client.call_tool("get_supported_embeddings", {"input": {"db_name": db_name}})
+            res = await client.call_tool(
+                "get_supported_embeddings", {"input": {"db_name": db_name}}
+            )
             assert hasattr(res, "data")
             # Backend-agnostic validation - just check we get some response
-            assert res.data and len(str(res.data)) > 0, f"No embeddings returned: {res.data}"
+            assert res.data and len(str(res.data)) > 0, (
+                f"No embeddings returned: {res.data}"
+            )
             print("✓ Got supported embeddings")
 
             # Test get_supported_chunking_strategies
             res = await client.call_tool("get_supported_chunking_strategies")
             assert hasattr(res, "data")
             # Should contain chunking strategies like 'Fixed', 'Sentence', etc.
-            strategies_mentioned = any(strategy in res.data for strategy in ["Fixed", "Sentence", "Semantic"])
-            assert strategies_mentioned, f"Expected chunking strategies not found in: {res.data}"
+            strategies_mentioned = any(
+                strategy in res.data for strategy in ["Fixed", "Sentence", "Semantic"]
+            )
+            assert strategies_mentioned, (
+                f"Expected chunking strategies not found in: {res.data}"
+            )
             print("✓ Got supported chunking strategies")
 
             # Cleanup
@@ -240,4 +271,6 @@ async def test_weaviate_resync_operations(mcp_http_server: dict[str, Any]) -> No
 
         # Validate the response indicates successful execution
         result_data = res.data if hasattr(res, "data") else ""
-        assert isinstance(result_data, (str, dict, list)), f"Unexpected response format: {result_data}"
+        assert isinstance(result_data, (str, dict, list)), (
+            f"Unexpected response format: {result_data}"
+        )
