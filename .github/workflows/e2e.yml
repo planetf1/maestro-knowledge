@@ -10,7 +10,7 @@ on:
 jobs:
   e2e-milvus:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -52,13 +52,19 @@ jobs:
       run: |
         uv sync
 
-    - name: Start Milvus with embedded etcd
+    - name: Start Milvus standalone (production config)
       run: |
-        echo "Starting Milvus v2.4.4 with embedded etcd..."
+        echo "Starting Milvus v2.6.1 with production configuration..."
         docker run -d --name milvus-service \
           -p 19530:19530 \
+          -p 9091:9091 \
           -e ETCD_USE_EMBED=true \
-          milvusdb/milvus:v2.4.4 \
+          -e ETCD_DATA_DIR=/var/lib/milvus/etcd \
+          -e ETCD_CONFIG_PATH=/milvus/configs/embedEtcd.yaml \
+          -e COMMON_STORAGETYPE=local \
+          -e DEPLOY_MODE=STANDALONE \
+          --tmpfs /var/lib/milvus:size=1G \
+          milvusdb/milvus:v2.6.1 \
           /milvus/bin/milvus run standalone
 
     - name: Wait for services to be ready
@@ -79,31 +85,44 @@ jobs:
         echo "Checking Milvus logs..."
         docker logs milvus-service --tail 20
         
-        for i in {1..30}; do
-          echo "Attempt $i/30: Checking Milvus readiness..."
+        # Wait initially for Milvus to start (matching production initialDelaySeconds)
+        echo "Initial delay for Milvus startup..."
+        sleep 10
+        
+        # Health check matching production probe configuration
+        for i in {1..15}; do
+          echo "Attempt $i/15: Checking Milvus health endpoint..."
           
-          # Try multiple ways to check if Milvus is ready
-          if curl -f http://localhost:9091/healthz 2>/dev/null; then
-            echo "Milvus health endpoint is ready"
+          # Check if container is still running
+          if ! docker ps --filter name=milvus-service --filter status=running | grep -q milvus-service; then
+            echo "Milvus container is not running!"
+            docker logs milvus-service --tail 50
+            exit 1
+          fi
+          
+          # Use the same health endpoint as production
+          if curl -f --max-time 5 http://localhost:9091/healthz 2>/dev/null; then
+            echo "✓ Milvus health endpoint is ready"
             break
-          elif nc -z localhost 19530 2>/dev/null; then
-            echo "Milvus gRPC port 19530 is open"
-            # Give it a bit more time for the service to be fully ready
-            sleep 5
-            if curl -f http://localhost:9091/healthz 2>/dev/null; then
-              echo "Milvus is ready"
-              break
-            fi
           fi
           
-          if [ $i -eq 15 ]; then
+          if [ $i -eq 8 ]; then
             echo "Mid-check: Milvus container logs..."
-            docker logs milvus-service --tail 10
+            docker logs milvus-service --tail 20
           fi
           
-          echo "Waiting for Milvus... ($i/30)"
+          echo "Waiting for Milvus health check... ($i/15)"
           sleep 10
         done
+        
+        # Final verification
+        if ! curl -f --max-time 5 http://localhost:9091/healthz 2>/dev/null; then
+          echo "✗ Milvus failed to become healthy"
+          docker logs milvus-service
+          exit 1
+        fi
+        
+        echo "✓ Milvus is ready and healthy"
 
     - name: Pull Ollama embedding model
       run: |
@@ -127,9 +146,31 @@ jobs:
           -d '{"model":"nomic-embed-text","prompt":"test"}' \
           --max-time 30 || echo "Embedding test failed but continuing..."
 
+    - name: Test Milvus connection
+      run: |
+        echo "Testing basic Milvus connection..."
+        uv run python -c "
+        import sys
+        try:
+            from pymilvus import connections, utility
+            # Connect to Milvus (gRPC endpoint)
+            connections.connect('default', host='localhost', port='19530')
+            print('✓ Successfully connected to Milvus')
+            # Test if we can get server info
+            version = utility.get_server_version()
+            print('✓ Server version:', version)
+            connections.disconnect('default')
+            print('✓ Connection test passed')
+        except Exception as e:
+            print('✗ Milvus connection failed:', str(e))
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)
+        " || (echo "Milvus connection test failed, showing logs..." && docker logs milvus-service --tail 50 && exit 1)
+
     - name: Run Milvus E2E tests
       env:
-        MILVUS_URI: http://localhost:19530
+        MILVUS_URI: localhost:19530
         CUSTOM_EMBEDDING_URL: http://localhost:11434/api/embeddings
         CUSTOM_EMBEDDING_MODEL: nomic-embed-text
         CUSTOM_EMBEDDING_VECTORSIZE: 768
@@ -188,8 +229,9 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          .uv/cache
-        key: ${{ runner.os }}-uv-e2e-${{ hashFiles('**/pyproject.toml', '**/requirements.txt') }}
+          ~/.cache/uv
+          .venv
+        key: ${{ runner.os }}-uv-e2e-${{ hashFiles('**/pyproject.toml', 'uv.lock') }}
         restore-keys: |
           ${{ runner.os }}-uv-e2e-
 
