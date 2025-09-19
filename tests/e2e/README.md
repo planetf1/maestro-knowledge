@@ -90,23 +90,13 @@ podman run -d --name ollama-mcp-e2e -p 11434:11434 ollama/ollama:latest
 curl -X POST http://localhost:11434/api/pull -d '{"name":"nomic-embed-text:latest"}'
 ```
 
-2. **Start Milvus stack:**
+2. **Start Milvus standalone with embedded etcd:**
+
 ```bash
-# etcd
-podman run -d --name etcd-mcp-e2e -p 2379:2379 -p 2380:2380 \
-  -e ETCD_AUTO_COMPACTION_MODE=revision \
-  quay.io/coreos/etcd:v3.5.5
-
-# MinIO  
-podman run -d --name minio-mcp-e2e -p 9000:9000 -p 9001:9001 \
-  -e MINIO_ACCESS_KEY=minioadmin -e MINIO_SECRET_KEY=minioadmin \
-  minio/minio:RELEASE.2023-03-20T20-16-18Z server /data --console-address ":9001"
-
-# Milvus
+# Milvus with embedded etcd (no separate etcd/MinIO needed)
 podman run -d --name milvus-mcp-e2e -p 19530:19530 \
-  -e ETCD_ENDPOINTS=host.containers.internal:2379 \
-  -e MINIO_ADDRESS=host.containers.internal:9000 \
-  milvusdb/milvus:v2.3.3
+  -e ETCD_USE_EMBED=true \
+  milvusdb/milvus:v2.4.4 /milvus/bin/milvus run standalone
 ```
 
 3. **Start Weaviate:**

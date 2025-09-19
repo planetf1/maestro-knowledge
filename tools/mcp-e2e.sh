@@ -85,52 +85,20 @@ start_ollama() {
     echo
 }
 
-# Start Milvus stack
+# Start Milvus standalone with embedded etcd
 start_milvus() {
-    log "Starting Milvus stack..."
+    log "Starting Milvus standalone with embedded etcd..."
     
-    # Start etcd
-    if ! $CONTAINER_CMD ps --filter "name=etcd-mcp-e2e" --format "{{.Names}}" | grep -q "etcd-mcp-e2e"; then
-        $CONTAINER_CMD run -d --name etcd-mcp-e2e \
-            -p 2379:2379 -p 2380:2380 \
-            -e ETCD_AUTO_COMPACTION_MODE=revision \
-            -e ETCD_AUTO_COMPACTION_RETENTION=1000 \
-            -e ETCD_QUOTA_BACKEND_BYTES=4294967296 \
-            -e ETCD_SNAPSHOT_COUNT=50000 \
-            quay.io/coreos/etcd:v3.5.5
-    fi
-    
-    # Start MinIO
-    if ! $CONTAINER_CMD ps --filter "name=minio-mcp-e2e" --format "{{.Names}}" | grep -q "minio-mcp-e2e"; then
-        $CONTAINER_CMD run -d --name minio-mcp-e2e \
-            -p 9000:9000 -p 9001:9001 \
-            -e MINIO_ACCESS_KEY=minioadmin \
-            -e MINIO_SECRET_KEY=minioadmin \
-            minio/minio:RELEASE.2023-03-20T20-16-18Z server /data --console-address ":9001"
-    fi
-    
-    # Start Milvus
+    # Start Milvus with embedded etcd (no separate etcd/MinIO needed)
     if ! $CONTAINER_CMD ps --filter "name=milvus-mcp-e2e" --format "{{.Names}}" | grep -q "milvus-mcp-e2e"; then
-        # Use host networking or proper container networking
-        if [ "$CONTAINER_CMD" = "docker" ]; then
-            # Docker: use host.docker.internal
-            ETCD_HOST="host.docker.internal"
-            MINIO_HOST="host.docker.internal"
-        else
-            # Podman: use host.containers.internal
-            ETCD_HOST="host.containers.internal"
-            MINIO_HOST="host.containers.internal"
-        fi
-        
         $CONTAINER_CMD run -d --name milvus-mcp-e2e \
             -p 19530:19530 \
-            -e ETCD_ENDPOINTS="${ETCD_HOST}:2379" \
-            -e MINIO_ADDRESS="${MINIO_HOST}:9000" \
-            milvusdb/milvus:v2.3.3
+            -e ETCD_USE_EMBED=true \
+            milvusdb/milvus:v2.4.4 /milvus/bin/milvus run standalone
     fi
     
-    # Wait for services
-    log "Waiting for Milvus services to be ready..."
+    # Wait for Milvus
+    log "Waiting for Milvus to be ready..."
     for i in {1..60}; do
         if curl -s http://localhost:19530 >/dev/null 2>&1; then
             success "Milvus is ready"
@@ -177,8 +145,6 @@ cleanup() {
     containers=(
         "ollama-mcp-e2e"
         "milvus-mcp-e2e" 
-        "etcd-mcp-e2e"
-        "minio-mcp-e2e"
         "weaviate-mcp-e2e"
     )
     
@@ -265,9 +231,7 @@ show_status() {
     
     containers=(
         "ollama-mcp-e2e:Ollama (Embeddings)"
-        "milvus-mcp-e2e:Milvus (Vector DB)"
-        "etcd-mcp-e2e:etcd (Milvus dependency)"
-        "minio-mcp-e2e:MinIO (Milvus storage)"
+        "milvus-mcp-e2e:Milvus (Vector DB with embedded etcd)"
         "weaviate-mcp-e2e:Weaviate (Vector DB)"
     )
     
@@ -284,10 +248,8 @@ show_status() {
     # Show service endpoints
     log "Service endpoints:"
     echo "  Ollama:    http://localhost:11434"
-    echo "  Milvus:    http://localhost:19530" 
+    echo "  Milvus:    http://localhost:19530 (with embedded etcd)" 
     echo "  Weaviate:  http://localhost:8080"
-    echo "  etcd:      http://localhost:2379"
-    echo "  MinIO:     http://localhost:9000 (console: http://localhost:9001)"
 }
 
 # Main script logic
