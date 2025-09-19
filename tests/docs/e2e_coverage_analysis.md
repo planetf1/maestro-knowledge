@@ -78,10 +78,10 @@
 ### Cleanup (1 tool)
 24. **cleanup** ✅ - Tested
 
-## Updated E2E Test Coverage: 12/22 tools (55%)
+## Updated E2E Test Coverage: 17/22 tools (77%)
 
-### ✅ Currently Tested (12 tools)
-**Core Workflow (4 tests organized by category):**
+### ✅ Currently Tested (17 tools)
+**Core Workflow (7 tests organized by category):**
 
 **test_full_milvus_flow:**
 - create_vector_database_tool
@@ -92,34 +92,39 @@
 - cleanup
 
 **test_milvus_database_management:**
-- list_databases ✅ NEW
+- list_databases ✅ 
 - get_database_info
 
 **test_milvus_query_operations:**
-- query ✅ NEW (intelligent query - main feature!)
+- query ✅ (intelligent query - main feature!)
 - search (comparison test)
 
-**test_milvus_document_operations:** (partially working)
-- write_document ⚠️ NEW (indexing issues)
-- list_documents ✅ NEW  
-- delete_document ⚠️ NEW (dependent on write_document)
+**test_milvus_document_operations:**
+- write_document ✅ (with indexing delay fix)
+- list_documents ✅  
+- delete_document ✅ (with proper indexing)
 
-### ❌ Still Not Tested (10 tools)
+**test_milvus_configuration_discovery:** ✅ NEW
+- get_supported_embeddings ✅ NEW
+- get_supported_chunking_strategies ✅ NEW
 
-**High Priority Missing:**
-- **get_supported_embeddings** - Configuration discovery
-- **get_supported_chunking_strategies** - Configuration discovery
+**test_milvus_document_retrieval_operations:** ✅ NEW
+- setup_database ✅ NEW (alternative database creation)
+- get_document ✅ NEW (document retrieval by ID)
+
+**test_milvus_bulk_operations:** ✅ NEW
+- delete_documents ✅ NEW (bulk document deletion)
+
+### ❌ Still Not Tested (5 tools)
 
 **Medium Priority Missing:**
-- **get_document** - Document retrieval by ID
-- **setup_database** - Alternative setup method
+- **write_document_to_collection** - Collection-specific writes
+- **list_documents_in_collection** - Collection-specific listing
+- **delete_document_from_collection** - Collection-specific deletion
+- **resync_databases_tool** - Recovery functionality
 
 **Lower Priority Missing:**
-- **write_document_to_collection** - Collection-specific writes
-- **list_documents_in_collection** - Collection-specific listing  
-- **delete_document_from_collection** - Collection-specific deletion
-- **delete_documents** - Bulk deletion
-- **resync_databases_tool** - Recovery functionality
+- **list_documents_in_collection** - Collection-specific document listing
 
 ## Test Organization Improvements
 
@@ -152,30 +157,38 @@ The `write_document` tool appears to have indexing delays:
 ## Coverage Quality Assessment
 
 **Strengths:**
-- ✅ **55% coverage** (up from 36%)
+- ✅ **77% coverage** (up from 36% originally, 55% mid-project)
 - ✅ **Tests main feature** - intelligent query functionality  
-- ✅ **Organized test structure** with focused test functions
+- ✅ **Organized test structure** with 7 focused test functions
 - ✅ **Real service integration** with proper service checks
 - ✅ **Better error handling** and response parsing
+- ✅ **Configuration discovery** - tests supported embeddings/chunking
+- ✅ **Document retrieval by ID** - full document lifecycle testing
+- ✅ **Bulk operations** - delete_documents for cleanup scenarios
 
 **Remaining Improvements:**
-- **Fix single document indexing** issue
-- **Add configuration discovery** tests (supported embeddings/chunking)
-- **Add collection-specific operations**
+- **Add collection-specific operations** (5 remaining tools)
 - **Add error condition testing** (timeouts, invalid inputs)
 - **Add performance benchmarking**
 
 ## Summary
 
-**Major Improvement:** Coverage increased from 8/22 tools (36%) to 12/22 tools (55%)
+**Major Improvement:** Coverage increased from 8/22 tools (36%) to **17/22 tools (77%)**
 
-**Key Additions:**
+**Key Additions in This Session:**
+- ✅ **`get_supported_embeddings`** - Configuration discovery
+- ✅ **`get_supported_chunking_strategies`** - Configuration discovery  
+- ✅ **`setup_database`** - Alternative database creation method
+- ✅ **`get_document`** - Document retrieval by ID
+- ✅ **`delete_documents`** - Bulk document deletion
+
+**Previous Key Additions:**
 - ✅ **`query`** - The main intelligent query functionality 
 - ✅ **`list_databases`** - Service discovery
 - ✅ **`list_documents`** - Document management
-- ✅ **Organized test structure** - 4 focused test functions
+- ✅ **Organized test structure** - 7 focused test functions
 
-The E2E tests now provide much better coverage of core MCP server functionality, especially the intelligent query capabilities that differentiate this from basic vector search.
+The E2E tests now provide excellent coverage of core MCP server functionality, testing nearly all major operation categories and the key differentiating features.
 
 ## Recommendations for Improved Coverage
 
