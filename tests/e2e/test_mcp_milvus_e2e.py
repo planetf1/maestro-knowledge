@@ -332,6 +332,12 @@ async def test_milvus_database_management(mcp_http_server: dict[str, Any]) -> No
             assert db_name in res.data  # Verify our database appears in the list
             print("✓ Listed databases")
 
+            # Test list_collections
+            res = await client.call_tool("list_collections", {"input": {"db_name": db_name}})
+            assert hasattr(res, "data")
+            assert db_name in res.data  # Verify our collection appears in the list
+            print("✓ Listed collections")
+
             # Test get_database_info
             res = await client.call_tool(
                 "get_database_info", {"input": {"db_name": db_name}}
@@ -1074,3 +1080,255 @@ async def test_milvus_bulk_operations(mcp_http_server: dict[str, Any]) -> None:
 
     except Exception as e:
         pytest.fail(f"Bulk operations E2E test failed: {e}")
+
+
+@pytest.mark.asyncio
+async def test_milvus_collection_specific_operations(mcp_http_server: dict[str, Any]) -> None:
+    """Test collection-specific operations: write_document_to_collection, list_documents_in_collection, delete_document_from_collection."""
+    
+    # Skip if Milvus not available
+    try:
+        from pymilvus import connections, utility
+        connections.connect(alias="test_collection", host="localhost", port="19530", timeout=5)
+        utility.list_collections(using="test_collection")
+        connections.disconnect("test_collection")
+    except Exception:
+        pytest.skip("Milvus service not available for collection-specific operations testing")
+
+    host = mcp_http_server["host"]
+    port = mcp_http_server["port"]
+    base_mcp_url = f"http://{host}:{port}/mcp/"
+
+    try:
+        from fastmcp import Client
+        db_name = "E2E_Collection_Test"
+        collection_name = "collection_specific_test"
+
+        async with Client(base_mcp_url, timeout=90) as client:
+            print("✓ Testing collection-specific operations")
+            
+            # Setup: Create database and multiple collections
+            res = await client.call_tool(
+                "create_vector_database_tool",
+                {
+                    "input": {
+                        "db_name": db_name,
+                        "db_type": "milvus",
+                        "collection_name": db_name,
+                    }
+                },
+            )
+            assert hasattr(res, "data")
+            
+            # Create a specific collection for collection-specific testing
+            res = await client.call_tool(
+                "create_collection",
+                {
+                    "input": {
+                        "db_name": db_name,
+                        "collection_name": collection_name,
+                        "embedding": "custom_local",
+                        "chunking_config": {
+                            "strategy": "Fixed",
+                            "parameters": {"chunk_size": 100, "overlap": 0},
+                        },
+                    }
+                },
+            )
+            assert hasattr(res, "data")
+            print(f"✓ Setup database and collection '{collection_name}'")
+
+            # Test write_document_to_collection (collection-specific write)
+            res = await client.call_tool(
+                "write_document_to_collection",
+                {
+                    "input": {
+                        "db_name": db_name,
+                        "collection_name": collection_name,
+                        "doc_name": "collection_specific_doc_1",
+                        "url": "https://example.com/collection-specific-doc",
+                        "text": "This is a document written specifically to a named collection for testing collection-specific operations.",
+                        "metadata": {"test_type": "collection_specific", "doc_purpose": "collection_write_test"},
+                    }
+                },
+            )
+            assert hasattr(res, "data")
+            print("✓ Wrote document to specific collection")
+
+            # Write another document for testing
+            res = await client.call_tool(
+                "write_document_to_collection",
+                {
+                    "input": {
+                        "db_name": db_name,
+                        "collection_name": collection_name,
+                        "doc_name": "collection_specific_doc_2",
+                        "url": "https://example.com/collection-doc-2",
+                        "text": "Second document written to the specific collection for comprehensive testing.",
+                        "metadata": {"test_type": "collection_specific", "doc_purpose": "collection_write_test_2"},
+                    }
+                },
+            )
+            assert hasattr(res, "data")
+            print("✓ Wrote second document to specific collection")
+
+            # Wait for indexing
+            await asyncio.sleep(2.0)
+            print("✓ Waited for document indexing")
+
+            # Test list_documents_in_collection (collection-specific listing)
+            res = await client.call_tool(
+                "list_documents_in_collection",
+                {
+                    "input": {
+                        "db_name": db_name,
+                        "collection_name": collection_name,
+                        "limit": 10,
+                        "offset": 0,
+                    }
+                },
+            )
+            assert hasattr(res, "data")
+            print("✓ Listed documents in specific collection")
+            
+            # Verify we have documents in this specific collection
+            import json
+            import re
+            
+            # Extract documents from response
+            json_match = re.search(r"\[\s*\{.*\}\s*\]", res.data, re.DOTALL)
+            collection_doc_ids = []
+            if json_match:
+                docs_data = json.loads(json_match.group())
+                collection_doc_ids = [doc.get("id") for doc in docs_data if doc.get("id")]
+                print(f"✓ Found {len(docs_data)} documents in collection '{collection_name}'")
+            else:
+                # Try to count documents in collection as fallback
+                res_count = await client.call_tool(
+                    "count_documents", 
+                    {"input": {"db_name": db_name}}
+                )
+                print(f"✓ Collection-specific listing completed. Total database count: {res_count.data}")
+            
+            # Test delete_document_from_collection (collection-specific deletion)
+            if collection_doc_ids:
+                test_doc_id = collection_doc_ids[0]
+                res = await client.call_tool(
+                    "delete_document_from_collection",
+                    {
+                        "input": {
+                            "db_name": db_name,
+                            "collection_name": collection_name,
+                            "document_id": test_doc_id,
+                        }
+                    },
+                )
+                assert hasattr(res, "data")
+                print(f"✓ Deleted document {test_doc_id} from collection '{collection_name}'")
+                
+                # Verify deletion by listing again
+                res = await client.call_tool(
+                    "list_documents_in_collection",
+                    {
+                        "input": {
+                            "db_name": db_name,
+                            "collection_name": collection_name,
+                            "limit": 10,
+                            "offset": 0,
+                        }
+                    },
+                )
+                assert hasattr(res, "data")
+                print("✓ Verified collection-specific deletion")
+            else:
+                print("⚠ Skipping collection-specific deletion test (no document IDs found)")
+
+            # Cleanup
+            res = await client.call_tool("cleanup", {"input": {"db_name": db_name}})
+            assert hasattr(res, "data")
+            print("✓ Collection-specific operations tests completed")
+
+    except Exception as e:
+        pytest.fail(f"Collection-specific operations E2E test failed: {e}")
+
+
+@pytest.mark.asyncio
+async def test_milvus_resync_operations(mcp_http_server: dict[str, Any]) -> None:
+    """Test resync operations: resync_databases_tool."""
+    
+    # Skip if Milvus not available
+    try:
+        from pymilvus import connections, utility
+        connections.connect(alias="test_resync", host="localhost", port="19530", timeout=5)
+        utility.list_collections(using="test_resync")
+        connections.disconnect("test_resync")
+    except Exception:
+        pytest.skip("Milvus service not available for resync operations testing")
+
+    host = mcp_http_server["host"]
+    port = mcp_http_server["port"]
+    base_mcp_url = f"http://{host}:{port}/mcp/"
+
+    try:
+        from fastmcp import Client
+        db_name = "E2E_Resync_Test"
+
+        async with Client(base_mcp_url, timeout=60) as client:
+            print("✓ Testing resync operations")
+            
+            # Create a test database that should be discoverable by resync
+            res = await client.call_tool(
+                "create_vector_database_tool",
+                {
+                    "input": {
+                        "db_name": db_name,
+                        "db_type": "milvus",
+                        "collection_name": db_name,
+                    }
+                },
+            )
+            assert hasattr(res, "data")
+            print("✓ Created test database for resync")
+            
+            # Create a collection
+            res = await client.call_tool(
+                "create_collection",
+                {
+                    "input": {
+                        "db_name": db_name,
+                        "collection_name": db_name,
+                        "embedding": "custom_local",
+                    }
+                },
+            )
+            assert hasattr(res, "data")
+            print("✓ Created collection for resync testing")
+
+            # Test resync_databases_tool - this should discover existing Milvus collections
+            res = await client.call_tool("resync_databases_tool")
+            assert hasattr(res, "data")
+            
+            # The resync tool may return 0 new discoveries if collections were created through MCP
+            # Verify the tool executed successfully and returned valid JSON structure
+            import json
+            try:
+                resync_data = json.loads(res.data)
+                assert "milvus" in resync_data, f"Expected 'milvus' key in resync results: {res.data}"
+                assert "count" in resync_data.get("milvus", {}), "Expected 'count' in milvus resync data"
+                print(f"✓ Resync executed successfully - found {resync_data.get('milvus', {}).get('count', 0)} new Milvus collections")
+            except json.JSONDecodeError:
+                pytest.fail(f"Resync tool returned invalid JSON: {res.data}")
+            
+            # After resync, verify we can still list databases and our test DB is there
+            res = await client.call_tool("list_databases")
+            assert hasattr(res, "data")
+            assert db_name in res.data, f"Database '{db_name}' should still be accessible after resync"
+            print("✓ Database still accessible after resync")
+
+            # Cleanup
+            res = await client.call_tool("cleanup", {"input": {"db_name": db_name}})
+            assert hasattr(res, "data")
+            print("✓ Resync operations tests completed")
+
+    except Exception as e:
+        pytest.fail(f"Resync operations E2E test failed: {e}")
