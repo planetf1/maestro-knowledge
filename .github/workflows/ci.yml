@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.12"]  # Reduced for speed
+        python-version: ["3.13"]  # Reduced for speed
 
     steps:
     - uses: actions/checkout@v4
@@ -113,7 +113,7 @@ jobs:
     needs: fast-tests
     strategy:
       matrix:
-        python-version: ["3.12"]
+        python-version: ["3.13"]
 
     steps:
     - uses: actions/checkout@v4
