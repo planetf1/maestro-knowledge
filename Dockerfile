@@ -4,18 +4,16 @@ WORKDIR /app
 ENV PYTHONPATH=/app
 ENV UV_CACHE_DIR=/app/cache
 
-COPY ./src /app/src
-COPY pyproject.toml /app
-COPY start.sh /app
-COPY stop.sh /app
+COPY --chown=1000:1000 ./src /app/src
+COPY --chown=1000:1000 pyproject.toml /app
+COPY --chown=1000:1000 start.sh /app
+COPY --chown=1000:1000 stop.sh /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends procps
 
 RUN uv sync
 
-RUN chmod +x ./start.sh
-
-RUN chown -R 1000:1000 /app &&\
+RUN chmod +x ./start.sh && \
   mkdir -p /app/cache && chown 1000:1000 /app/cache
 
 EXPOSE 8030
