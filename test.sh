@@ -33,27 +33,34 @@ print_help() {
     echo "Usage: ./test.sh [COMMAND]"
     echo ""
     echo "Commands:"
-    echo "  ${GREEN}Python Test Categories:${NC}"
+    echo "  ${GREEN}Individual Test Categories:${NC}"
     echo "  unit        Run only unit tests (fast, isolated, no external deps)"
-    echo "  integration Run only integration tests (components working together)"  
+    echo "  integration Run only integration tests (components working together)"
     echo "  service     Run only service tests (with mocked external services)"
     echo "  e2e         Run only end-to-end Python tests (full Python stack)"
-    echo "  fast        Run fast tests (unit + integration)"
-    echo "  mcp         Run all MCP server tests (all Python tests - legacy)"
     echo ""
-    echo "  ${GREEN}System Test Categories:${NC}"
+    echo "  ${GREEN}Combined Test Categories:${NC}"
+    echo "  fast        Run fast tests (unit + integration)"
+    echo "  python      Run all Python tests (unit + integration + service + e2e)"
+    echo "  system      Run system integration tests (CLI + MCP end-to-end)"
+    echo ""
+    echo "  ${GREEN}Comprehensive Test Categories:${NC}"
+    echo "  all         Run everything (all Python tests + system integration)"
+    echo "  mcp         Legacy mode - all Python tests without markers (deprecated)"
+    echo ""
+    echo "  ${GREEN}Special Categories:${NC}"
+    echo "  ci          CI-optimized test sequence (fast tests first, then comprehensive)"
     echo "  cli         CLI tests (moved to separate repository - AI4quantum/maestro-cli)"
-    echo "  system-e2e  Run system integration tests (CLI + MCP end-to-end)"
-    echo "  all         Run all tests (Python + System Integration)"
     echo "  help        Show this help message"
     echo ""
     echo "Examples:"
     echo "  ./test.sh unit        # Fast unit tests (~5-10s)"
     echo "  ./test.sh integration # Integration tests (~10-15s)"
     echo "  ./test.sh fast        # Unit + integration tests (~15-20s)"
-    echo "  ./test.sh mcp         # All Python tests (~30s)"
-    echo "  ./test.sh system-e2e  # Full CLI + MCP end-to-end tests"
+    echo "  ./test.sh python      # All Python tests (~30s)"
+    echo "  ./test.sh system      # System integration tests"
     echo "  ./test.sh all         # Everything"
+    echo "  ./test.sh ci          # CI-optimized test sequence"
     echo "  ./test.sh             # Run all Python tests (default)"
     echo ""
     echo "Test Categories:"
@@ -89,7 +96,7 @@ print_help() {
 }
 
 # Check command line arguments
-case "${1:-mcp}" in
+case "${1:-python}" in  # Default to python tests instead of mcp
     "unit")
         RUN_UNIT_TESTS=true
         RUN_INTEGRATION_TESTS=false
@@ -135,7 +142,32 @@ case "${1:-mcp}" in
         RUN_MCP_TESTS=false
         RUN_SYSTEM_E2E_TESTS=false
         ;;
+    "python")
+        # All Python tests (unit + integration + service + e2e)
+        RUN_UNIT_TESTS=true
+        RUN_INTEGRATION_TESTS=true
+        RUN_SERVICE_TESTS=true
+        RUN_E2E_TESTS=true
+        RUN_CLI_TESTS=false
+        RUN_MCP_TESTS=false
+        RUN_SYSTEM_E2E_TESTS=false
+        ;;
+    "system")
+        # System integration tests only
+        RUN_UNIT_TESTS=false
+        RUN_INTEGRATION_TESTS=false
+        RUN_SERVICE_TESTS=false
+        RUN_E2E_TESTS=false
+        RUN_CLI_TESTS=false
+        RUN_MCP_TESTS=false
+        RUN_SYSTEM_E2E_TESTS=true
+        ;;
     "mcp")
+        # Legacy mode - warn about deprecation
+        print_header "Running MCP Server Tests (Legacy Mode - Consider using categorized tests instead)..."
+        print_warning "This is a legacy test mode. Consider using './test.sh python' for all Python tests."
+        print_warning "For complete coverage, use './test.sh all'"
+        
         RUN_UNIT_TESTS=false
         RUN_INTEGRATION_TESTS=false
         RUN_SERVICE_TESTS=false
@@ -153,16 +185,8 @@ case "${1:-mcp}" in
         RUN_MCP_TESTS=false
         RUN_SYSTEM_E2E_TESTS=false
         ;;
-    "system-e2e")
-        RUN_UNIT_TESTS=false
-        RUN_INTEGRATION_TESTS=false
-        RUN_SERVICE_TESTS=false
-        RUN_E2E_TESTS=false
-        RUN_CLI_TESTS=false
-        RUN_MCP_TESTS=false
-        RUN_SYSTEM_E2E_TESTS=true
-        ;;
     "all")
+        # Everything (all Python tests + system integration)
         RUN_UNIT_TESTS=true
         RUN_INTEGRATION_TESTS=true
         RUN_SERVICE_TESTS=true
@@ -170,6 +194,20 @@ case "${1:-mcp}" in
         RUN_CLI_TESTS=true
         RUN_MCP_TESTS=false
         RUN_SYSTEM_E2E_TESTS=true
+        ;;
+    "ci")
+        # CI-optimized test sequence
+        print_header "Running CI-optimized test sequence..."
+        
+        # Run fast tests first
+        if ./test.sh fast; then
+            print_status "Fast tests passed, running comprehensive tests..."
+            ./test.sh all
+        else
+            print_error "Fast tests failed, stopping CI pipeline"
+            exit 1
+        fi
+        exit 0
         ;;
     "help"|"-h"|"--help")
         print_help

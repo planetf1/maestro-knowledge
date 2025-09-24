@@ -387,26 +387,32 @@ The `./test.sh` script has been enhanced to support granular test execution:
 
 ### Legacy/Comprehensive Categories
 ```bash
-# All Python tests (legacy mode - equivalent to pytest -v)
-./test.sh mcp          # ~30 seconds
+# All Python tests (unit + integration + service + e2e)
+./test.sh python       # ~30 seconds
 
-# Full system integration: CLI + MCP server + databases
-./test.sh system-e2e   # ~2-5 minutes (requires external CLI)
+# System integration tests only (CLI + MCP end-to-end)
+./test.sh system       # ~2-5 minutes (requires external CLI)
 
 # Everything: all Python tests + system integration
 ./test.sh all          # ~2-5 minutes
 
+# Legacy mode (deprecated) - all Python tests without markers
+./test.sh mcp          # ~30 seconds (consider using python instead)
+
 # Default behavior (runs all Python tests)
-./test.sh              # ~30 seconds
+./test.sh              # ~30 seconds (equivalent to ./test.sh python)
+
+# CI-optimized test sequence (fast tests first, then comprehensive)
+./test.sh ci           # ~2-5 minutes (fast feedback for failures)
 ```
 
 ### Development Workflow Examples
 ```bash
 # Quick development cycle
-./test.sh fast         # Fast feedback during coding
+./test.sh fast         # Fast feedback during coding (unit + integration)
 
-# Before committing  
-./test.sh mcp          # Ensure all Python tests pass
+# Before committing
+./test.sh python       # Ensure all Python tests pass
 
 # Full validation
 ./test.sh all          # Complete system validation
@@ -418,11 +424,14 @@ The `./test.sh` script has been enhanced to support granular test execution:
 ### CI/CD Integration
 ```bash
 # Fast CI feedback
-./test.sh fast
+./test.sh fast         # Quick feedback for rapid iterations
+
+# Optimized CI pipeline
+./test.sh ci           # Runs fast tests first, then comprehensive tests
 
 # Comprehensive CI validation
-./test.sh all
+./test.sh all          # Complete validation including system tests
 
 # Production deployment validation
-./test.sh system-e2e
+./test.sh system       # System integration tests
 ```
