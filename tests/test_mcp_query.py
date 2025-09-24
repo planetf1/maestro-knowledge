@@ -32,6 +32,7 @@ from fastmcp import FastMCP
 from tests.test_utils import mock_resync_functions
 
 
+@pytest.mark.unit
 class TestMCPQueryFunctionality:
     """Test cases for the MCP server query functionality."""
 
@@ -188,6 +189,7 @@ class TestMCPQueryFunctionality:
         assert query_input.limit == 5
 
 
+@pytest.mark.integration
 class TestMCPQueryIntegration:
     """Integration tests for MCP query functionality."""
 

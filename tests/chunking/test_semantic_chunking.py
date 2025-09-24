@@ -11,6 +11,7 @@ import pytest
 from src.chunking import ChunkingConfig, chunk_text
 
 
+@pytest.mark.unit
 def test_semantic_chunk_basic() -> None:
     """Test basic semantic chunking functionality."""
     text = "This is the first sentence. This is the second sentence. This is the third sentence."
@@ -28,6 +29,7 @@ def test_semantic_chunk_basic() -> None:
     assert all("semantic_info" in chunk for chunk in result)
 
 
+@pytest.mark.unit
 def test_semantic_chunk_empty_text() -> None:
     """Test semantic chunking with empty text."""
     cfg = ChunkingConfig(strategy="Semantic")
@@ -39,6 +41,7 @@ def test_semantic_chunk_empty_text() -> None:
     assert result == []
 
 
+@pytest.mark.unit
 def test_semantic_chunk_single_sentence() -> None:
     """Test semantic chunking with single sentence."""
     text = "This is a single sentence."
@@ -51,6 +54,7 @@ def test_semantic_chunk_single_sentence() -> None:
     assert result[0]["semantic_info"]["split_reason"] == "single_sentence"
 
 
+@pytest.mark.unit
 def test_semantic_chunk_with_code_blocks() -> None:
     """Test semantic chunking preserves code blocks."""
     text = "Here is some text. ```print('hello world')``` Here is more text."
@@ -65,6 +69,7 @@ def test_semantic_chunk_with_code_blocks() -> None:
     assert code_block_present
 
 
+@pytest.mark.unit
 def test_semantic_chunk_parameters() -> None:
     """Test semantic chunking with various parameters."""
     text = "First sentence. Second sentence. Third sentence. Fourth sentence."
@@ -86,6 +91,7 @@ def test_semantic_chunk_parameters() -> None:
     assert all(chunk["chunk_size"] <= 30 for chunk in result)
 
 
+@pytest.mark.unit
 def test_semantic_chunk_invalid_parameters() -> None:
     """Test semantic chunking with invalid parameters."""
     text = "Some text here."
@@ -110,6 +116,7 @@ def test_semantic_chunk_invalid_parameters() -> None:
         chunk_text(text, cfg)
 
 
+@pytest.mark.unit
 def test_semantic_chunk_large_text() -> None:
     """Test semantic chunking with larger text."""
     # Create a longer text with multiple sentences
@@ -124,6 +131,7 @@ def test_semantic_chunk_large_text() -> None:
     assert all(chunk["chunk_size"] <= 100 for chunk in result)
 
 
+@pytest.mark.unit
 def test_semantic_chunk_sequence_and_total() -> None:
     """Test that sequence and total are properly set."""
     text = "First. Second. Third. Fourth. Fifth."
@@ -141,6 +149,7 @@ def test_semantic_chunk_sequence_and_total() -> None:
     assert total == len(result)
 
 
+@pytest.mark.unit
 def test_semantic_chunk_semantic_info() -> None:
     """Test that semantic_info contains expected fields."""
     text = "First sentence. Second sentence."
@@ -164,6 +173,7 @@ def test_semantic_chunk_semantic_info() -> None:
         ]
 
 
+@pytest.mark.unit
 def test_semantic_chunk_fallback_behavior() -> None:
     """Test that semantic chunking falls back gracefully if embeddings fail."""
     text = "First sentence. Second sentence. Third sentence."
@@ -177,6 +187,7 @@ def test_semantic_chunk_fallback_behavior() -> None:
     assert all("text" in chunk for chunk in result)
 
 
+@pytest.mark.unit
 def test_semantic_chunk_integration() -> None:
     """Test semantic chunking integrates properly with the chunking system."""
     text = "This is a test document. It has multiple sentences. We want to chunk it semantically."
@@ -197,6 +208,7 @@ def test_semantic_chunk_integration() -> None:
     assert isinstance(first_chunk["total"], int)
 
 
+@pytest.mark.unit
 def test_semantic_chunk_default_chunk_size() -> None:
     """Test that semantic chunking uses 768 as default chunk size."""
     # Create text that's longer than 512 but shorter than 768

@@ -6,8 +6,10 @@ sys.path.append(
 )
 
 from src.chunking import ChunkingConfig, chunk_text
+import pytest
 
 
+@pytest.mark.unit
 def test_none_chunk() -> None:
     text = "Hello world"
     cfg = ChunkingConfig()

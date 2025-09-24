@@ -28,6 +28,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.db.vector_db_base import VectorDatabase
 
 
+@pytest.mark.unit
 class TestVectorDatabase:
     """Test cases for the VectorDatabase abstract base class."""
 
@@ -139,6 +140,7 @@ class ConcreteVectorDatabase(VectorDatabase):
         return [{"result": f"Dummy search response: {query} (limit={limit})"}]
 
 
+@pytest.mark.unit
 class TestConcreteVectorDatabase:
     """Test cases for the concrete implementation of VectorDatabase."""
 

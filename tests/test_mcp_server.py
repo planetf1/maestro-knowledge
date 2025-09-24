@@ -20,6 +20,7 @@ from src.maestro_mcp.server import create_mcp_server
 from tests.test_utils import mock_resync_functions
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
 async def test_server_creation() -> None:
     """Test that the server can be created successfully."""
@@ -39,6 +40,7 @@ async def test_server_creation() -> None:
         assert False, f"Failed to create server: {e}"
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
 async def test_tool_definitions() -> None:
     """Test that all expected tools are defined."""
@@ -81,6 +83,7 @@ async def test_tool_definitions() -> None:
         assert False, f"Failed to test tool definitions: {e}"
 
 
+@pytest.mark.unit
 def test_imports() -> None:
     """Test that all required imports work."""
     print("\nTesting Imports...")

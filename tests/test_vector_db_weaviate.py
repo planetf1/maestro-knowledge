@@ -52,6 +52,7 @@ from src.db.vector_db_weaviate import WeaviateVectorDatabase
 
 
 @pytest.mark.skipif(not WEAVIATE_AVAILABLE, reason="weaviate not available")
+@pytest.mark.unit
 class TestWeaviateVectorDatabase:
     """Test cases for the WeaviateVectorDatabase implementation."""
 

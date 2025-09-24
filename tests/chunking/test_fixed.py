@@ -6,8 +6,10 @@ sys.path.append(
 )
 
 from src.chunking import ChunkingConfig, chunk_text
+import pytest
 
 
+@pytest.mark.unit
 def test_fixed_chunk() -> None:
     text = "a" * 1200
     cfg = ChunkingConfig(
@@ -20,6 +22,7 @@ def test_fixed_chunk() -> None:
     assert res[1]["offset_start"] == 400
 
 
+@pytest.mark.unit
 def test_fixed_overlap_validation() -> None:
     text = "a" * 100
     # overlap == chunk_size should raise for Fixed
@@ -47,12 +50,14 @@ def test_fixed_overlap_validation() -> None:
         assert "chunk_size" in str(e)
 
 
+@pytest.mark.unit
 def test_fixed_empty_text_returns_no_chunks() -> None:
     cfg = ChunkingConfig(strategy="Fixed", parameters={"chunk_size": 10, "overlap": 0})
     res = chunk_text("", cfg)
     assert res == []
 
 
+@pytest.mark.unit
 def test_fixed_defaults_apply_when_params_missing() -> None:
     # Only set strategy; expect defaults chunk_size=512, overlap=0
     text = "a" * 600
@@ -63,6 +68,7 @@ def test_fixed_defaults_apply_when_params_missing() -> None:
     assert res[1]["offset_start"] == 512
 
 
+@pytest.mark.unit
 def test_fixed_near_max_overlap_many_steps() -> None:
     # overlap just below chunk_size should produce many small steps (step=1)
     text = "a" * 35

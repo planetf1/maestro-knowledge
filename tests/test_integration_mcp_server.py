@@ -23,6 +23,7 @@ from src.maestro_mcp.server import create_mcp_server, QueryInput
 from tests.test_utils import mock_resync_functions
 
 
+@pytest.mark.integration
 class TestMCPServerIntegration:
     """Integration tests for MCP server creation and tool registration."""
 
@@ -58,6 +59,7 @@ class TestMCPServerIntegration:
             assert server is not None
 
 
+@pytest.mark.integration
 class TestQueryWorkflowIntegration:
     """Integration tests for query workflow with mocked databases."""
 

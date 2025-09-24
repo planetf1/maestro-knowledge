@@ -11,6 +11,7 @@ import os
 from src.maestro_mcp.server import create_mcp_server, QueryInput
 
 
+@pytest.mark.service
 class TestMCPServerServiceIntegration:
     """Service integration tests requiring real databases."""
 
@@ -79,6 +80,7 @@ class TestMCPServerServiceIntegration:
         assert server is not None
 
 
+@pytest.mark.service
 class TestRealDatabaseOperations:
     """Test real database operations when databases are available."""
 

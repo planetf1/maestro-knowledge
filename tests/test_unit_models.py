@@ -20,6 +20,7 @@ from unittest.mock import Mock
 from src.maestro_mcp.server import QueryInput
 
 
+@pytest.mark.unit
 class TestQueryInputModel:
     """Unit tests for QueryInput Pydantic model."""
 

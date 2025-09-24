@@ -31,6 +31,7 @@ from fastmcp import FastMCP
 from tests.test_utils import mock_resync_functions
 
 
+@pytest.mark.integration
 class TestQueryIntegration:
     """Integration tests for the query functionality."""
 
@@ -161,6 +162,7 @@ class TestQueryIntegration:
                 assert query_input.limit == 5
 
 
+@pytest.mark.integration
 class TestQueryCLIIntegration:
     """Integration tests for CLI query functionality."""
 
@@ -264,6 +266,7 @@ class TestQueryCLIIntegration:
             pytest.skip("CLI binary not found - CLI may not be built")
 
 
+@pytest.mark.e2e
 class TestQueryEndToEnd:
     """End-to-end tests for the query functionality."""
 
