@@ -40,6 +40,7 @@ class TestQueryFunctionality:
         # Check that it's an abstract method
         # Check that it's an abstract method that requires implementation
         import inspect
+
         assert inspect.isabstract(VectorDatabase)
         assert "query" in VectorDatabase.__abstractmethods__
 
@@ -73,11 +74,19 @@ class ConcreteQueryVectorDatabase:
     def supported_embeddings(self) -> list[str]:
         return ["default", "test-embedding"]
 
-    async def setup(self, embedding: str = "default", collection_name: str = "", chunking_config: dict = {}) -> None:
+    async def setup(
+        self,
+        embedding: str = "default",
+        collection_name: str = "",
+        chunking_config: dict = {},
+    ) -> None:
         pass
 
     async def write_documents(
-        self, documents: list[dict[str, Any]], embedding: str = "default", collection_name: str = ""
+        self,
+        documents: list[dict[str, Any]],
+        embedding: str = "default",
+        collection_name: str = "",
     ) -> None:
         for doc in documents:
             doc_copy = doc.copy()
@@ -86,7 +95,9 @@ class ConcreteQueryVectorDatabase:
             self.documents.append(doc_copy)
             self.next_id += 1
 
-    async def list_documents(self, limit: int = 10, offset: int = 0) -> list[dict[str, Any]]:
+    async def list_documents(
+        self, limit: int = 10, offset: int = 0
+    ) -> list[dict[str, Any]]:
         return self.documents[offset : offset + limit]
 
     async def count_documents(self) -> int:

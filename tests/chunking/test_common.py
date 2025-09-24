@@ -11,6 +11,7 @@ from src.chunking import ChunkingConfig, chunk_text
 
 import pytest
 
+
 @pytest.mark.unit
 def test_unknown_strategy_raises_value_error() -> None:
     cfg = ChunkingConfig(strategy="Bogus", parameters={})
