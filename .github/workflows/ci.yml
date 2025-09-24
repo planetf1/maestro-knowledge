@@ -71,20 +71,20 @@ jobs:
         jq -n \
           --arg python_version "${{ matrix.python-version }}" \
           --arg test_type "unit" \
-          --argjson total "${TOTAL_TESTS:-0}" \
-          --argjson passed "${PASSED_TESTS:-0}" \
-          --argjson failed "${FAILED_TESTS:-0}" \
-          --argjson skipped "${SKIPPED_TESTS:-0}" \
-          --argjson warnings "${WARNINGS:-0}" \
+          --arg total "${TOTAL_TESTS:-0}" \
+          --arg passed "${PASSED_TESTS:-0}" \
+          --arg failed "${FAILED_TESTS:-0}" \
+          --arg skipped "${SKIPPED_TESTS:-0}" \
+          --arg warnings "${WARNINGS:-0}" \
           --arg duration "${DURATION:-0.00}" \
           '{
             python_version: $python_version,
             test_type: $test_type,
-            total: $total,
-            passed: $passed,
-            failed: $failed,
-            skipped: $skipped,
-            warnings: $warnings,
+            total: (if $total == "" then 0 else ($total | tonumber) end),
+            passed: (if $passed == "" then 0 else ($passed | tonumber) end),
+            failed: (if $failed == "" then 0 else ($failed | tonumber) end),
+            skipped: (if $skipped == "" then 0 else ($skipped | tonumber) end),
+            warnings: (if $warnings == "" then 0 else ($warnings | tonumber) end),
             duration: $duration
           }' > unit_test_results_${{ matrix.python-version }}.json
 
@@ -161,20 +161,20 @@ jobs:
         jq -n \
           --arg python_version "${{ matrix.python-version }}" \
           --arg test_type "integration" \
-          --argjson total "${TOTAL_TESTS:-0}" \
-          --argjson passed "${PASSED_TESTS:-0}" \
-          --argjson failed "${FAILED_TESTS:-0}" \
-          --argjson skipped "${SKIPPED_TESTS:-0}" \
-          --argjson warnings "${WARNINGS:-0}" \
+          --arg total "${TOTAL_TESTS:-0}" \
+          --arg passed "${PASSED_TESTS:-0}" \
+          --arg failed "${FAILED_TESTS:-0}" \
+          --arg skipped "${SKIPPED_TESTS:-0}" \
+          --arg warnings "${WARNINGS:-0}" \
           --arg duration "${DURATION:-0.00}" \
           '{
             python_version: $python_version,
             test_type: $test_type,
-            total: $total,
-            passed: $passed,
-            failed: $failed,
-            skipped: $skipped,
-            warnings: $warnings,
+            total: (if $total == "" then 0 else ($total | tonumber) end),
+            passed: (if $passed == "" then 0 else ($passed | tonumber) end),
+            failed: (if $failed == "" then 0 else ($failed | tonumber) end),
+            skipped: (if $skipped == "" then 0 else ($skipped | tonumber) end),
+            warnings: (if $warnings == "" then 0 else ($warnings | tonumber) end),
             duration: $duration
           }' > integration_test_results_${{ matrix.python-version }}.json
 
