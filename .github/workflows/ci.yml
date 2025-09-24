@@ -57,15 +57,38 @@ jobs:
         # Extract test results from pytest output
         echo "Parsing test results..."
         
-        # Get test counts from the output
-        TOTAL_TESTS=$(grep -oE "[0-9]+ selected" unit_test_output.log | grep -o "[0-9]*" || echo "0")
-        PASSED_TESTS=$(grep -oE "[0-9]+ passed" unit_test_output.log | grep -o "[0-9]*" || echo "0")
-        FAILED_TESTS=$(grep -oE "[0-9]+ failed" unit_test_output.log | grep -o "[0-9]*" || echo "0")
-        SKIPPED_TESTS=$(grep -oE "[0-9]+ skipped" unit_test_output.log | grep -o "[0-9]*" || echo "0")
-        WARNINGS=$(grep -c "warnings summary" unit_test_output.log || echo "0")
+        # Get test counts from the output with better parsing
+        TOTAL_TESTS=$(grep -oE "[0-9]+ selected" unit_test_output.log | grep -o "[0-9]*" | head -1 | tr -d '\n' || echo "0")
+        PASSED_TESTS=$(grep -oE "[0-9]+ passed" unit_test_output.log | grep -o "[0-9]*" | head -1 | tr -d '\n' || echo "0")
+        FAILED_TESTS=$(grep -oE "[0-9]+ failed" unit_test_output.log | grep -o "[0-9]*" | head -1 | tr -d '\n' || echo "0")
+        SKIPPED_TESTS=$(grep -oE "[0-9]+ skipped" unit_test_output.log | grep -o "[0-9]*" | head -1 | tr -d '\n' || echo "0")
+        WARNINGS=$(grep -c "warnings summary" unit_test_output.log | tr -d '\n' || echo "0")
         
         # Get test duration
-        DURATION=$(grep -oE "in [0-9]+\.[0-9]+s" unit_test_output.log | grep -o "[0-9]*\.[0-9]*" || echo "0.00")
+        DURATION=$(grep -oE "in [0-9]+\.[0-9]+s" unit_test_output.log | grep -o "[0-9]*\.[0-9]*" | head -1 | tr -d '\n' || echo "0.00")
+        
+        # Ensure variables are clean (no whitespace, default to 0 if empty)
+        TOTAL_TESTS=$(echo "$TOTAL_TESTS" | sed 's/[^0-9]//g')
+        PASSED_TESTS=$(echo "$PASSED_TESTS" | sed 's/[^0-9]//g')
+        FAILED_TESTS=$(echo "$FAILED_TESTS" | sed 's/[^0-9]//g')
+        SKIPPED_TESTS=$(echo "$SKIPPED_TESTS" | sed 's/[^0-9]//g')
+        WARNINGS=$(echo "$WARNINGS" | sed 's/[^0-9]//g')
+        
+        # Set defaults if empty after cleaning
+        TOTAL_TESTS=${TOTAL_TESTS:-0}
+        PASSED_TESTS=${PASSED_TESTS:-0}
+        FAILED_TESTS=${FAILED_TESTS:-0}
+        SKIPPED_TESTS=${SKIPPED_TESTS:-0}
+        WARNINGS=${WARNINGS:-0}
+        DURATION=${DURATION:-0.00}
+        
+        echo "Debug: Parsed values for unit tests:"
+        echo "  TOTAL_TESTS='$TOTAL_TESTS'"
+        echo "  PASSED_TESTS='$PASSED_TESTS'"
+        echo "  FAILED_TESTS='$FAILED_TESTS'"
+        echo "  SKIPPED_TESTS='$SKIPPED_TESTS'"
+        echo "  WARNINGS='$WARNINGS'"
+        echo "  DURATION='$DURATION'"
         
         # Save results as JSON for later aggregation using jq to ensure valid JSON
         jq -n \
@@ -147,15 +170,38 @@ jobs:
         # Extract test results from pytest output
         echo "Parsing test results..."
         
-        # Get test counts from the output
-        TOTAL_TESTS=$(grep -oE "[0-9]+ selected" integration_test_output.log | grep -o "[0-9]*" || echo "0")
-        PASSED_TESTS=$(grep -oE "[0-9]+ passed" integration_test_output.log | grep -o "[0-9]*" || echo "0")
-        FAILED_TESTS=$(grep -oE "[0-9]+ failed" integration_test_output.log | grep -o "[0-9]*" || echo "0")
-        SKIPPED_TESTS=$(grep -oE "[0-9]+ skipped" integration_test_output.log | grep -o "[0-9]*" || echo "0")
-        WARNINGS=$(grep -c "warnings summary" integration_test_output.log || echo "0")
+        # Get test counts from the output with better parsing
+        TOTAL_TESTS=$(grep -oE "[0-9]+ selected" integration_test_output.log | grep -o "[0-9]*" | head -1 | tr -d '\n' || echo "0")
+        PASSED_TESTS=$(grep -oE "[0-9]+ passed" integration_test_output.log | grep -o "[0-9]*" | head -1 | tr -d '\n' || echo "0")
+        FAILED_TESTS=$(grep -oE "[0-9]+ failed" integration_test_output.log | grep -o "[0-9]*" | head -1 | tr -d '\n' || echo "0")
+        SKIPPED_TESTS=$(grep -oE "[0-9]+ skipped" integration_test_output.log | grep -o "[0-9]*" | head -1 | tr -d '\n' || echo "0")
+        WARNINGS=$(grep -c "warnings summary" integration_test_output.log | tr -d '\n' || echo "0")
         
         # Get test duration
-        DURATION=$(grep -oE "in [0-9]+\.[0-9]+s" integration_test_output.log | grep -o "[0-9]*\.[0-9]*" || echo "0.00")
+        DURATION=$(grep -oE "in [0-9]+\.[0-9]+s" integration_test_output.log | grep -o "[0-9]*\.[0-9]*" | head -1 | tr -d '\n' || echo "0.00")
+        
+        # Ensure variables are clean (no whitespace, default to 0 if empty)
+        TOTAL_TESTS=$(echo "$TOTAL_TESTS" | sed 's/[^0-9]//g')
+        PASSED_TESTS=$(echo "$PASSED_TESTS" | sed 's/[^0-9]//g')
+        FAILED_TESTS=$(echo "$FAILED_TESTS" | sed 's/[^0-9]//g')
+        SKIPPED_TESTS=$(echo "$SKIPPED_TESTS" | sed 's/[^0-9]//g')
+        WARNINGS=$(echo "$WARNINGS" | sed 's/[^0-9]//g')
+        
+        # Set defaults if empty after cleaning
+        TOTAL_TESTS=${TOTAL_TESTS:-0}
+        PASSED_TESTS=${PASSED_TESTS:-0}
+        FAILED_TESTS=${FAILED_TESTS:-0}
+        SKIPPED_TESTS=${SKIPPED_TESTS:-0}
+        WARNINGS=${WARNINGS:-0}
+        DURATION=${DURATION:-0.00}
+        
+        echo "Debug: Parsed values for integration tests:"
+        echo "  TOTAL_TESTS='$TOTAL_TESTS'"
+        echo "  PASSED_TESTS='$PASSED_TESTS'"
+        echo "  FAILED_TESTS='$FAILED_TESTS'"
+        echo "  SKIPPED_TESTS='$SKIPPED_TESTS'"
+        echo "  WARNINGS='$WARNINGS'"
+        echo "  DURATION='$DURATION'"
         
         # Save results as JSON for later aggregation using jq to ensure valid JSON
         jq -n \
