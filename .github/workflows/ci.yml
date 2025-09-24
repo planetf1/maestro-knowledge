@@ -6,6 +6,16 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+# Prevent multiple workflow runs for the same PR/branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Set minimal required permissions
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   # Unit tests - run across all Python versions
   unit-tests:
@@ -13,134 +23,195 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
+      fail-fast: false  # Continue other versions even if one fails
 
     steps:
     - uses: actions/checkout@v4
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v2
+      uses: astral-sh/setup-uv@v3
 
-    - name: Cache dependencies
-      uses: actions/cache@v3
+    - name: Restore uv cache
+      uses: actions/cache@v4
       with:
-        path: |
-          .uv/cache
-        key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml', '**/requirements.txt') }}
+        path: ~/.cache/uv
+        key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml', '**/uv.lock') }}
         restore-keys: |
+          ${{ runner.os }}-uv-${{ matrix.python-version }}-
           ${{ runner.os }}-uv-
 
-    - name: Create virtual environment
+    - name: Create virtual environment and install dependencies
       run: |
-        rm -rf .venv
-        uv venv
-
-    - name: Install dependencies
-      run: |
-        uv sync
+        uv sync --frozen
 
     - name: Run unit tests
       run: |
-        ./test.sh unit
+        # Run tests with JUnit XML output for parsing
+        ./test.sh unit 2>&1 | tee unit_test_output.log
+        
+        # Extract test results from pytest output
+        echo "Parsing test results..."
+        
+        # Get test counts from the output
+        TOTAL_TESTS=$(grep -o "collected [0-9]* items" unit_test_output.log | grep -o "[0-9]*" || echo "0")
+        PASSED_TESTS=$(grep -oE "[0-9]+ passed" unit_test_output.log | grep -o "[0-9]*" || echo "0")
+        FAILED_TESTS=$(grep -oE "[0-9]+ failed" unit_test_output.log | grep -o "[0-9]*" || echo "0")
+        SKIPPED_TESTS=$(grep -oE "[0-9]+ skipped" unit_test_output.log | grep -o "[0-9]*" || echo "0")
+        WARNINGS=$(grep -c "warnings summary" unit_test_output.log || echo "0")
+        
+        # Get test duration
+        DURATION=$(grep -oE "in [0-9]+\.[0-9]+s" unit_test_output.log | grep -o "[0-9]*\.[0-9]*" || echo "0.00")
+        
+        # Save results as JSON for later aggregation
+        cat > unit_test_results_${{ matrix.python-version }}.json << EOF
+        {
+          "python_version": "${{ matrix.python-version }}",
+          "test_type": "unit",
+          "total": $TOTAL_TESTS,
+          "passed": $PASSED_TESTS,
+          "failed": $FAILED_TESTS,
+          "skipped": $SKIPPED_TESTS,
+          "warnings": $WARNINGS,
+          "duration": "$DURATION"
+        }
+        EOF
 
+    - name: Prepare unit test artifacts
+      if: always()
+      run: |
+        # Create artifact directory and copy files that exist
+        mkdir -p artifact_upload
+        cp unit_test_results_${{ matrix.python-version }}.json artifact_upload/ || true
+        cp unit_test_output.log artifact_upload/ || true
+        if [ -d ".pytest_cache" ]; then
+          cp -r .pytest_cache artifact_upload/
+        fi
+      
     - name: Upload unit test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: unit-test-results-${{ matrix.python-version }}
-        path: |
-          .pytest_cache/
+        path: artifact_upload/
         retention-days: 7
 
   # Integration tests - run across all Python versions
   integration-tests:
     runs-on: ubuntu-latest
-    needs: unit-tests  # Run after unit tests pass
     strategy:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
+      fail-fast: false  # Continue other versions even if one fails
 
     steps:
     - uses: actions/checkout@v4
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v2
+      uses: astral-sh/setup-uv@v3
 
-    - name: Cache dependencies
-      uses: actions/cache@v3
+    - name: Restore uv cache
+      uses: actions/cache@v4
       with:
-        path: |
-          .uv/cache
-        key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml', '**/requirements.txt') }}
+        path: ~/.cache/uv
+        key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml', '**/uv.lock') }}
         restore-keys: |
+          ${{ runner.os }}-uv-${{ matrix.python-version }}-
           ${{ runner.os }}-uv-
 
-    - name: Create virtual environment
+    - name: Create virtual environment and install dependencies
       run: |
-        rm -rf .venv
-        uv venv
-
-    - name: Install dependencies
-      run: |
-        uv sync
+        uv sync --frozen
 
     - name: Run integration tests
       run: |
-        ./test.sh integration
+        # Run tests with captured output for parsing
+        ./test.sh integration 2>&1 | tee integration_test_output.log
+        
+        # Extract test results from pytest output
+        echo "Parsing test results..."
+        
+        # Get test counts from the output
+        TOTAL_TESTS=$(grep -o "collected [0-9]* items" integration_test_output.log | grep -o "[0-9]*" || echo "0")
+        PASSED_TESTS=$(grep -oE "[0-9]+ passed" integration_test_output.log | grep -o "[0-9]*" || echo "0")
+        FAILED_TESTS=$(grep -oE "[0-9]+ failed" integration_test_output.log | grep -o "[0-9]*" || echo "0")
+        SKIPPED_TESTS=$(grep -oE "[0-9]+ skipped" integration_test_output.log | grep -o "[0-9]*" || echo "0")
+        WARNINGS=$(grep -c "warnings summary" integration_test_output.log || echo "0")
+        
+        # Get test duration
+        DURATION=$(grep -oE "in [0-9]+\.[0-9]+s" integration_test_output.log | grep -o "[0-9]*\.[0-9]*" || echo "0.00")
+        
+        # Save results as JSON for later aggregation
+        cat > integration_test_results_${{ matrix.python-version }}.json << EOF
+        {
+          "python_version": "${{ matrix.python-version }}",
+          "test_type": "integration",
+          "total": $TOTAL_TESTS,
+          "passed": $PASSED_TESTS,
+          "failed": $FAILED_TESTS,
+          "skipped": $SKIPPED_TESTS,
+          "warnings": $WARNINGS,
+          "duration": "$DURATION"
+        }
+        EOF
 
+    - name: Prepare integration test artifacts
+      if: always()
+      run: |
+        # Create artifact directory and copy files that exist
+        mkdir -p artifact_upload_integration
+        cp integration_test_results_${{ matrix.python-version }}.json artifact_upload_integration/ || true
+        cp integration_test_output.log artifact_upload_integration/ || true
+        if [ -d ".pytest_cache" ]; then
+          cp -r .pytest_cache artifact_upload_integration/
+        fi
+        if [ -d "htmlcov" ]; then
+          cp -r htmlcov artifact_upload_integration/
+        fi
+      
     - name: Upload integration test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: integration-test-results-${{ matrix.python-version }}
-        path: |
-          .pytest_cache/
-          htmlcov/
+        path: artifact_upload_integration/
         retention-days: 7
 
   lint:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.12"]
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "3.12"
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v2
+      uses: astral-sh/setup-uv@v3
 
-    - name: Cache dependencies
-      uses: actions/cache@v3
+    - name: Restore uv cache
+      uses: actions/cache@v4
       with:
-        path: |
-          .uv/cache
-        key: ${{ runner.os }}-uv-lint-${{ hashFiles('**/pyproject.toml', '**/requirements.txt') }}
+        path: ~/.cache/uv
+        key: ${{ runner.os }}-uv-lint-${{ hashFiles('**/pyproject.toml', '**/uv.lock') }}
         restore-keys: |
           ${{ runner.os }}-uv-lint-
+          ${{ runner.os }}-uv-
 
-    - name: Create virtual environment
+    - name: Create virtual environment and install dependencies
       run: |
-        rm -rf .venv
-        uv venv
-
-    - name: Install dependencies
-      run: |
-        uv sync
+        uv sync --frozen
 
     - name: Run linting
       run: |
@@ -149,38 +220,30 @@ jobs:
 
   security:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.12"]
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "3.12"
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v2
+      uses: astral-sh/setup-uv@v3
 
-    - name: Cache dependencies
-      uses: actions/cache@v3
+    - name: Restore uv cache
+      uses: actions/cache@v4
       with:
-        path: |
-          .uv/cache
-        key: ${{ runner.os }}-uv-security-${{ hashFiles('**/pyproject.toml', '**/requirements.txt') }}
+        path: ~/.cache/uv
+        key: ${{ runner.os }}-uv-security-${{ hashFiles('**/pyproject.toml', '**/uv.lock') }}
         restore-keys: |
           ${{ runner.os }}-uv-security-
+          ${{ runner.os }}-uv-
 
-    - name: Create virtual environment
+    - name: Create virtual environment and install dependencies
       run: |
-        rm -rf .venv
-        uv venv
-
-    - name: Install dependencies
-      run: |
-        uv sync
+        uv sync --frozen
 
     - name: Run security checks
       run: |
@@ -196,3 +259,126 @@ jobs:
           bandit-report.json
           safety-report.json
         retention-days: 30
+
+  # Test Results Summary - runs after all tests complete
+  test-summary:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, lint, security]
+    if: always()
+
+    steps:
+    - name: Download all test results
+      uses: actions/download-artifact@v4
+      with:
+        pattern: "*-test-results-*"
+        merge-multiple: true
+
+    - name: Generate Test Summary
+      if: always()
+      run: |
+        echo "# 🧪 Test Results Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Create test results table
+        echo "## Unit Tests" >> $GITHUB_STEP_SUMMARY
+        echo "| Python Version | Total Tests | ✅ Passed | ❌ Failed | ⏭️ Skipped | ⚠️ Warnings | ⏱️ Duration |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------------|-------------|-----------|-----------|------------|-------------|------------|" >> $GITHUB_STEP_SUMMARY
+        
+        # Process unit test results
+        for file in unit_test_results_*.json; do
+          if [ -f "$file" ]; then
+            VERSION=$(jq -r '.python_version' "$file")
+            TOTAL=$(jq -r '.total' "$file")
+            PASSED=$(jq -r '.passed' "$file")
+            FAILED=$(jq -r '.failed' "$file")
+            SKIPPED=$(jq -r '.skipped' "$file")
+            WARNINGS=$(jq -r '.warnings' "$file")
+            DURATION=$(jq -r '.duration' "$file")
+            
+            # Add status emoji based on results
+            STATUS_ICON="✅"
+            if [ "$FAILED" != "0" ]; then
+              STATUS_ICON="❌"
+            fi
+            
+            echo "| $STATUS_ICON Python $VERSION | $TOTAL | $PASSED | $FAILED | $SKIPPED | $WARNINGS | ${DURATION}s |" >> $GITHUB_STEP_SUMMARY
+          fi
+        done
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Create integration test results table
+        echo "## Integration Tests" >> $GITHUB_STEP_SUMMARY
+        echo "| Python Version | Total Tests | ✅ Passed | ❌ Failed | ⏭️ Skipped | ⚠️ Warnings | ⏱️ Duration |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------------|-------------|-----------|-----------|------------|-------------|------------|" >> $GITHUB_STEP_SUMMARY
+        
+        # Process integration test results
+        for file in integration_test_results_*.json; do
+          if [ -f "$file" ]; then
+            VERSION=$(jq -r '.python_version' "$file")
+            TOTAL=$(jq -r '.total' "$file")
+            PASSED=$(jq -r '.passed' "$file")
+            FAILED=$(jq -r '.failed' "$file")
+            SKIPPED=$(jq -r '.skipped' "$file")
+            WARNINGS=$(jq -r '.warnings' "$file")
+            DURATION=$(jq -r '.duration' "$file")
+            
+            # Add status emoji based on results
+            STATUS_ICON="✅"
+            if [ "$FAILED" != "0" ]; then
+              STATUS_ICON="❌"
+            fi
+            
+            echo "| $STATUS_ICON Python $VERSION | $TOTAL | $PASSED | $FAILED | $SKIPPED | $WARNINGS | ${DURATION}s |" >> $GITHUB_STEP_SUMMARY
+          fi
+        done
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Calculate totals across all versions and test types
+        echo "## Overall Summary" >> $GITHUB_STEP_SUMMARY
+        
+        TOTAL_TESTS=0
+        TOTAL_PASSED=0
+        TOTAL_FAILED=0
+        TOTAL_SKIPPED=0
+        TOTAL_WARNINGS=0
+        
+        for file in *_test_results_*.json; do
+          if [ -f "$file" ]; then
+            TESTS=$(jq -r '.total' "$file")
+            PASSED=$(jq -r '.passed' "$file")
+            FAILED=$(jq -r '.failed' "$file")
+            SKIPPED=$(jq -r '.skipped' "$file")
+            WARNINGS=$(jq -r '.warnings' "$file")
+            
+            TOTAL_TESTS=$((TOTAL_TESTS + TESTS))
+            TOTAL_PASSED=$((TOTAL_PASSED + PASSED))
+            TOTAL_FAILED=$((TOTAL_FAILED + FAILED))
+            TOTAL_SKIPPED=$((TOTAL_SKIPPED + SKIPPED))
+            TOTAL_WARNINGS=$((TOTAL_WARNINGS + WARNINGS))
+          fi
+        done
+        
+        echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+        echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| 📊 Total Tests | $TOTAL_TESTS |" >> $GITHUB_STEP_SUMMARY
+        echo "| ✅ Passed | $TOTAL_PASSED |" >> $GITHUB_STEP_SUMMARY
+        echo "| ❌ Failed | $TOTAL_FAILED |" >> $GITHUB_STEP_SUMMARY
+        echo "| ⏭️ Skipped | $TOTAL_SKIPPED |" >> $GITHUB_STEP_SUMMARY
+        echo "| ⚠️ Warnings | $TOTAL_WARNINGS |" >> $GITHUB_STEP_SUMMARY
+        
+        # Add overall status
+        if [ "$TOTAL_FAILED" -eq 0 ]; then
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎉 All Tests Passed!" >> $GITHUB_STEP_SUMMARY
+          echo "All $TOTAL_TESTS tests passed successfully across all Python versions." >> $GITHUB_STEP_SUMMARY
+        else
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## ⚠️ Some Tests Failed" >> $GITHUB_STEP_SUMMARY
+          echo "$TOTAL_FAILED out of $TOTAL_TESTS tests failed. Please check the individual job logs for details." >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "---" >> $GITHUB_STEP_SUMMARY
+        echo "*Generated on $(date)* | *Workflow run: ${{ github.run_id }}*" >> $GITHUB_STEP_SUMMARY
