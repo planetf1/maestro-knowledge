@@ -231,7 +231,7 @@ uv run pytest -m "unit" -v
 unset MILVUS_URI  # Uses default: milvus_demo.db
 
 # Optional: Use custom file location
-export MILVUS_URI="./my_test.db"
+export MILVUS_URI="file:///path/to/my_test.db"
 
 # Optional: Set timeout for operations
 export MILVUS_TIMEOUT=10

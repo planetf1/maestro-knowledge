@@ -96,6 +96,7 @@ jobs:
     - name: Run all tests
       run: |
         ./test.sh mcp
+        ./test.sh all
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
