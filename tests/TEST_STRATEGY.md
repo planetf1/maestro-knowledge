@@ -135,6 +135,8 @@ uv run pytest -m "e2e" -v
 ```bash
 # Run only fast tests with no external dependencies
 uv run pytest -m "unit or integration" -v
+# Or simply (uses default configuration)
+uv run pytest
 ```
 
 ### Pre-commit Validation
@@ -146,8 +148,22 @@ uv run pytest -m "unit or integration or service" -v
 ### Full Test Suite
 ```bash
 # Run all tests including end-to-end
-uv run pytest -v
+uv run pytest -v --no-markers
+# Or explicitly
+uv run pytest -m "unit or integration or service or e2e" -v
 ```
+
+### Default Configuration
+The project is configured to run standard tests (unit + integration) by default when running `uv run pytest` without any markers. This is set in `pyproject.toml`:
+
+```toml
+# Run standard tests by default (unit + integration)
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-m 'unit or integration'"
+```
+
+This matches the behavior of `./test.sh standard` for consistency.
 
 ### Database-Specific Testing
 ```bash
@@ -365,56 +381,53 @@ curl http://localhost:19530/health  # May not work - Milvus uses gRPC
 
 ## Enhanced Test.sh Script Usage
 
-The `./test.sh` script has been enhanced to support granular test execution:
+The `./test.sh` script has been simplified to support intuitive test execution:
 
-### Python Test Categories (New)
+### Basic Test Categories
 ```bash
 # Fast, isolated tests with no external dependencies
-./test.sh unit         # ~5-10 seconds
+./test.sh unit         # ~5 seconds
 
-# Component integration tests with mocked external services  
-./test.sh integration  # ~10-15 seconds
+# Component integration tests with mocked external services
+./test.sh integration  # ~5 seconds
 
-# Service tests with mocked external APIs
-./test.sh service      # ~5-10 seconds
+# Service tests requiring external databases
+./test.sh service      # ~20 seconds
 
-# Full Python stack end-to-end tests
-./test.sh e2e          # ~10-15 seconds
-
-# Combination of unit + integration for fast feedback
-./test.sh fast         # ~15-20 seconds
+# End-to-end tests requiring full environment
+./test.sh e2e          # (currently no tests marked with e2e)
 ```
 
-### Legacy/Comprehensive Categories
+### Combined Test Categories
 ```bash
-# All Python tests (unit + integration + service + e2e)
-./test.sh python       # ~30 seconds
+# Standard tests (unit + integration) - no external dependencies
+./test.sh standard     # ~10 seconds
 
-# System integration tests only (CLI + MCP end-to-end)
-./test.sh system       # ~2-5 minutes (requires external CLI)
+# Everything: all tests including those with external dependencies
+./test.sh all          # ~30 seconds (with databases available)
 
-# Everything: all Python tests + system integration
-./test.sh all          # ~2-5 minutes
-
-# Legacy mode (deprecated) - all Python tests without markers
-./test.sh mcp          # ~30 seconds (consider using python instead)
-
-# Default behavior (runs all Python tests)
-./test.sh              # ~30 seconds (equivalent to ./test.sh python)
-
-# CI-optimized test sequence (fast tests first, then comprehensive)
-./test.sh ci           # ~2-5 minutes (fast feedback for failures)
+# Default behavior (runs standard tests)
+./test.sh              # ~10 seconds (equivalent to ./test.sh standard)
 ```
 
 ### Development Workflow Examples
 ```bash
 # Quick development cycle
-./test.sh fast         # Fast feedback during coding (unit + integration)
+./test.sh unit         # Fast unit tests for quick feedback (~5s)
+
+# Standard development testing
+./test.sh standard     # Standard tests (unit + integration) (~10s)
+# Or simply
+./test.sh              # Same as standard (default)
 
 # Before committing
-./test.sh python       # Ensure all Python tests pass
+./test.sh standard     # Ensure standard tests pass
 
-# Full validation
+# Testing with external dependencies (when available)
+./test.sh service      # Service tests with external databases (~20s)
+./test.sh e2e          # End-to-end tests with external dependencies
+
+# Full validation (when external services are available)
 ./test.sh all          # Complete system validation
 
 # Help and documentation
@@ -423,15 +436,26 @@ The `./test.sh` script has been enhanced to support granular test execution:
 
 ### CI/CD Integration
 ```bash
-# Fast CI feedback
-./test.sh fast         # Quick feedback for rapid iterations
+# Standard CI validation
+./test.sh standard     # Standard tests for CI pipelines (no external deps)
 
-# Optimized CI pipeline
-./test.sh ci           # Runs fast tests first, then comprehensive tests
+# Comprehensive validation (when external services are available)
+./test.sh all          # Complete validation including external dependencies
+```
 
-# Comprehensive CI validation
-./test.sh all          # Complete validation including system tests
+### Consistency with pytest
+The test script behavior is consistent with direct pytest usage:
 
-# Production deployment validation
-./test.sh system       # System integration tests
+```bash
+# These commands are equivalent:
+./test.sh standard
+uv run pytest          # Uses default configuration from pyproject.toml
+
+# These commands are equivalent:
+./test.sh unit
+uv run pytest -m "unit"
+
+# These commands are equivalent:
+./test.sh all
+uv run pytest --no-markers
 ```
