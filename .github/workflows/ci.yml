@@ -67,19 +67,26 @@ jobs:
         # Get test duration
         DURATION=$(grep -oE "in [0-9]+\.[0-9]+s" unit_test_output.log | grep -o "[0-9]*\.[0-9]*" || echo "0.00")
         
-        # Save results as JSON for later aggregation
-        cat > unit_test_results_${{ matrix.python-version }}.json << EOF
-        {
-          "python_version": "${{ matrix.python-version }}",
-          "test_type": "unit",
-          "total": $TOTAL_TESTS,
-          "passed": $PASSED_TESTS,
-          "failed": $FAILED_TESTS,
-          "skipped": $SKIPPED_TESTS,
-          "warnings": $WARNINGS,
-          "duration": "$DURATION"
-        }
-        EOF
+        # Save results as JSON for later aggregation using jq to ensure valid JSON
+        jq -n \
+          --arg python_version "${{ matrix.python-version }}" \
+          --arg test_type "unit" \
+          --argjson total "${TOTAL_TESTS:-0}" \
+          --argjson passed "${PASSED_TESTS:-0}" \
+          --argjson failed "${FAILED_TESTS:-0}" \
+          --argjson skipped "${SKIPPED_TESTS:-0}" \
+          --argjson warnings "${WARNINGS:-0}" \
+          --arg duration "${DURATION:-0.00}" \
+          '{
+            python_version: $python_version,
+            test_type: $test_type,
+            total: $total,
+            passed: $passed,
+            failed: $failed,
+            skipped: $skipped,
+            warnings: $warnings,
+            duration: $duration
+          }' > unit_test_results_${{ matrix.python-version }}.json
 
     - name: Prepare unit test artifacts
       if: always()
@@ -150,19 +157,26 @@ jobs:
         # Get test duration
         DURATION=$(grep -oE "in [0-9]+\.[0-9]+s" integration_test_output.log | grep -o "[0-9]*\.[0-9]*" || echo "0.00")
         
-        # Save results as JSON for later aggregation
-        cat > integration_test_results_${{ matrix.python-version }}.json << EOF
-        {
-          "python_version": "${{ matrix.python-version }}",
-          "test_type": "integration",
-          "total": $TOTAL_TESTS,
-          "passed": $PASSED_TESTS,
-          "failed": $FAILED_TESTS,
-          "skipped": $SKIPPED_TESTS,
-          "warnings": $WARNINGS,
-          "duration": "$DURATION"
-        }
-        EOF
+        # Save results as JSON for later aggregation using jq to ensure valid JSON
+        jq -n \
+          --arg python_version "${{ matrix.python-version }}" \
+          --arg test_type "integration" \
+          --argjson total "${TOTAL_TESTS:-0}" \
+          --argjson passed "${PASSED_TESTS:-0}" \
+          --argjson failed "${FAILED_TESTS:-0}" \
+          --argjson skipped "${SKIPPED_TESTS:-0}" \
+          --argjson warnings "${WARNINGS:-0}" \
+          --arg duration "${DURATION:-0.00}" \
+          '{
+            python_version: $python_version,
+            test_type: $test_type,
+            total: $total,
+            passed: $passed,
+            failed: $failed,
+            skipped: $skipped,
+            warnings: $warnings,
+            duration: $duration
+          }' > integration_test_results_${{ matrix.python-version }}.json
 
     - name: Prepare integration test artifacts
       if: always()
@@ -279,31 +293,49 @@ jobs:
         echo "# 🧪 Test Results Summary" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
+        # Debug: List available files
+        echo "Available test result files:"
+        ls -la *test_results*.json || echo "No test result files found"
+        
         # Create test results table
         echo "## Unit Tests" >> $GITHUB_STEP_SUMMARY
         echo "| Python Version | Total Tests | ✅ Passed | ❌ Failed | ⏭️ Skipped | ⚠️ Warnings | ⏱️ Duration |" >> $GITHUB_STEP_SUMMARY
         echo "|----------------|-------------|-----------|-----------|------------|-------------|------------|" >> $GITHUB_STEP_SUMMARY
         
         # Process unit test results
+        UNIT_FILES_FOUND=false
         for file in unit_test_results_*.json; do
           if [ -f "$file" ]; then
-            VERSION=$(jq -r '.python_version' "$file")
-            TOTAL=$(jq -r '.total' "$file")
-            PASSED=$(jq -r '.passed' "$file")
-            FAILED=$(jq -r '.failed' "$file")
-            SKIPPED=$(jq -r '.skipped' "$file")
-            WARNINGS=$(jq -r '.warnings' "$file")
-            DURATION=$(jq -r '.duration' "$file")
+            UNIT_FILES_FOUND=true
+            echo "Processing unit test file: $file"
+            
+            # Validate JSON first
+            if ! jq empty "$file" 2>/dev/null; then
+              echo "Invalid JSON in $file, skipping..."
+              continue
+            fi
+            
+            VERSION=$(jq -r '.python_version // "unknown"' "$file")
+            TOTAL=$(jq -r '.total // 0' "$file")
+            PASSED=$(jq -r '.passed // 0' "$file")
+            FAILED=$(jq -r '.failed // 0' "$file")
+            SKIPPED=$(jq -r '.skipped // 0' "$file")
+            WARNINGS=$(jq -r '.warnings // 0' "$file")
+            DURATION=$(jq -r '.duration // "0.00"' "$file")
             
             # Add status emoji based on results
             STATUS_ICON="✅"
-            if [ "$FAILED" != "0" ]; then
+            if [ "$FAILED" != "0" ] && [ "$FAILED" != "null" ]; then
               STATUS_ICON="❌"
             fi
             
             echo "| $STATUS_ICON Python $VERSION | $TOTAL | $PASSED | $FAILED | $SKIPPED | $WARNINGS | ${DURATION}s |" >> $GITHUB_STEP_SUMMARY
           fi
         done
+        
+        if [ "$UNIT_FILES_FOUND" = false ]; then
+          echo "| ⚠️ No unit test results found | - | - | - | - | - | - |" >> $GITHUB_STEP_SUMMARY
+        fi
         
         echo "" >> $GITHUB_STEP_SUMMARY
         
@@ -313,25 +345,39 @@ jobs:
         echo "|----------------|-------------|-----------|-----------|------------|-------------|------------|" >> $GITHUB_STEP_SUMMARY
         
         # Process integration test results
+        INTEGRATION_FILES_FOUND=false
         for file in integration_test_results_*.json; do
           if [ -f "$file" ]; then
-            VERSION=$(jq -r '.python_version' "$file")
-            TOTAL=$(jq -r '.total' "$file")
-            PASSED=$(jq -r '.passed' "$file")
-            FAILED=$(jq -r '.failed' "$file")
-            SKIPPED=$(jq -r '.skipped' "$file")
-            WARNINGS=$(jq -r '.warnings' "$file")
-            DURATION=$(jq -r '.duration' "$file")
+            INTEGRATION_FILES_FOUND=true
+            echo "Processing integration test file: $file"
+            
+            # Validate JSON first
+            if ! jq empty "$file" 2>/dev/null; then
+              echo "Invalid JSON in $file, skipping..."
+              continue
+            fi
+            
+            VERSION=$(jq -r '.python_version // "unknown"' "$file")
+            TOTAL=$(jq -r '.total // 0' "$file")
+            PASSED=$(jq -r '.passed // 0' "$file")
+            FAILED=$(jq -r '.failed // 0' "$file")
+            SKIPPED=$(jq -r '.skipped // 0' "$file")
+            WARNINGS=$(jq -r '.warnings // 0' "$file")
+            DURATION=$(jq -r '.duration // "0.00"' "$file")
             
             # Add status emoji based on results
             STATUS_ICON="✅"
-            if [ "$FAILED" != "0" ]; then
+            if [ "$FAILED" != "0" ] && [ "$FAILED" != "null" ]; then
               STATUS_ICON="❌"
             fi
             
             echo "| $STATUS_ICON Python $VERSION | $TOTAL | $PASSED | $FAILED | $SKIPPED | $WARNINGS | ${DURATION}s |" >> $GITHUB_STEP_SUMMARY
           fi
         done
+        
+        if [ "$INTEGRATION_FILES_FOUND" = false ]; then
+          echo "| ⚠️ No integration test results found | - | - | - | - | - | - |" >> $GITHUB_STEP_SUMMARY
+        fi
         
         echo "" >> $GITHUB_STEP_SUMMARY
         
@@ -346,17 +392,34 @@ jobs:
         
         for file in *_test_results_*.json; do
           if [ -f "$file" ]; then
-            TESTS=$(jq -r '.total' "$file")
-            PASSED=$(jq -r '.passed' "$file")
-            FAILED=$(jq -r '.failed' "$file")
-            SKIPPED=$(jq -r '.skipped' "$file")
-            WARNINGS=$(jq -r '.warnings' "$file")
+            # Validate JSON first
+            if ! jq empty "$file" 2>/dev/null; then
+              echo "Invalid JSON in $file, skipping from totals..."
+              continue
+            fi
             
-            TOTAL_TESTS=$((TOTAL_TESTS + TESTS))
-            TOTAL_PASSED=$((TOTAL_PASSED + PASSED))
-            TOTAL_FAILED=$((TOTAL_FAILED + FAILED))
-            TOTAL_SKIPPED=$((TOTAL_SKIPPED + SKIPPED))
-            TOTAL_WARNINGS=$((TOTAL_WARNINGS + WARNINGS))
+            TESTS=$(jq -r '.total // 0' "$file")
+            PASSED=$(jq -r '.passed // 0' "$file")
+            FAILED=$(jq -r '.failed // 0' "$file")
+            SKIPPED=$(jq -r '.skipped // 0' "$file")
+            WARNINGS=$(jq -r '.warnings // 0' "$file")
+            
+            # Only add to totals if we got valid numbers
+            if [[ "$TESTS" =~ ^[0-9]+$ ]]; then
+              TOTAL_TESTS=$((TOTAL_TESTS + TESTS))
+            fi
+            if [[ "$PASSED" =~ ^[0-9]+$ ]]; then
+              TOTAL_PASSED=$((TOTAL_PASSED + PASSED))
+            fi
+            if [[ "$FAILED" =~ ^[0-9]+$ ]]; then
+              TOTAL_FAILED=$((TOTAL_FAILED + FAILED))
+            fi
+            if [[ "$SKIPPED" =~ ^[0-9]+$ ]]; then
+              TOTAL_SKIPPED=$((TOTAL_SKIPPED + SKIPPED))
+            fi
+            if [[ "$WARNINGS" =~ ^[0-9]+$ ]]; then
+              TOTAL_WARNINGS=$((TOTAL_WARNINGS + WARNINGS))
+            fi
           fi
         done
         
