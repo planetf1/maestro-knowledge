@@ -57,51 +57,34 @@ jobs:
         # Extract test results from pytest output
         echo "Parsing test results..."
         
-        # Get test counts from the output (pytest shows "X selected" for total tests run)
-        TOTAL_TESTS=$(grep -oE "[0-9]+ selected" unit_test_output.log | grep -o "[0-9]*" | head -1)
-        PASSED_TESTS=$(grep -oE "[0-9]+ passed" unit_test_output.log | grep -o "[0-9]*" | head -1)
-        FAILED_TESTS=$(grep -oE "[0-9]+ failed" unit_test_output.log | grep -o "[0-9]*" | head -1)
-        SKIPPED_TESTS=$(grep -oE "[0-9]+ skipped" unit_test_output.log | grep -o "[0-9]*" | head -1)
-        WARNINGS=$(grep -c "warnings summary" unit_test_output.log)
+        # Get test counts from the output
+        TOTAL_TESTS=$(grep -oE "[0-9]+ selected" unit_test_output.log | grep -o "[0-9]*" || echo "0")
+        PASSED_TESTS=$(grep -oE "[0-9]+ passed" unit_test_output.log | grep -o "[0-9]*" || echo "0")
+        FAILED_TESTS=$(grep -oE "[0-9]+ failed" unit_test_output.log | grep -o "[0-9]*" || echo "0")
+        SKIPPED_TESTS=$(grep -oE "[0-9]+ skipped" unit_test_output.log | grep -o "[0-9]*" || echo "0")
+        WARNINGS=$(grep -c "warnings summary" unit_test_output.log || echo "0")
         
         # Get test duration
-        DURATION=$(grep -oE "in [0-9]+\.[0-9]+s" unit_test_output.log | grep -o "[0-9]*\.[0-9]*" | head -1)
-        
-        # Ensure all variables have valid numeric values
-        TOTAL_TESTS=${TOTAL_TESTS:-0}
-        PASSED_TESTS=${PASSED_TESTS:-0}
-        FAILED_TESTS=${FAILED_TESTS:-0}
-        SKIPPED_TESTS=${SKIPPED_TESTS:-0}
-        WARNINGS=${WARNINGS:-0}
-        DURATION=${DURATION:-0.00}
-        
-        # Debug output
-        echo "Unit test parsing results:"
-        echo "  TOTAL_TESTS='$TOTAL_TESTS'"
-        echo "  PASSED_TESTS='$PASSED_TESTS'"
-        echo "  FAILED_TESTS='$FAILED_TESTS'"
-        echo "  SKIPPED_TESTS='$SKIPPED_TESTS'"
-        echo "  WARNINGS='$WARNINGS'"
-        echo "  DURATION='$DURATION'"
+        DURATION=$(grep -oE "in [0-9]+\.[0-9]+s" unit_test_output.log | grep -o "[0-9]*\.[0-9]*" || echo "0.00")
         
         # Save results as JSON for later aggregation using jq to ensure valid JSON
         jq -n \
           --arg python_version "${{ matrix.python-version }}" \
           --arg test_type "unit" \
-          --arg total "${TOTAL_TESTS:-0}" \
-          --arg passed "${PASSED_TESTS:-0}" \
-          --arg failed "${FAILED_TESTS:-0}" \
-          --arg skipped "${SKIPPED_TESTS:-0}" \
-          --arg warnings "${WARNINGS:-0}" \
+          --argjson total "${TOTAL_TESTS:-0}" \
+          --argjson passed "${PASSED_TESTS:-0}" \
+          --argjson failed "${FAILED_TESTS:-0}" \
+          --argjson skipped "${SKIPPED_TESTS:-0}" \
+          --argjson warnings "${WARNINGS:-0}" \
           --arg duration "${DURATION:-0.00}" \
           '{
             python_version: $python_version,
             test_type: $test_type,
-            total: ($total | tonumber),
-            passed: ($passed | tonumber),
-            failed: ($failed | tonumber),
-            skipped: ($skipped | tonumber),
-            warnings: ($warnings | tonumber),
+            total: $total,
+            passed: $passed,
+            failed: $failed,
+            skipped: $skipped,
+            warnings: $warnings,
             duration: $duration
           }' > unit_test_results_${{ matrix.python-version }}.json
 
@@ -164,51 +147,34 @@ jobs:
         # Extract test results from pytest output
         echo "Parsing test results..."
         
-        # Get test counts from the output (pytest shows "X selected" for total tests run)
-        TOTAL_TESTS=$(grep -oE "[0-9]+ selected" integration_test_output.log | grep -o "[0-9]*" | head -1)
-        PASSED_TESTS=$(grep -oE "[0-9]+ passed" integration_test_output.log | grep -o "[0-9]*" | head -1)
-        FAILED_TESTS=$(grep -oE "[0-9]+ failed" integration_test_output.log | grep -o "[0-9]*" | head -1)
-        SKIPPED_TESTS=$(grep -oE "[0-9]+ skipped" integration_test_output.log | grep -o "[0-9]*" | head -1)
-        WARNINGS=$(grep -c "warnings summary" integration_test_output.log)
+        # Get test counts from the output
+        TOTAL_TESTS=$(grep -oE "[0-9]+ selected" integration_test_output.log | grep -o "[0-9]*" || echo "0")
+        PASSED_TESTS=$(grep -oE "[0-9]+ passed" integration_test_output.log | grep -o "[0-9]*" || echo "0")
+        FAILED_TESTS=$(grep -oE "[0-9]+ failed" integration_test_output.log | grep -o "[0-9]*" || echo "0")
+        SKIPPED_TESTS=$(grep -oE "[0-9]+ skipped" integration_test_output.log | grep -o "[0-9]*" || echo "0")
+        WARNINGS=$(grep -c "warnings summary" integration_test_output.log || echo "0")
         
         # Get test duration
-        DURATION=$(grep -oE "in [0-9]+\.[0-9]+s" integration_test_output.log | grep -o "[0-9]*\.[0-9]*" | head -1)
-        
-        # Ensure all variables have valid numeric values
-        TOTAL_TESTS=${TOTAL_TESTS:-0}
-        PASSED_TESTS=${PASSED_TESTS:-0}
-        FAILED_TESTS=${FAILED_TESTS:-0}
-        SKIPPED_TESTS=${SKIPPED_TESTS:-0}
-        WARNINGS=${WARNINGS:-0}
-        DURATION=${DURATION:-0.00}
-        
-        # Debug output
-        echo "Integration test parsing results:"
-        echo "  TOTAL_TESTS='$TOTAL_TESTS'"
-        echo "  PASSED_TESTS='$PASSED_TESTS'"
-        echo "  FAILED_TESTS='$FAILED_TESTS'"
-        echo "  SKIPPED_TESTS='$SKIPPED_TESTS'"
-        echo "  WARNINGS='$WARNINGS'"
-        echo "  DURATION='$DURATION'"
+        DURATION=$(grep -oE "in [0-9]+\.[0-9]+s" integration_test_output.log | grep -o "[0-9]*\.[0-9]*" || echo "0.00")
         
         # Save results as JSON for later aggregation using jq to ensure valid JSON
         jq -n \
           --arg python_version "${{ matrix.python-version }}" \
           --arg test_type "integration" \
-          --arg total "${TOTAL_TESTS:-0}" \
-          --arg passed "${PASSED_TESTS:-0}" \
-          --arg failed "${FAILED_TESTS:-0}" \
-          --arg skipped "${SKIPPED_TESTS:-0}" \
-          --arg warnings "${WARNINGS:-0}" \
+          --argjson total "${TOTAL_TESTS:-0}" \
+          --argjson passed "${PASSED_TESTS:-0}" \
+          --argjson failed "${FAILED_TESTS:-0}" \
+          --argjson skipped "${SKIPPED_TESTS:-0}" \
+          --argjson warnings "${WARNINGS:-0}" \
           --arg duration "${DURATION:-0.00}" \
           '{
             python_version: $python_version,
             test_type: $test_type,
-            total: ($total | tonumber),
-            passed: ($passed | tonumber),
-            failed: ($failed | tonumber),
-            skipped: ($skipped | tonumber),
-            warnings: ($warnings | tonumber),
+            total: $total,
+            passed: $passed,
+            failed: $failed,
+            skipped: $skipped,
+            warnings: $warnings,
             duration: $duration
           }' > integration_test_results_${{ matrix.python-version }}.json
 
