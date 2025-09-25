@@ -1,24 +1,32 @@
+# Start with the slim base image
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
-WORKDIR /app
 
+# Set working directory and environment variables
+WORKDIR /app
 ENV PYTHONPATH=/app
 ENV UV_CACHE_DIR=/app/cache
 
-COPY ./src /app/src
-COPY pyproject.toml /app
-COPY start.sh /app
-COPY stop.sh /app
+# Install system packages and create the non-root user and app directory.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends procps && \
+    rm -rf /var/lib/apt/lists/* && \
+    useradd --create-home --shell /bin/bash appuser --uid 1000 && \
+    chown -R 1000:1000 /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends procps
+# Switch to the non-root user
+USER appuser
 
+# Copy the dependency definition file.
+COPY --chown=1000:1000 pyproject.toml .
+
+# Install Python dependencies.
 RUN uv sync
 
-RUN chmod +x ./start.sh
+# Copy the the maestro knowledge code.
+COPY --chown=1000:1000 ./src /app/src
+COPY --chown=1000:1000 start.sh stop.sh /app/
+RUN chmod +x /app/start.sh
 
-RUN chown -R 1000:1000 /app &&\
-  mkdir -p /app/cache && chown 1000:1000 /app/cache
-
+# Launch the server
 EXPOSE 8030
-USER 1000:1000
-
 ENTRYPOINT ["uv", "run", "./start.sh", "--host", "0.0.0.0", "--tail"]
