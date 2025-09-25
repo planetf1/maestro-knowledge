@@ -29,6 +29,7 @@ warnings.filterwarnings(
 from src.db.vector_db_factory import create_vector_database
 
 
+@pytest.mark.unit
 class TestCreateVectorDatabase:
     """Tests for the vector database factory function."""
 

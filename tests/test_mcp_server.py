@@ -11,15 +11,16 @@ import sys
 from pathlib import Path
 import pytest
 
-
 # Ensure the project root is in sys.path
 project_root = Path(__file__).parent.parent.resolve()
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 from src.maestro_mcp.server import create_mcp_server
+from tests.test_utils import mock_resync_functions
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
 async def test_server_creation() -> None:
     """Test that the server can be created successfully."""
@@ -27,16 +28,19 @@ async def test_server_creation() -> None:
     print("=" * 50)
 
     try:
-        server = await create_mcp_server()
-        print("✓ Server created successfully")
-        print(f"✓ Server name: {server.name}")
+        # Mock the resync functions to prevent hanging on database connections
+        with mock_resync_functions():
+            server = await create_mcp_server()
+            print("✓ Server created successfully")
+            print(f"✓ Server name: {server.name}")
 
-        # Test that the server has the expected structure
-        print("✓ Server structure verified")
+            # Test that the server has the expected structure
+            print("✓ Server structure verified")
     except Exception as e:
         assert False, f"Failed to create server: {e}"
 
 
+@pytest.mark.unit
 @pytest.mark.asyncio
 async def test_tool_definitions() -> None:
     """Test that all expected tools are defined."""
@@ -44,39 +48,42 @@ async def test_tool_definitions() -> None:
     print("=" * 50)
 
     try:
-        server = await create_mcp_server()
+        # Mock the resync functions to prevent hanging on database connections
+        with mock_resync_functions():
+            server = await create_mcp_server()
 
-        # Get the tool definitions from the server
-        expected_tools = [
-            "create_vector_database",
-            "setup_database",
-            "get_supported_embeddings",
-            "write_documents",
-            "write_document",
-            "list_documents",
-            "count_documents",
-            "delete_documents",
-            "delete_document",
-            "delete_collection",
-            "cleanup",
-            "get_database_info",
-            "list_collections",
-            "list_databases",
-        ]
+            # Get the tool definitions from the server
+            expected_tools = [
+                "create_vector_database",
+                "setup_database",
+                "get_supported_embeddings",
+                "write_documents",
+                "write_document",
+                "list_documents",
+                "count_documents",
+                "delete_documents",
+                "delete_document",
+                "delete_collection",
+                "cleanup",
+                "get_database_info",
+                "list_collections",
+                "list_databases",
+            ]
 
-        print("✓ Server created with expected tools")
-        print(f"✓ Expected {len(expected_tools)} tools")
+            print("✓ Server created with expected tools")
+            print(f"✓ Expected {len(expected_tools)} tools")
 
-        # Test that the server has the right structure for FastMCP
-        assert hasattr(server, "get_tools"), "Server missing get_tools method"
-        print("✓ Server has get_tools method")
+            # Test that the server has the right structure for FastMCP
+            assert hasattr(server, "get_tools"), "Server missing get_tools method"
+            print("✓ Server has get_tools method")
 
-        assert hasattr(server, "tool"), "Server missing tool decorator"
-        print("✓ Server has tool decorator")
+            assert hasattr(server, "tool"), "Server missing tool decorator"
+            print("✓ Server has tool decorator")
     except Exception as e:
         assert False, f"Failed to test tool definitions: {e}"
 
 
+@pytest.mark.unit
 def test_imports() -> None:
     """Test that all required imports work."""
     print("\nTesting Imports...")

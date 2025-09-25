@@ -61,6 +61,7 @@ def remote_weaviate_yaml() -> dict[str, Any]:
     return yaml.safe_load(content)
 
 
+@pytest.mark.unit
 class TestVectorDatabaseYAMLValidation:
     """Test class for vector database YAML validation."""
 

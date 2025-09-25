@@ -6,6 +6,7 @@ import warnings
 # Suppress all deprecation warnings from external packages immediately
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
+
 # Suppress Pydantic deprecation warnings from dependencies
 warnings.filterwarnings(
     "ignore", category=DeprecationWarning, message=".*class-based `config`.*"
@@ -51,6 +52,7 @@ from src.db.vector_db_weaviate import WeaviateVectorDatabase
 
 
 @pytest.mark.skipif(not WEAVIATE_AVAILABLE, reason="weaviate not available")
+@pytest.mark.unit
 class TestWeaviateVectorDatabase:
     """Test cases for the WeaviateVectorDatabase implementation."""
 
@@ -701,16 +703,27 @@ class TestWeaviateVectorDatabase:
             # Mock client and collection
             mock_client = AsyncMock()
             mock_connect.return_value = mock_client
-            mock_collection = AsyncMock()
+
+            # Create a regular Mock for the collection but with async methods where needed
+            mock_collection = MagicMock()
+            mock_client.collections = MagicMock()
             mock_client.collections.exists = AsyncMock(return_value=True)
-            mock_client.collections.get.return_value = mock_collection
-            # config.get returns an object with attributes used in code
-            mock_cfg = AsyncMock()
+            mock_client.collections.get = AsyncMock(return_value=mock_collection)
+
+            # Mock the async query.fetch_objects method
+            mock_result = MagicMock()
+            mock_result.objects = [MagicMock(), MagicMock()]  # Simulate 2 documents
+            mock_collection.query = MagicMock()
+            mock_collection.query.fetch_objects = AsyncMock(return_value=mock_result)
+
+            # Mock the config.get method (non-async)
+            mock_cfg = MagicMock()
             mock_cfg.description = "Test collection"
             mock_cfg.vectorizer = "text2vec-openai"
             mock_cfg.properties = []
             mock_cfg.module_config = {}
-            mock_collection.config.get.return_value = mock_cfg
+            mock_collection.config = MagicMock()
+            mock_collection.config.get = MagicMock(return_value=mock_cfg)
 
             db = WeaviateVectorDatabase()
             chunk_cfg = {

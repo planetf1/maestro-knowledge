@@ -460,10 +460,10 @@ class WeaviateVectorDatabase(VectorDatabase):
 
         # Fetch all objects with metadata containing the doc_name
         collection = await self.client.collections.get(target_collection)
+        filter_property = await collection.query.filter.by_property("metadata")
+        filter_condition = await filter_property.contains_any([doc_name])
         result = await collection.query.fetch_objects(
-            where=(await collection.query.filter.by_property("metadata")).contains_any(
-                [doc_name]
-            ),
+            where=filter_condition,
             limit=10000,
         )
 
@@ -498,10 +498,10 @@ class WeaviateVectorDatabase(VectorDatabase):
     ) -> list[dict[str, Any]]:
         target_collection = collection_name or self.collection_name
         collection = await self.client.collections.get(target_collection)
+        filter_property = await collection.query.filter.by_property("metadata")
+        filter_condition = await filter_property.contains_any([doc_id])
         result = await collection.query.fetch_objects(
-            where=(await collection.query.filter.by_property("metadata")).contains_any(
-                [doc_id]
-            ),
+            where=filter_condition,
             limit=10000,
         )
         chunks = []
@@ -542,6 +542,9 @@ class WeaviateVectorDatabase(VectorDatabase):
     async def list_collections(self) -> list[str]:
         """List all collections in Weaviate."""
         try:
+            # Ensure client is connected
+            await self.client.connect()
+
             # Get all collections from the client
             collections = await self.client.collections.list_all()
 

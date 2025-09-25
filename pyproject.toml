@@ -42,9 +42,28 @@ filterwarnings = [
     "ignore::UserWarning:google.protobuf.runtime_version",
     # Suppress our own warning in test_list_collections_exception test
     "ignore::UserWarning:src.db.vector_db_weaviate",
+    # Suppress asyncio loop warnings from cancelled database operations - these occur during timeout handling
+    "ignore:.*got Future.*attached to a different loop:UserWarning",
 ]
 # Enable async test support
 asyncio_mode = "auto"
+
+# Run standard tests by default (unit + integration)
+# This matches the behavior of ./test.sh standard
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-m 'unit or integration'"
+
+# Custom pytest markers
+markers = [
+    "unit: Unit tests - fast, no external dependencies",
+    "integration: Integration tests - components working together with mocked externals",
+    "service: Service integration tests - requires real databases running",
+    "e2e: End-to-end tests - full environment required",
+    "slow: Tests that take >5 seconds",
+    "requires_milvus: Tests that require Milvus database running",
+    "requires_weaviate: Tests that require Weaviate database running",
+]
 
 [dependency-groups]
 dev = [

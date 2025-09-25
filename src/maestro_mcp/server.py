@@ -6,7 +6,8 @@ import json
 import logging
 import os
 import sys
-from typing import Any
+from typing import Any, cast
+from collections.abc import Awaitable, Callable
 
 from fastmcp import FastMCP
 from fastmcp.tools.tool import ToolResult
@@ -44,6 +45,100 @@ logger = logging.getLogger(__name__)
 # Dictionary to store vector database instances keyed by name
 vector_databases: dict[str, VectorDatabase] = {}
 
+# Default timeout (in seconds) for MCP tool execution. Can be overridden via env.
+DEFAULT_TOOL_TIMEOUT = int(os.getenv("MCP_TOOL_TIMEOUT", "15"))
+
+# Per-category timeout defaults (seconds).
+# Override via environment variables MCP_TIMEOUT_<CATEGORY>, e.g., MCP_TIMEOUT_QUERY=45
+TIMEOUT_DEFAULTS: dict[str, int] = {
+    "health": 30,
+    "list_databases": 15,
+    "list_collections": 15,
+    "list_documents": 30,
+    "count_documents": 15,
+    "get_database_info": 15,
+    "get_collection_info": 30,
+    "query": 30,
+    "search": 30,
+    "write_single": 900,  # 15 minutes
+    "write_bulk": 3600,  # 60 minutes
+    "delete": 60,
+    "cleanup": 60,
+    "create_collection": 60,
+    "setup_database": 60,
+    "resync": 60,
+}
+
+
+def get_timeout(category: str, fallback: int | None = None) -> int:
+    """Resolve timeout for a category from env or defaults.
+
+    Env var format: MCP_TIMEOUT_<CATEGORY>, e.g., MCP_TIMEOUT_QUERY=45
+    """
+    env_key = f"MCP_TIMEOUT_{category.upper()}"
+    val = os.getenv(env_key)
+    if val is not None:
+        try:
+            return int(val)
+        except ValueError:
+            pass
+    if fallback is not None:
+        return fallback
+    return TIMEOUT_DEFAULTS.get(category, DEFAULT_TOOL_TIMEOUT)
+
+
+def tool_timeout(
+    seconds: int | None = None,
+) -> Callable[[Callable[..., Awaitable[object]]], Callable[..., Awaitable[object]]]:
+    """Decorator to enforce a timeout and guaranteed response for MCP tools.
+
+    Ensures that every tool returns a response even if an operation hangs or raises.
+    Timeout is configurable via MCP_TOOL_TIMEOUT env var or the decorator argument.
+    """
+
+    def decorator(
+        func: Callable[..., Awaitable[object]],
+    ) -> Callable[..., Awaitable[object]]:
+        async def wrapper(*args: object, **kwargs: object) -> object:
+            timeout_s = seconds if seconds is not None else DEFAULT_TOOL_TIMEOUT
+            try:
+                return await asyncio.wait_for(func(*args, **kwargs), timeout=timeout_s)
+            except asyncio.TimeoutError:
+                func_name = getattr(func, "__name__", "tool")
+                logger.error(
+                    "Tool '%s' timed out after %s seconds", func_name, timeout_s
+                )
+                return f"Error: '{func_name}' timed out after {timeout_s} seconds"
+            except Exception as e:
+                # Catch any uncaught exceptions so we always return a response
+                func_name = getattr(func, "__name__", "tool")
+                logger.exception("Tool '%s' failed: %s", func_name, e)
+                return f"Error: {str(e)}"
+
+        return wrapper
+
+    return decorator
+
+
+async def run_with_timeout(
+    awaitable: Awaitable[Any], tool_name: str, timeout_s: int | None = None
+) -> tuple[bool, Any]:
+    """Run an awaitable with a timeout, return (ok, result_or_error_message).
+
+    If the awaitable completes, returns (True, result). If it times out, returns
+    (False, error_message). Any other exception is caught and returned as (False, error_message).
+    """
+    to = timeout_s if timeout_s is not None else DEFAULT_TOOL_TIMEOUT
+    try:
+        result = await asyncio.wait_for(awaitable, timeout=to)
+        return True, result
+    except asyncio.TimeoutError:
+        logger.error("Tool '%s' timed out after %s seconds", tool_name, to)
+        return False, f"Error: '{tool_name}' timed out after {to} seconds"
+    except Exception as e:
+        logger.exception("Tool '%s' failed: %s", tool_name, e)
+        return False, f"Error: {str(e)}"
+
 
 async def resync_vector_databases() -> list[str]:
     """Discover Milvus collections and register them in memory.
@@ -63,16 +158,41 @@ async def resync_vector_databases() -> list[str]:
             # Import here to avoid optional-dependency import at module load time
             from ..db.vector_db_milvus import MilvusVectorDatabase
 
-        # Create a temporary Milvus handle to list collections
-        temp = MilvusVectorDatabase()
-        temp._ensure_client()
-        if temp.client is None:
-            logger.info("Milvus client not available during resync; skipping resync")
-            return added
+        # Add timeout protection for the entire resync operation
+        timeout_seconds = int(os.getenv("MILVUS_RESYNC_TIMEOUT", "15"))
 
         try:
-            collections = await temp.list_collections() or []
+            # Create a temporary Milvus handle to list collections with timeout
+            temp = MilvusVectorDatabase()
+            temp._ensure_client()
+            if temp.client is None:
+                logger.info(
+                    "Milvus client not available during resync; skipping resync"
+                )
+                return added
+
+            # List collections with timeout protection and proper task cleanup
+            list_task = asyncio.create_task(temp.list_collections())
+            try:
+                collections = await asyncio.wait_for(list_task, timeout=timeout_seconds)
+                collections = collections or []
+            except asyncio.TimeoutError:
+                logger.warning(
+                    f"Milvus resync timed out after {timeout_seconds} seconds"
+                )
+                # Properly cancel the task to avoid orphaned futures
+                list_task.cancel()
+                try:
+                    await list_task
+                except asyncio.CancelledError:
+                    pass  # Expected when we cancel
+                return added
+        except asyncio.TimeoutError:
+            logger.warning(f"Milvus resync timed out after {timeout_seconds} seconds")
+            return added
         except Exception as e:
+            logger.warning(f"Failed to connect to Milvus during resync: {e}")
+            return added
             logger.warning(f"Failed to list Milvus collections during resync: {e}")
             return added
 
@@ -154,17 +274,46 @@ async def resync_weaviate_databases() -> list[str]:
         # Import lazily to avoid mandatory dependency when Weaviate isn't used
         from ..db.vector_db_weaviate import WeaviateVectorDatabase
 
-        # Attempt to create a temporary client; this will raise if env is missing
-        temp = WeaviateVectorDatabase()
+        # Add timeout protection for the entire resync operation
+        timeout_seconds = int(os.getenv("WEAVIATE_RESYNC_TIMEOUT", "10"))
+
+        # Attempt to create a temporary client with timeout protection
+        temp = None
         try:
-            collections = await temp.list_collections() or []
+            # WeaviateVectorDatabase constructor is synchronous but may hang on client creation
+            # Wrap it in an executor with timeout
+            loop = asyncio.get_event_loop()
+            temp = await asyncio.wait_for(
+                loop.run_in_executor(None, WeaviateVectorDatabase),
+                timeout=timeout_seconds,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                f"Weaviate client creation timed out after {timeout_seconds} seconds"
+            )
+            return added
+        except Exception as e:
+            logger.warning(f"Failed to create Weaviate client during resync: {e}")
+            return added
+
+        try:
+            collections = await asyncio.wait_for(
+                temp.list_collections(), timeout=timeout_seconds
+            )
+            collections = collections or []
+        except asyncio.TimeoutError:
+            logger.warning(
+                f"Weaviate collection listing timed out after {timeout_seconds} seconds"
+            )
+            return added
         except Exception as e:
             logger.warning(f"Failed to list Weaviate collections during resync: {e}")
             return added
         finally:
             # Close the temporary connection to avoid resource warnings/leaks
             try:
-                await temp.cleanup()
+                if temp:
+                    await temp.cleanup()
             except Exception:
                 pass
 
@@ -174,7 +323,7 @@ async def resync_weaviate_databases() -> list[str]:
                     db = WeaviateVectorDatabase(collection_name=coll)
                     # Best-effort: set embedding info on instance if available
                     try:
-                        info = db.get_collection_info(coll)
+                        info = await db.get_collection_info(coll)
                         emb_details = (info or {}).get("embedding_details", {})
                         name = emb_details.get("name")
                         if name:
@@ -253,8 +402,9 @@ class WriteDocumentInput(BaseModel):
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata for the document"
     )
-    vector: list[float] = Field(
-        default=None, description="Pre-computed vector embedding (optional, for Milvus)"
+    vector: list[float] | None = Field(
+        default=None,
+        description="Pre-computed vector embedding (optional, for Milvus)",
     )
     # TODO(deprecate): embedding at write-time is deprecated and ignored; embedding is per-collection
     embedding: str = Field(
@@ -272,8 +422,9 @@ class WriteDocumentToCollectionInput(BaseModel):
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata for the document"
     )
-    vector: list[float] = Field(
-        default=None, description="Pre-computed vector embedding (optional, for Milvus)"
+    vector: list[float] | None = Field(
+        default=None,
+        description="Pre-computed vector embedding (optional, for Milvus)",
     )
     # TODO(deprecate): embedding at write-time is deprecated and ignored; embedding is per-collection
     embedding: str = Field(
@@ -329,7 +480,7 @@ class GetDocumentInput(BaseModel):
 
 class DeleteCollectionInput(BaseModel):
     db_name: str = Field(..., description="Name of the vector database instance")
-    collection_name: str = Field(
+    collection_name: str | None = Field(
         default=None, description="Name of the collection to delete"
     )
 
@@ -350,7 +501,7 @@ class ListCollectionsInput(BaseModel):
 
 class GetCollectionInfoInput(BaseModel):
     db_name: str = Field(..., description="Name of the vector database instance")
-    collection_name: str = Field(
+    collection_name: str | None = Field(
         default=None,
         description="Name of the collection to get info for. If not provided, uses the default collection.",
     )
@@ -362,7 +513,7 @@ class CreateCollectionInput(BaseModel):
     embedding: str = Field(
         default="default", description="Embedding model to use for the collection"
     )
-    chunking_config: dict[str, Any] = Field(
+    chunking_config: dict[str, Any] | None = Field(
         default=None,
         description="Optional chunking configuration for the collection. Example: {'strategy':'Sentence','parameters':{'chunk_size':256,'overlap':1}}",
     )
@@ -372,7 +523,7 @@ class QueryInput(BaseModel):
     db_name: str = Field(..., description="Name of the vector database instance")
     query: str = Field(..., description="The query string to search for")
     limit: int = Field(default=5, description="Maximum number of results to consider")
-    collection_name: str = Field(
+    collection_name: str | None = Field(
         default=None, description="Optional collection name to search in"
     )
 
@@ -381,7 +532,7 @@ class SearchInput(BaseModel):
     db_name: str = Field(..., description="Name of the vector database instance")
     query: str = Field(..., description="The query string to search for")
     limit: int = Field(default=5, description="Maximum number of results to consider")
-    collection_name: str = Field(
+    collection_name: str | None = Field(
         default=None, description="Optional collection name to search in"
     )
 
@@ -395,16 +546,34 @@ async def create_mcp_server() -> FastMCP:
     @app.custom_route("/health", methods=["GET"])
     async def health_check(request: Request) -> PlainTextResponse:
         if not vector_databases:
-            PlainTextResponse("No vector databases are currently active")
+            return PlainTextResponse("No vector databases are currently active")
 
         db_list = []
         for db_name, db in vector_databases.items():
+            # Protect per-db count with a timeout so /health never hangs
+            try:
+                count = await asyncio.wait_for(
+                    db.count_documents(), timeout=get_timeout("health")
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "health_check: count_documents timed out for db '%s'", db_name
+                )
+                count = -1  # indicate unknown
+            except Exception as e:
+                logger.warning(
+                    "health_check: count_documents failed for db '%s': %s",
+                    db_name,
+                    e,
+                )
+                count = -1
+
             db_list.append(
                 {
                     "name": db_name,
                     "type": db.db_type,
                     "collection": db.collection_name,
-                    "document_count": await db.count_documents(),
+                    "document_count": count,
                 }
             )
         return PlainTextResponse(
@@ -454,11 +623,23 @@ async def create_mcp_server() -> FastMCP:
                 # Get the number of parameters in the setup method
                 param_count = len(db.setup.__code__.co_varnames)
                 if param_count > 2:  # self, embedding, collection_name
-                    await db.setup(embedding=input.embedding)
+                    ok, res = await run_with_timeout(
+                        db.setup(embedding=input.embedding),
+                        "setup_database",
+                        get_timeout("setup_database"),
+                    )
                 elif param_count > 1:  # self, embedding
-                    await db.setup(embedding=input.embedding)
+                    ok, res = await run_with_timeout(
+                        db.setup(embedding=input.embedding),
+                        "setup_database",
+                        get_timeout("setup_database"),
+                    )
                 else:  # self only
-                    await db.setup()
+                    ok, res = await run_with_timeout(
+                        db.setup(), "setup_database", get_timeout("setup_database")
+                    )
+                if not ok:
+                    return str(res)
 
             return f"Successfully set up {db.db_type} vector database '{input.db_name}' with embedding '{input.embedding}'"
         except Exception as e:
@@ -540,18 +721,30 @@ async def create_mcp_server() -> FastMCP:
                 "Deprecation: embedding specified at write_documents is ignored; embedding is configured per collection."
             )
         # Use the database's current collection embedding where applicable
-        coll_info = None
+        coll_info: dict[str, Any] | None = None
         try:
             # Best effort: fetch current collection info to get embedding
-            coll_info = await db.get_collection_info()
+            ok, coll_info_any = await run_with_timeout(
+                db.get_collection_info(),
+                "get_collection_info",
+                get_timeout("get_collection_info"),
+            )
+            if ok:
+                coll_info = cast("dict[str, Any]", coll_info_any)
         except Exception:
             pass
         collection_embedding = (coll_info or {}).get("embedding", "default")
-        stats = None
+        stats: Any = None
         try:
-            stats = await db.write_documents(
-                input.documents, embedding=collection_embedding
+            ok, stats_any = await run_with_timeout(
+                db.write_documents(input.documents, embedding=collection_embedding),
+                "write_documents",
+                get_timeout("write_bulk"),
             )
+            if not ok:
+                result = {"status": "error", "message": str(stats_any)}
+                return json.dumps(result, indent=2)
+            stats = stats_any
         except Exception as e:
             # surface error in JSON result
             result = {
@@ -561,9 +754,14 @@ async def create_mcp_server() -> FastMCP:
             return json.dumps(result, indent=2)
 
         # Refresh collection info after write
-        post_info = None
+        post_info: dict[str, Any] | None = None
         try:
-            post_info = await db.get_collection_info()
+            ok, post_info_any = await run_with_timeout(
+                db.get_collection_info(),
+                "get_collection_info",
+                get_timeout("get_collection_info"),
+            )
+            post_info = cast("dict[str, Any]", post_info_any) if ok else None
         except Exception:
             post_info = None
 
@@ -598,7 +796,7 @@ async def create_mcp_server() -> FastMCP:
     async def write_document(input: WriteDocumentInput) -> str:
         """Write a single document to a vector database. Embedding at write-time is deprecated; collection embedding is used. Returns JSON with stats and collection info."""
         db = get_database_by_name(input.db_name)
-        document = {
+        document: dict[str, Any] = {
             "url": input.url,
             "text": input.text,
             "metadata": input.metadata,
@@ -613,15 +811,27 @@ async def create_mcp_server() -> FastMCP:
             logger.warning(
                 "Deprecation: embedding specified at write_document is ignored; embedding is configured per collection."
             )
-        coll_info = None
+        coll_info: dict[str, Any] | None = None
         try:
-            coll_info = await db.get_collection_info()
+            ok, coll_info_any = await run_with_timeout(
+                db.get_collection_info(),
+                "get_collection_info",
+                get_timeout("get_collection_info"),
+            )
+            if ok:
+                coll_info = cast("dict[str, Any]", coll_info_any)
         except Exception:
             pass
         collection_embedding = (coll_info or {}).get("embedding", "default")
         stats = None
         try:
-            stats = await db.write_document(document, embedding=collection_embedding)
+            ok, stats = await run_with_timeout(
+                db.write_document(document, embedding=collection_embedding),
+                "write_document",
+                get_timeout("write_single"),
+            )
+            if not ok:
+                return json.dumps({"status": "error", "message": str(stats)}, indent=2)
         except Exception as e:
             return json.dumps(
                 {
@@ -632,9 +842,14 @@ async def create_mcp_server() -> FastMCP:
             )
 
         # Post-write info and suggestion
-        post_info = None
+        post_info: dict[str, Any] | None = None
         try:
-            post_info = await db.get_collection_info()
+            ok, post_info_any = await run_with_timeout(
+                db.get_collection_info(),
+                "get_collection_info",
+                get_timeout("get_collection_info"),
+            )
+            post_info = cast("dict[str, Any]", post_info_any) if ok else None
         except Exception:
             post_info = None
         sample_query = (
@@ -664,14 +879,21 @@ async def create_mcp_server() -> FastMCP:
         db = get_database_by_name(input.db_name)
 
         # Check if the collection exists
-        collections = await db.list_collections()
+        ok, collections_any = await run_with_timeout(
+            db.list_collections(), "list_collections", get_timeout("list_collections")
+        )
+        collections: list[str] = (
+            cast("list[str]", collections_any)
+            if ok and isinstance(collections_any, list)
+            else []
+        )
         if input.collection_name not in collections:
             raise ValueError(
                 f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
             )
 
         # Create document with collection-specific metadata
-        document = {
+        document: dict[str, Any] = {
             "url": input.url,
             "text": input.text,
             "metadata": {
@@ -692,16 +914,31 @@ async def create_mcp_server() -> FastMCP:
             )
         collection_embedding = "default"
         try:
-            info = await db.get_collection_info(input.collection_name)
+            ok, info_any = await run_with_timeout(
+                db.get_collection_info(input.collection_name),
+                "get_collection_info",
+                get_timeout("get_collection_info"),
+            )
+            info: dict[str, Any] = (
+                cast("dict[str, Any]", info_any)
+                if ok and isinstance(info_any, dict)
+                else {}
+            )
             collection_embedding = info.get("embedding", "default")
         except Exception:
             pass
         # Use the new write_documents_to_collection method
         stats = None
         try:
-            stats = await db.write_documents_to_collection(
-                [document], input.collection_name, embedding=collection_embedding
+            ok, stats = await run_with_timeout(
+                db.write_documents_to_collection(
+                    [document], input.collection_name, embedding=collection_embedding
+                ),
+                "write_document_to_collection",
+                get_timeout("write_single"),
             )
+            if not ok:
+                return json.dumps({"status": "error", "message": str(stats)}, indent=2)
         except Exception as e:
             return json.dumps(
                 {
@@ -740,7 +977,16 @@ async def create_mcp_server() -> FastMCP:
     async def list_documents(input: ListDocumentsInput) -> str:
         """List documents from a vector database."""
         db = get_database_by_name(input.db_name)
-        documents = await db.list_documents(input.limit, input.offset)
+        ok, documents_any = await run_with_timeout(
+            db.list_documents(input.limit, input.offset),
+            "list_documents",
+            get_timeout("list_documents"),
+        )
+        documents: list[dict[str, Any]] = (
+            cast("list[dict[str, Any]]", documents_any)
+            if ok and isinstance(documents_any, list)
+            else []
+        )
 
         return f"Found {len(documents)} documents in vector database '{input.db_name}':\n{json.dumps(documents, indent=2, default=str)}"
 
@@ -752,7 +998,14 @@ async def create_mcp_server() -> FastMCP:
         db = get_database_by_name(input.db_name)
 
         # Check if the collection exists
-        collections = await db.list_collections()
+        ok, collections_any = await run_with_timeout(
+            db.list_collections(), "list_collections", get_timeout("list_collections")
+        )
+        collections = (
+            cast("list[str]", collections_any)
+            if ok and isinstance(collections_any, list)
+            else []
+        )
         # Use case-sensitive comparison
         if input.collection_name not in collections:
             raise ValueError(
@@ -760,8 +1013,17 @@ async def create_mcp_server() -> FastMCP:
             )
 
         # Use the new list_documents_in_collection method
-        documents = await db.list_documents_in_collection(
-            input.collection_name, input.limit, input.offset
+        ok, documents_any = await run_with_timeout(
+            db.list_documents_in_collection(
+                input.collection_name, input.limit, input.offset
+            ),
+            "list_documents",
+            get_timeout("list_documents"),
+        )
+        documents = (
+            cast("list[dict[str, Any]]", documents_any)
+            if ok and isinstance(documents_any, list)
+            else []
         )
         return f"Found {len(documents)} documents in collection '{input.collection_name}' of vector database '{input.db_name}':\n{json.dumps(documents, indent=2, default=str)}"
 
@@ -769,7 +1031,10 @@ async def create_mcp_server() -> FastMCP:
     async def count_documents(input: CountDocumentsInput) -> str:
         """Get the current count of documents in a collection."""
         db = get_database_by_name(input.db_name)
-        count = await db.count_documents()
+        ok, count_any = await run_with_timeout(
+            db.count_documents(), "count_documents", get_timeout("count_documents")
+        )
+        count: int = int(count_any) if ok else -1
 
         return f"Document count in vector database '{input.db_name}': {count}"
 
@@ -777,7 +1042,11 @@ async def create_mcp_server() -> FastMCP:
     async def delete_documents(input: DeleteDocumentsInput) -> str:
         """Delete documents from a vector database by their IDs."""
         db = get_database_by_name(input.db_name)
-        await db.delete_documents(input.document_ids)
+        ok, _ = await run_with_timeout(
+            db.delete_documents(input.document_ids), "delete", get_timeout("delete")
+        )
+        if not ok:
+            return f"Error: Failed to delete documents in vector database '{input.db_name}'"
 
         return f"Successfully deleted {len(input.document_ids)} documents from vector database '{input.db_name}'"
 
@@ -785,7 +1054,11 @@ async def create_mcp_server() -> FastMCP:
     async def delete_document(input: DeleteDocumentInput) -> str:
         """Delete a single document from a vector database."""
         db = get_database_by_name(input.db_name)
-        await db.delete_document(input.document_id)
+        ok, _ = await run_with_timeout(
+            db.delete_document(input.document_id), "delete", get_timeout("delete")
+        )
+        if not ok:
+            return f"Error: Failed to delete document '{input.document_id}' from vector database '{input.db_name}'"
 
         return f"Successfully deleted document '{input.document_id}' from vector database '{input.db_name}'"
 
@@ -797,7 +1070,14 @@ async def create_mcp_server() -> FastMCP:
         db = get_database_by_name(input.db_name)
 
         # Check if the collection exists
-        collections = await db.list_collections()
+        ok, collections_any = await run_with_timeout(
+            db.list_collections(), "list_collections", get_timeout("list_collections")
+        )
+        collections = (
+            cast("list[str]", collections_any)
+            if ok and isinstance(collections_any, list)
+            else []
+        )
         if input.collection_name not in collections:
             raise ValueError(
                 f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
@@ -809,9 +1089,16 @@ async def create_mcp_server() -> FastMCP:
 
         try:
             # List documents to find the one with the matching name
-            documents = await db.list_documents(
-                limit=1000, offset=0
-            )  # Get all documents to search by name
+            ok, documents_any = await run_with_timeout(
+                db.list_documents(limit=1000, offset=0),
+                "list_documents",
+                get_timeout("list_documents"),
+            )
+            documents = (
+                cast("list[dict[str, Any]]", documents_any)
+                if ok and isinstance(documents_any, list)
+                else []
+            )
             document_id = None
 
             for doc in documents:
@@ -825,7 +1112,11 @@ async def create_mcp_server() -> FastMCP:
                 )
 
             # Delete the document
-            await db.delete_document(document_id)
+            ok, _ = await run_with_timeout(
+                db.delete_document(document_id), "delete", get_timeout("delete")
+            )
+            if not ok:
+                return f"Error: Failed to delete document '{input.doc_name}' from collection '{input.collection_name}'"
 
             return f"Successfully deleted document '{input.doc_name}' from collection '{input.collection_name}' in vector database '{input.db_name}'"
         finally:
@@ -838,7 +1129,14 @@ async def create_mcp_server() -> FastMCP:
         db = get_database_by_name(input.db_name)
 
         # Check if the collection exists
-        collections = await db.list_collections()
+        ok, collections_any = await run_with_timeout(
+            db.list_collections(), "list_collections", get_timeout("list_collections")
+        )
+        collections = (
+            cast("list[str]", collections_any)
+            if ok and isinstance(collections_any, list)
+            else []
+        )
         if input.collection_name not in collections:
             raise ValueError(
                 f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
@@ -846,7 +1144,14 @@ async def create_mcp_server() -> FastMCP:
 
         try:
             # Get the document using the new get_document method
-            document = await db.get_document(input.doc_name, input.collection_name)
+            ok, document_any = await run_with_timeout(
+                db.get_document(input.doc_name, input.collection_name),
+                "get_document",
+                get_timeout("list_documents"),
+            )
+            if not ok:
+                return str(document_any)
+            document: dict[str, Any] = cast("dict[str, Any]", document_any)
             return f"Document '{input.doc_name}' from collection '{input.collection_name}' in vector database '{input.db_name}':\n{json.dumps(document, indent=2, default=str)}"
         except ValueError as e:
             # Re-raise ValueError as is (these are user-friendly error messages)
@@ -861,20 +1166,47 @@ async def create_mcp_server() -> FastMCP:
             db = get_database_by_name(input.db_name)
 
             # Check if the collection exists
-            collections = await db.list_collections()
-            if input.collection_name not in collections:
+            ok, colls_any = await run_with_timeout(
+                db.list_collections(),
+                "list_collections",
+                get_timeout("list_collections"),
+            )
+            collections = (
+                cast("list[str]", colls_any)
+                if ok and isinstance(colls_any, list)
+                else []
+            )
+            if (
+                input.collection_name is None
+                or input.collection_name not in collections
+            ):
                 raise ValueError(
                     f"Collection '{input.collection_name}' not found in vector database '{input.db_name}'"
                 )
-
-            await db.delete_collection(input.collection_name)
+            ok, _ = await run_with_timeout(
+                db.delete_collection(input.collection_name),
+                "delete",
+                get_timeout("delete"),
+            )
+            if not ok:
+                return f"Error: Failed to delete collection '{input.collection_name}' from vector database '{input.db_name}'"
 
             return f"Successfully deleted collection '{input.collection_name}' from vector database '{input.db_name}'"
         try:
             from ..db.vector_db_milvus import MilvusVectorDatabase
 
+            if input.collection_name is None:
+                raise ValueError(
+                    "collection_name must be provided to delete a collection"
+                )
             temp_db = MilvusVectorDatabase(collection_name=input.collection_name)
-            await temp_db.delete_collection(input.collection_name)
+            ok, _ = await run_with_timeout(
+                temp_db.delete_collection(input.collection_name),
+                "delete",
+                get_timeout("delete"),
+            )
+            if not ok:
+                return f"Error: Failed to delete collection '{input.collection_name}' from Milvus (untracked)."
             return f"Successfully dropped collection '{input.collection_name}' from Milvus (untracked)."
         except Exception as e:
             return f"Delete collection failed: {str(e)}"
@@ -884,7 +1216,11 @@ async def create_mcp_server() -> FastMCP:
         """Clean up resources and close connections for a vector database."""
         if input.db_name in vector_databases:
             db = get_database_by_name(input.db_name)
-            await db.cleanup()
+            ok, _ = await run_with_timeout(
+                db.cleanup(), "cleanup", get_timeout("cleanup")
+            )
+            if not ok:
+                return f"Error: Failed to cleanup vector database '{input.db_name}'"
             del vector_databases[input.db_name]
             return (
                 f"Successfully cleaned up and removed vector database '{input.db_name}'"
@@ -893,7 +1229,13 @@ async def create_mcp_server() -> FastMCP:
             from ..db.vector_db_milvus import MilvusVectorDatabase
 
             temp_db = MilvusVectorDatabase(collection_name=input.db_name)
-            await temp_db.delete_collection(input.db_name)
+            ok, _ = await run_with_timeout(
+                temp_db.delete_collection(input.db_name),
+                "cleanup",
+                get_timeout("cleanup"),
+            )
+            if not ok:
+                return f"Error: Failed to cleanup (drop) collection '{input.db_name}' from Milvus (untracked)."
             return f"Successfully dropped collection '{input.db_name}' from Milvus (untracked)."
         except Exception as e:
             return f"Cleanup failed: {str(e)}"
@@ -902,11 +1244,15 @@ async def create_mcp_server() -> FastMCP:
     async def get_database_info(input: GetDatabaseInfoInput) -> str:
         """Get information about a vector database."""
         db = get_database_by_name(input.db_name)
+        ok, cnt_any = await run_with_timeout(
+            db.count_documents(), "count_documents", get_timeout("count_documents")
+        )
+        count = int(cnt_any) if ok else -1
         info = {
             "name": input.db_name,
             "type": db.db_type,
             "collection": db.collection_name,
-            "document_count": await db.count_documents(),
+            "document_count": count,
         }
 
         return (
@@ -917,7 +1263,12 @@ async def create_mcp_server() -> FastMCP:
     async def list_collections(input: ListCollectionsInput) -> str:
         """List all collections in a vector database."""
         db = get_database_by_name(input.db_name)
-        collections = await db.list_collections()
+        ok, colls_any = await run_with_timeout(
+            db.list_collections(), "list_collections", get_timeout("list_collections")
+        )
+        collections = (
+            cast("list[str]", colls_any) if ok and isinstance(colls_any, list) else []
+        )
 
         if not collections:
             return f"No collections found in vector database '{input.db_name}'"
@@ -930,7 +1281,21 @@ async def create_mcp_server() -> FastMCP:
         db = get_database_by_name(input.db_name)
         # Always delegate to the backend which can surface metadata even if
         # the collection doesn't exist (including chunking config and errors)
-        info = await db.get_collection_info(input.collection_name)
+        if input.collection_name is None:
+            ok, info_any = await run_with_timeout(
+                db.get_collection_info(),
+                "get_collection_info",
+                get_timeout("get_collection_info"),
+            )
+        else:
+            ok, info_any = await run_with_timeout(
+                db.get_collection_info(input.collection_name),
+                "get_collection_info",
+                get_timeout("get_collection_info"),
+            )
+        if not ok:
+            return str(info_any)
+        info: dict[str, Any] = cast("dict[str, Any]", info_any)
 
         return (
             f"Collection information for '{info.get('name')}' in vector database "
@@ -944,7 +1309,16 @@ async def create_mcp_server() -> FastMCP:
             db = get_database_by_name(input.db_name)
 
             # Check if collection already exists
-            existing_collections = await db.list_collections()
+            ok, existing_any = await run_with_timeout(
+                db.list_collections(),
+                "list_collections",
+                get_timeout("list_collections"),
+            )
+            existing_collections = (
+                cast("list[str]", existing_any)
+                if ok and isinstance(existing_any, list)
+                else []
+            )
             if input.collection_name in existing_collections:
                 return f"Error: Collection '{input.collection_name}' already exists in vector database '{input.db_name}'"
 
@@ -958,25 +1332,46 @@ async def create_mcp_server() -> FastMCP:
                     # Get the number of parameters in the setup method
                     param_count = len(db.setup.__code__.co_varnames)
                     # Try to call setup with embedding and chunking_config where supported
-                    if (
-                        param_count > 3
-                    ):  # self, embedding, collection_name, chunking_config
-                        await db.setup(
-                            embedding=input.embedding,
-                            collection_name=input.collection_name,
-                            chunking_config=input.chunking_config,
+                    if (param_count > 3) and (input.chunking_config is not None):
+                        # self, embedding, collection_name, chunking_config
+                        ok, res = await run_with_timeout(
+                            db.setup(
+                                embedding=input.embedding,
+                                collection_name=input.collection_name,
+                                chunking_config=input.chunking_config,
+                            ),
+                            "create_collection",
+                            get_timeout("create_collection"),
                         )
                     elif param_count > 2:  # self, embedding, collection_name
-                        await db.setup(
-                            embedding=input.embedding,
-                            collection_name=input.collection_name,
+                        ok, res = await run_with_timeout(
+                            db.setup(
+                                embedding=input.embedding,
+                                collection_name=input.collection_name,
+                            ),
+                            "create_collection",
+                            get_timeout("create_collection"),
                         )
                     elif param_count > 1:  # self, embedding
-                        await db.setup(embedding=input.embedding)
+                        ok, res = await run_with_timeout(
+                            db.setup(embedding=input.embedding),
+                            "create_collection",
+                            get_timeout("create_collection"),
+                        )
                     else:  # self only
-                        await db.setup()
+                        ok, res = await run_with_timeout(
+                            db.setup(),
+                            "create_collection",
+                            get_timeout("create_collection"),
+                        )
                 else:
-                    await db.setup()
+                    ok, res = await run_with_timeout(
+                        db.setup(),
+                        "create_collection",
+                        get_timeout("create_collection"),
+                    )
+                if not ok:
+                    return str(res)
 
                 # NOTE: Embedding is configured per-collection at creation time.
                 # TODO(deprecate): Remove write-time embedding parameters from write tools in a future release.
@@ -995,24 +1390,36 @@ async def create_mcp_server() -> FastMCP:
         """Query a vector database using the default query agent."""
         try:
             db = get_database_by_name(input.db_name)
-            response = await db.query(
-                input.query, limit=input.limit, collection_name=input.collection_name
+            kwargs: dict[str, Any] = {"limit": input.limit}
+            if input.collection_name is not None:
+                kwargs["collection_name"] = input.collection_name
+            ok, response = await run_with_timeout(
+                db.query(input.query, **kwargs), "query", get_timeout("query")
             )
-            return response
+            if not ok:
+                return str(response)
+            # response is expected to be a string summary
+            return str(response)
         except Exception as e:
             error_msg = f"Failed to query vector database '{input.db_name}': {str(e)}"
             logger.error(error_msg)
             return f"Error: {error_msg}"
 
     @app.tool()
-    async def search(input: SearchInput) -> ToolResult:
+    async def search(input: SearchInput) -> str:
         """Search a vector database using vector similarity search."""
         try:
             db = get_database_by_name(input.db_name)
-            response = await db.search(
-                input.query, limit=input.limit, collection_name=input.collection_name
+            kwargs: dict[str, Any] = {"limit": input.limit}
+            if input.collection_name is not None:
+                kwargs["collection_name"] = input.collection_name
+            ok, response = await run_with_timeout(
+                db.search(input.query, **kwargs), "search", get_timeout("search")
             )
-            return response
+            if not ok:
+                return str(response)
+            # Serialize list of results to JSON string for consistent str tool output
+            return json.dumps(response, indent=2, default=str)
         except Exception as e:
             error_msg = f"Failed to search vector database '{input.db_name}': {str(e)}"
             logger.error(error_msg)
@@ -1030,12 +1437,19 @@ async def create_mcp_server() -> FastMCP:
 
         db_list = []
         for db_name, db in vector_databases.items():
+            ok, count = await run_with_timeout(
+                db.count_documents(),
+                "list_databases/count",
+                get_timeout("list_databases"),
+            )
+            if not ok:
+                count = -1
             db_list.append(
                 {
                     "name": db_name,
                     "type": db.db_type,
                     "collection": db.collection_name,
-                    "document_count": await db.count_documents(),
+                    "document_count": count,
                 }
             )
 
@@ -1099,13 +1513,10 @@ async def run_http_server(host: str = "localhost", port: int = 8030) -> None:
     custom_url = os.getenv("CUSTOM_EMBEDDING_URL")
     if custom_url:
         custom_model = os.getenv("CUSTOM_EMBEDDING_MODEL", "nomic-embed-text")
-        print("🧬 Custom Embedding Endpoint is configured:")
         print(f"   - URL:    {custom_url}")
         print(f"   - Model:  {custom_model}")
     else:
         print("🧬 Using default OpenAI embedding configuration.")
-
-    # Run the MCP server directly
     await mcp_app.run_http_async(host=host, port=port)
 
 

@@ -4,7 +4,7 @@
 import warnings
 import pytest
 import subprocess
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from typing import Any
 
 # Suppress Pydantic deprecation warnings from dependencies
@@ -28,15 +28,18 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.maestro_mcp.server import create_mcp_server, QueryInput
 from fastmcp import FastMCP
+from tests.test_utils import mock_resync_functions
 
 
+@pytest.mark.integration
 class TestQueryIntegration:
     """Integration tests for the query functionality."""
 
     @pytest.fixture
     async def mcp_server(self) -> FastMCP:
         """Create a test MCP server instance."""
-        return await create_mcp_server()
+        with mock_resync_functions():
+            return await create_mcp_server()
 
     @pytest.fixture
     def mock_vector_db(self) -> Mock:
@@ -65,89 +68,101 @@ class TestQueryIntegration:
     @pytest.mark.asyncio
     async def test_query_with_real_vector_db_factory(self) -> None:
         """Test query with real vector database factory."""
-        # Test that the server was created successfully
-        mcp_server = await create_mcp_server()
-        assert mcp_server is not None, "MCP server should be created"
+        # Test that the server was created successfully, but mock the resync functions to prevent hanging
+        with mock_resync_functions():
+            mcp_server = await create_mcp_server()
+            assert mcp_server is not None, "MCP server should be created"
 
-        # Test QueryInput model
-        query_input = QueryInput(db_name="test-db", query="Test query", limit=5)
+            # Test QueryInput model
+            query_input = QueryInput(db_name="test-db", query="Test query", limit=5)
 
-        assert query_input.db_name == "test-db"
-        assert query_input.query == "Test query"
-        assert query_input.limit == 5
+            assert query_input.db_name == "test-db"
+            assert query_input.query == "Test query"
+            assert query_input.limit == 5
 
     @pytest.mark.asyncio
     async def test_query_multiple_databases_integration(self) -> None:
         """Test querying multiple databases in the same session."""
-        # Test that the server was created successfully
-        mcp_server = await create_mcp_server()
-        assert mcp_server is not None, "MCP server should be created"
+        # Test that the server was created successfully, but mock the resync functions to prevent hanging
+        with mock_resync_functions():
+            mcp_server = await create_mcp_server()
+            assert mcp_server is not None, "MCP server should be created"
 
-        # Test QueryInput with different database names
-        query_input1 = QueryInput(db_name="weaviate-db", query="Test query 1", limit=5)
+            # Test QueryInput with different database names
+            query_input1 = QueryInput(
+                db_name="weaviate-db", query="Test query 1", limit=5
+            )
 
-        query_input2 = QueryInput(db_name="milvus-db", query="Test query 2", limit=10)
+            query_input2 = QueryInput(
+                db_name="milvus-db", query="Test query 2", limit=10
+            )
 
-        assert query_input1.db_name == "weaviate-db"
-        assert query_input1.query == "Test query 1"
-        assert query_input1.limit == 5
+            assert query_input1.db_name == "weaviate-db"
+            assert query_input1.query == "Test query 1"
+            assert query_input1.limit == 5
 
-        assert query_input2.db_name == "milvus-db"
-        assert query_input2.query == "Test query 2"
-        assert query_input2.limit == 10
+            assert query_input2.db_name == "milvus-db"
+            assert query_input2.query == "Test query 2"
+            assert query_input2.limit == 10
 
     @pytest.mark.asyncio
     async def test_query_error_handling_integration(self) -> None:
         """Test error handling in the complete query flow."""
-        # Test that the server was created successfully
-        mcp_server = await create_mcp_server()
-        assert mcp_server is not None, "MCP server should be created"
+        # Test that the server was created successfully, but mock the resync functions to prevent hanging
+        with mock_resync_functions():
+            mcp_server = await create_mcp_server()
+            assert mcp_server is not None, "MCP server should be created"
 
-        # Test QueryInput model
-        query_input = QueryInput(db_name="test-db", query="Test query", limit=5)
+            # Test QueryInput model
+            query_input = QueryInput(db_name="test-db", query="Test query", limit=5)
 
-        assert query_input.db_name == "test-db"
-        assert query_input.query == "Test query"
-        assert query_input.limit == 5
+            assert query_input.db_name == "test-db"
+            assert query_input.query == "Test query"
+            assert query_input.limit == 5
 
     @pytest.mark.asyncio
     async def test_query_with_different_limits_integration(self) -> None:
         """Test query with different limit values in integration."""
-        # Test that the server was created successfully
-        mcp_server = await create_mcp_server()
-        assert mcp_server is not None, "MCP server should be created"
+        # Test that the server was created successfully, but mock the resync functions to prevent hanging
+        with mock_resync_functions():
+            mcp_server = await create_mcp_server()
+            assert mcp_server is not None, "MCP server should be created"
 
-        # Test QueryInput with different limit values
-        test_cases = [1, 5, 10, 100]
+            # Test QueryInput with different limit values
+            test_cases = [1, 5, 10, 100]
 
-        for limit in test_cases:
-            query_input = QueryInput(
-                db_name="test-db", query=f"Test query with limit {limit}", limit=limit
-            )
+            for limit in test_cases:
+                query_input = QueryInput(
+                    db_name="test-db",
+                    query=f"Test query with limit {limit}",
+                    limit=limit,
+                )
 
-            assert query_input.db_name == "test-db"
-            assert query_input.query == f"Test query with limit {limit}"
-            assert query_input.limit == limit
+                assert query_input.db_name == "test-db"
+                assert query_input.query == f"Test query with limit {limit}"
+                assert query_input.limit == limit
 
     @pytest.mark.asyncio
     async def test_query_special_characters_integration(self) -> None:
         """Test query with special characters in integration."""
-        mcp_server = await create_mcp_server()
-        assert mcp_server is not None, "MCP server should be created"
+        with mock_resync_functions():
+            mcp_server = await create_mcp_server()
+            assert mcp_server is not None, "MCP server should be created"
 
-        special_queries = [
-            "What's the deal with API endpoints? (v2.0)",
-            "¿Qué tal? 你好世界 🌍",
-            "Special chars: !@#$%^&*()_+-=[]{}|;':\",./<>?",
-            "Unicode: αβγδε ζηθικλμν ξοπρστ υφχψω",
-        ]
-        for query in special_queries:
-            query_input = QueryInput(db_name="test-db", query=query, limit=5)
-            assert query_input.db_name == "test-db"
-            assert query_input.query == query
-            assert query_input.limit == 5
+            special_queries = [
+                "What's the deal with API endpoints? (v2.0)",
+                "¿Qué tal? 你好世界 🌍",
+                "Special chars: !@#$%^&*()_+-=[]{}|;':\",./<>?",
+                "Unicode: αβγδε ζηθικλμν ξοπρστ υφχψω",
+            ]
+            for query in special_queries:
+                query_input = QueryInput(db_name="test-db", query=query, limit=5)
+                assert query_input.db_name == "test-db"
+                assert query_input.query == query
+                assert query_input.limit == 5
 
 
+@pytest.mark.integration
 class TestQueryCLIIntegration:
     """Integration tests for CLI query functionality."""
 
@@ -251,6 +266,7 @@ class TestQueryCLIIntegration:
             pytest.skip("CLI binary not found - CLI may not be built")
 
 
+@pytest.mark.e2e
 class TestQueryEndToEnd:
     """End-to-end tests for the query functionality."""
 
@@ -260,12 +276,13 @@ class TestQueryEndToEnd:
         from src.db.vector_db_base import VectorDatabase
 
         assert hasattr(VectorDatabase, "query")
-        mcp_server = await create_mcp_server()
-        assert mcp_server is not None, "MCP server should be created"
-        query_input = QueryInput(db_name="test-db", query="Test query", limit=5)
-        assert query_input.db_name == "test-db"
-        assert query_input.query == "Test query"
-        assert query_input.limit == 5
+        with mock_resync_functions():
+            mcp_server = await create_mcp_server()
+            assert mcp_server is not None, "MCP server should be created"
+            query_input = QueryInput(db_name="test-db", query="Test query", limit=5)
+            assert query_input.db_name == "test-db"
+            assert query_input.query == "Test query"
+            assert query_input.limit == 5
 
     def test_query_cli_integration_e2e(self) -> None:
         """Test CLI integration end-to-end."""

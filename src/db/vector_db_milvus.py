@@ -78,13 +78,19 @@ class MilvusVectorDatabase(VectorDatabase):
 
             milvus_uri = original_milvus_uri or "milvus_demo.db"
             milvus_token = os.getenv("MILVUS_TOKEN", None)
+            try:
+                timeout = int(os.getenv("MILVUS_TIMEOUT", "10"))
+            except ValueError:
+                timeout = 10
 
             # For local Milvus Lite, try different URI formats
             try:
                 if milvus_token:
-                    self.client = AsyncMilvusClient(uri=milvus_uri, token=milvus_token)
+                    self.client = AsyncMilvusClient(
+                        uri=milvus_uri, token=milvus_token, timeout=timeout
+                    )
                 else:
-                    self.client = AsyncMilvusClient(uri=milvus_uri)
+                    self.client = AsyncMilvusClient(uri=milvus_uri, timeout=timeout)
             except Exception as e:
                 # If the URI format fails, try with file:// prefix
                 if not milvus_uri.startswith(("http://", "https://", "file://")):
@@ -92,10 +98,12 @@ class MilvusVectorDatabase(VectorDatabase):
                     try:
                         if milvus_token:
                             self.client = AsyncMilvusClient(
-                                uri=file_uri, token=milvus_token
+                                uri=file_uri, token=milvus_token, timeout=timeout
                             )
                         else:
-                            self.client = AsyncMilvusClient(uri=file_uri)
+                            self.client = AsyncMilvusClient(
+                                uri=file_uri, timeout=timeout
+                            )
                     except Exception as file_e:
                         # If both attempts fail, create a mock client that warns about connection issues
                         warnings.warn(

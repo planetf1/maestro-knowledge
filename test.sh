@@ -33,58 +33,108 @@ print_help() {
     echo "Usage: ./test.sh [COMMAND]"
     echo ""
     echo "Commands:"
-    echo "  cli         CLI tests (moved to separate repository - AI4quantum/maestro-cli)"
-    echo "  mcp         Run only MCP server tests (Python-based server)"
-    echo "  integration Run only integration tests (CLI + MCP end-to-end)"
-    echo "  all         Run all tests (MCP + Integration)"
-    echo "  help        Show this help message"
+    echo "  ${GREEN}Basic Test Categories:${NC}"
+    echo "  unit        Run only unit tests (fast, isolated, no external deps) (~5s)"
+    echo "  integration Run only integration tests (components working together) (~5s)"
+    echo "  service     Run only service tests (requires external databases) (~20s)"
+    echo "  e2e         Run only end-to-end tests (requires external dependencies)"
+    echo ""
+    echo "  ${GREEN}Combined Test Categories:${NC}"
+    echo "  standard    Run standard tests (unit + integration) - no external deps (~10s)"
+    echo "  all         Run everything (all tests including those with external deps)"
     echo ""
     echo "Examples:"
-    echo "  ./test.sh cli         # CLI tests (redirected to separate repo)"
-    echo "  ./test.sh mcp         # Run only MCP server tests"
-    echo "  ./test.sh integration # Run only integration tests"
-    echo "  ./test.sh all         # Run all tests"
-    echo "  ./test.sh             # Run MCP tests (default)"
+    echo "  ./test.sh unit        # Fast unit tests"
+    echo "  ./test.sh integration # Integration tests"
+    echo "  ./test.sh standard    # Standard tests (unit + integration)"
+    echo "  ./test.sh service     # Service tests (requires external databases)"
+    echo "  ./test.sh all         # Everything (including tests with external deps)"
+    echo "  ./test.sh             # Run standard tests (default)"
     echo ""
     echo "Test Categories:"
-    echo "  CLI Tests:"
+    echo "  ${GREEN}Unit Tests:${NC}"
+    echo "    - Isolated component testing with mocked dependencies"
+    echo "    - Fast execution, no external services required"
+    echo "    - Pure Python logic validation"
+    echo ""
+    echo "  ${GREEN}Integration Tests:${NC}"
+    echo "    - Multiple Python components working together"
+    echo "    - Database factories, chunking systems, etc."
+    echo "    - Still uses mocks for external services"
+    echo ""
+    echo "  ${GREEN}Service Tests:${NC}"
+    echo "    - Tests with mocked external services (Milvus, Weaviate)"
+    echo "    - API contract validation"
+    echo "    - Service integration patterns"
+    echo ""
+    echo "  ${GREEN}End-to-End Python Tests:${NC}"
+    echo "    - Full Python application stack"
+    echo "    - MCP server with vector databases"
+    echo "    - Complete workflow validation"
+    echo ""
+    echo "  ${GREEN}CLI Tests:${NC}"
     echo "    - CLI has been moved to: AI4quantum/maestro-cli"
     echo "    - Please run CLI tests in the maestro-cli repository"
     echo ""
-    echo "  MCP Tests:"
-    echo "    - Python unit tests for MCP server"
-    echo "    - Vector database implementations"
-    echo "    - API endpoint testing"
-    echo "    - Integration with vector databases"
-    echo ""
-    echo "  Integration Tests:"
+    echo "  ${GREEN}System Integration Tests:${NC}"
     echo "    - End-to-end CLI + MCP testing"
     echo "    - Real vector database operations"
-    echo "    - Complete workflow validation"
+    echo "    - Complete system workflow validation"
     echo "    - Requires CLI from AI4quantum/maestro-cli repository"
 }
 
 # Check command line arguments
-case "${1:-mcp}" in
-    "cli")
-        RUN_CLI_TESTS=true
-        RUN_MCP_TESTS=false
+case "${1:-standard}" in  # Default to standard tests
+    "unit")
+        RUN_UNIT_TESTS=true
         RUN_INTEGRATION_TESTS=false
-        ;;
-    "mcp")
+        RUN_SERVICE_TESTS=false
+        RUN_E2E_TESTS=false
         RUN_CLI_TESTS=false
-        RUN_MCP_TESTS=true
-        RUN_INTEGRATION_TESTS=false
+        RUN_SYSTEM_E2E_TESTS=false
         ;;
     "integration")
-        RUN_CLI_TESTS=false
-        RUN_MCP_TESTS=false
+        RUN_UNIT_TESTS=false
         RUN_INTEGRATION_TESTS=true
+        RUN_SERVICE_TESTS=false
+        RUN_E2E_TESTS=false
+        RUN_CLI_TESTS=false
+        RUN_SYSTEM_E2E_TESTS=false
+        ;;
+    "service")
+        RUN_UNIT_TESTS=false
+        RUN_INTEGRATION_TESTS=false
+        RUN_SERVICE_TESTS=true
+        RUN_E2E_TESTS=false
+        RUN_CLI_TESTS=false
+        RUN_SYSTEM_E2E_TESTS=false
+        ;;
+    "e2e")
+        RUN_UNIT_TESTS=false
+        RUN_INTEGRATION_TESTS=false
+        RUN_SERVICE_TESTS=false
+        RUN_E2E_TESTS=true
+        RUN_CLI_TESTS=false
+        RUN_SYSTEM_E2E_TESTS=false
+        ;;
+    "standard")
+        # Standard tests - unit + integration (no external dependencies)
+        # This is what most people would use and what CI should run
+        RUN_UNIT_TESTS=true
+        RUN_INTEGRATION_TESTS=true
+        RUN_SERVICE_TESTS=false
+        RUN_E2E_TESTS=false
+        RUN_CLI_TESTS=false
+        RUN_SYSTEM_E2E_TESTS=false
         ;;
     "all")
-        RUN_CLI_TESTS=true
-        RUN_MCP_TESTS=true
+        # Everything (all tests including those with external dependencies)
+        RUN_UNIT_TESTS=true
         RUN_INTEGRATION_TESTS=true
+        RUN_SERVICE_TESTS=true
+        RUN_E2E_TESTS=true
+        RUN_CLI_TESTS=true
+        RUN_SYSTEM_E2E_TESTS=true
         ;;
     "help"|"-h"|"--help")
         print_help
@@ -106,9 +156,69 @@ if [ "$RUN_CLI_TESTS" = true ]; then
     print_warning "Skipping CLI tests in this repository"
 fi
 
-# Run MCP tests if requested
+# Run unit tests if requested
+if [ "$RUN_UNIT_TESTS" = true ]; then
+    print_header "Running Unit Tests..."
+    
+    # Add some test .env variables
+    export OPENAI_API_KEY=fake-openai-key
+    export WEAVIATE_API_KEY=fake-weaviate-key
+    export WEAVIATE_URL=fake-weaviate-url.com
+
+    # Run unit tests only
+    PYTHONWARNINGS="ignore:PydanticDeprecatedSince20" PYTHONPATH=src uv run pytest -m unit -v
+    
+    print_status "✓ Unit tests completed"
+fi
+
+# Run integration tests if requested
+if [ "$RUN_INTEGRATION_TESTS" = true ]; then
+    print_header "Running Integration Tests..."
+    
+    # Add some test .env variables
+    export OPENAI_API_KEY=fake-openai-key
+    export WEAVIATE_API_KEY=fake-weaviate-key
+    export WEAVIATE_URL=fake-weaviate-url.com
+
+    # Run integration tests only
+    PYTHONWARNINGS="ignore:PydanticDeprecatedSince20" PYTHONPATH=src uv run pytest -m integration -v
+    
+    print_status "✓ Integration tests completed"
+fi
+
+# Run service tests if requested
+if [ "$RUN_SERVICE_TESTS" = true ]; then
+    print_header "Running Service Tests..."
+    
+    # Add some test .env variables
+    export OPENAI_API_KEY=fake-openai-key
+    export WEAVIATE_API_KEY=fake-weaviate-key
+    export WEAVIATE_URL=fake-weaviate-url.com
+
+    # Run service tests only
+    PYTHONWARNINGS="ignore:PydanticDeprecatedSince20" PYTHONPATH=src uv run pytest -m service -v
+    
+    print_status "✓ Service tests completed"
+fi
+
+# Run end-to-end Python tests if requested
+if [ "$RUN_E2E_TESTS" = true ]; then
+    print_header "Running End-to-End Python Tests..."
+    
+    # Add some test .env variables
+    export OPENAI_API_KEY=fake-openai-key
+    export WEAVIATE_API_KEY=fake-weaviate-key
+    export WEAVIATE_URL=fake-weaviate-url.com
+
+    # Run e2e tests only
+    PYTHONWARNINGS="ignore:PydanticDeprecatedSince20" PYTHONPATH=src uv run pytest -m e2e -v
+    
+    print_status "✓ End-to-end Python tests completed"
+fi
+
+# Run MCP tests if requested (legacy - all Python tests)
 if [ "$RUN_MCP_TESTS" = true ]; then
-    print_header "Running MCP Server Tests..."
+    print_header "Running MCP Server Tests (All Python Tests)..."
     
     # Add some test .env variables
     export OPENAI_API_KEY=fake-openai-key
@@ -121,9 +231,9 @@ if [ "$RUN_MCP_TESTS" = true ]; then
     print_header "MCP Server Tests Completed Successfully! 🎉"
 fi
 
-# Run integration tests if requested
-if [ "$RUN_INTEGRATION_TESTS" = true ]; then
-    print_header "Running Integration Tests..."
+# Run system integration tests if requested
+if [ "$RUN_SYSTEM_E2E_TESTS" = true ]; then
+    print_header "Running System Integration Tests..."
     
     # Check if CLI is available
     CLI_PATH=""
@@ -173,7 +283,35 @@ if [ "$RUN_INTEGRATION_TESTS" = true ]; then
         print_warning "tools/test-integration.sh not found, skipping integration tests"
     fi
     
-    print_header "Integration Tests Completed Successfully! 🎉"
+    print_header "System Integration Tests Completed Successfully! 🎉"
 fi
 
-print_status "All requested tests completed!" 
+# Print summary of what was run
+TESTS_RUN=""
+if [ "$RUN_UNIT_TESTS" = true ]; then
+    TESTS_RUN="$TESTS_RUN Unit"
+fi
+if [ "$RUN_INTEGRATION_TESTS" = true ]; then
+    TESTS_RUN="$TESTS_RUN Integration"
+fi
+if [ "$RUN_SERVICE_TESTS" = true ]; then
+    TESTS_RUN="$TESTS_RUN Service"
+fi
+if [ "$RUN_E2E_TESTS" = true ]; then
+    TESTS_RUN="$TESTS_RUN E2E-Python"
+fi
+if [ "$RUN_MCP_TESTS" = true ]; then
+    TESTS_RUN="$TESTS_RUN MCP-All-Python"
+fi
+if [ "$RUN_CLI_TESTS" = true ]; then
+    TESTS_RUN="$TESTS_RUN CLI"
+fi
+if [ "$RUN_SYSTEM_E2E_TESTS" = true ]; then
+    TESTS_RUN="$TESTS_RUN System-E2E"
+fi
+
+if [ -n "$TESTS_RUN" ]; then
+    print_status "✅ All requested tests completed successfully:$TESTS_RUN"
+else
+    print_warning "No tests were run"
+fi 

@@ -26,6 +26,7 @@ import pytest
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+@pytest.mark.integration
 class TestIntegrationExamples:
     """Integration tests that run the example files to ensure they work correctly."""
 

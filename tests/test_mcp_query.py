@@ -29,15 +29,18 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.maestro_mcp.server import create_mcp_server, QueryInput
 from fastmcp import FastMCP
+from tests.test_utils import mock_resync_functions
 
 
+@pytest.mark.unit
 class TestMCPQueryFunctionality:
     """Test cases for the MCP server query functionality."""
 
     @pytest_asyncio.fixture
     async def mcp_server(self) -> FastMCP:
         """Create a test MCP server instance."""
-        return await create_mcp_server()
+        with mock_resync_functions():
+            return await create_mcp_server()
 
     @pytest.fixture
     def mock_vector_db(self) -> Mock:
@@ -71,10 +74,10 @@ class TestMCPQueryFunctionality:
         """Test QueryInput model validation."""
         # Test missing required fields
         with pytest.raises(ValueError):
-            QueryInput(query="test")
+            QueryInput(query="test")  # type: ignore[call-arg]
 
         with pytest.raises(ValueError):
-            QueryInput(db_name="test-db")
+            QueryInput(db_name="test-db")  # type: ignore[call-arg]
 
     @pytest.mark.asyncio
     async def test_query_tool_exists(self, mcp_server: FastMCP) -> None:
@@ -186,39 +189,42 @@ class TestMCPQueryFunctionality:
         assert query_input.limit == 5
 
 
+@pytest.mark.integration
 class TestMCPQueryIntegration:
     """Integration tests for MCP query functionality."""
 
     @pytest.mark.asyncio
     async def test_query_tool_with_real_vector_db(self) -> None:
         """Test query tool with a real vector database instance."""
-        # Test that the server was created successfully
-        mcp_server = await create_mcp_server()
-        assert mcp_server is not None, "MCP server should be created"
+        # Test that the server was created successfully, but mock the resync functions to prevent hanging
+        with mock_resync_functions():
+            mcp_server = await create_mcp_server()
+            assert mcp_server is not None, "MCP server should be created"
 
-        # Test QueryInput model
-        query_input = QueryInput(db_name="test-db", query="Test query", limit=5)
+            # Test QueryInput model
+            query_input = QueryInput(db_name="test-db", query="Test query", limit=5)
 
-        assert query_input.db_name == "test-db"
-        assert query_input.query == "Test query"
-        assert query_input.limit == 5
+            assert query_input.db_name == "test-db"
+            assert query_input.query == "Test query"
+            assert query_input.limit == 5
 
     @pytest.mark.asyncio
     async def test_query_tool_multiple_databases(self) -> None:
         """Test query tool with multiple databases."""
-        # Test that the server was created successfully
-        mcp_server = await create_mcp_server()
-        assert mcp_server is not None, "MCP server should be created"
+        # Test that the server was created successfully, but mock the resync functions to prevent hanging
+        with mock_resync_functions():
+            mcp_server = await create_mcp_server()
+            assert mcp_server is not None, "MCP server should be created"
 
-        # Test QueryInput with different database names
-        query_input1 = QueryInput(db_name="db1", query="Test query 1", limit=5)
+            # Test QueryInput with different database names
+            query_input1 = QueryInput(db_name="db1", query="Test query 1", limit=5)
 
-        query_input2 = QueryInput(db_name="db2", query="Test query 2", limit=10)
+            query_input2 = QueryInput(db_name="db2", query="Test query 2", limit=10)
 
-        assert query_input1.db_name == "db1"
-        assert query_input1.query == "Test query 1"
-        assert query_input1.limit == 5
+            assert query_input1.db_name == "db1"
+            assert query_input1.query == "Test query 1"
+            assert query_input1.limit == 5
 
-        assert query_input2.db_name == "db2"
-        assert query_input2.query == "Test query 2"
-        assert query_input2.limit == 10
+            assert query_input2.db_name == "db2"
+            assert query_input2.query == "Test query 2"
+            assert query_input2.limit == 10

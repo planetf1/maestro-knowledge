@@ -6,8 +6,10 @@ sys.path.append(
 )
 
 from src.chunking import ChunkingConfig, chunk_text
+import pytest
 
 
+@pytest.mark.unit
 def test_sentence_chunk_simple() -> None:
     text = "This is one sentence. This is another! And a third?"
     cfg = ChunkingConfig(
@@ -20,6 +22,7 @@ def test_sentence_chunk_simple() -> None:
     assert seqs == sorted(seqs)
 
 
+@pytest.mark.unit
 def test_sentence_split_long_sentence() -> None:
     text = "A" * 1200
     cfg = ChunkingConfig(
@@ -31,6 +34,7 @@ def test_sentence_split_long_sentence() -> None:
     assert all("total" in c for c in res)
 
 
+@pytest.mark.unit
 def test_sentence_overlap_validation() -> None:
     text = "a" * 100
     # overlap > chunk_size should raise for Sentence
@@ -73,6 +77,7 @@ def test_sentence_overlap_validation() -> None:
     assert starts == [0, 10, 20]
 
 
+@pytest.mark.unit
 def test_sentence_empty_text_returns_no_chunks() -> None:
     cfg = ChunkingConfig(
         strategy="Sentence", parameters={"chunk_size": 10, "overlap": 0}
@@ -81,6 +86,7 @@ def test_sentence_empty_text_returns_no_chunks() -> None:
     assert res == []
 
 
+@pytest.mark.unit
 def test_sentence_packs_sentences_and_is_contiguous() -> None:
     text = "A. B. C. D. E. F."
     cfg = ChunkingConfig(
@@ -94,6 +100,7 @@ def test_sentence_packs_sentences_and_is_contiguous() -> None:
         assert res[i - 1]["offset_end"] == res[i]["offset_start"]
 
 
+@pytest.mark.unit
 def test_sentence_split_long_sentence_with_overlap_windows() -> None:
     # One long sentence should be split with the requested overlap
     text = "X" * 30
@@ -110,6 +117,7 @@ def test_sentence_split_long_sentence_with_overlap_windows() -> None:
     assert all(c["total"] == len(res) for c in res)
 
 
+@pytest.mark.unit
 def test_sentence_mixed_punctuation_and_newlines() -> None:
     text = (
         "One line.\nSecond line!\nThird line? Fourth line without punctuation\nFifth."
@@ -131,6 +139,7 @@ def test_sentence_mixed_punctuation_and_newlines() -> None:
     assert boundary_count >= (non_final // 2)
 
 
+@pytest.mark.unit
 def test_sentence_exact_fit_boundary() -> None:
     # Two sentences exactly fill chunk_size — they should be packed together
     text = "abcd.efg."
