@@ -365,7 +365,7 @@ async def run_document_retrieval_tests(client: Client, backend_name: str) -> Non
     )
     assert hasattr(res, "data")
 
-    # Create collection 
+    # Create collection
     res = await client.call_tool(
         "create_collection",
         {
@@ -664,36 +664,42 @@ async def run_resync_operations_tests(client: Client, backend_name: str) -> None
     )
 
 
-async def run_health_check_tests(client: Client, backend_name: str, server_port: str = None) -> None:
+async def run_health_check_tests(
+    client: Client, backend_name: str, server_port: str = None
+) -> None:
     """Test health endpoint functionality."""
     import httpx
-    
+
     # Use provided server port or try to extract from client base URL, or use default
     if server_port:
         health_url = f"http://localhost:{server_port}/health"
     else:
         # Try to extract port from client base URL if available
         import os
+
         mcp_port = os.getenv("E2E_MCP_PORT", "8030")
         health_url = f"http://localhost:{mcp_port}/health"
-    
+
     try:
         async with httpx.AsyncClient() as http_client:
             response = await http_client.get(health_url)
-            assert response.status_code == 200, f"Health check failed with status {response.status_code}"
-            
+            assert response.status_code == 200, (
+                f"Health check failed with status {response.status_code}"
+            )
+
             health_text = response.text
             assert health_text, "Health check returned empty response"
-            
+
             # Health response should contain database information or "No vector databases" message
             assert (
-                "vector databases" in health_text.lower() or
-                "Available vector databases" in health_text
+                "vector databases" in health_text.lower()
+                or "Available vector databases" in health_text
             ), f"Unexpected health response: {health_text}"
-            
+
     except Exception as e:
         # Health endpoint test is informational - don't fail the entire test suite
         import pytest
+
         pytest.skip(f"Health endpoint test skipped due to connection issue: {e}")
 
 
