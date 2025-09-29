@@ -1,20 +1,14 @@
 name: E2E Tests
 
-# Current Status: 6/9 Milvus tests passing, 8/8 Weaviate tests passing
+# Current Status: 9/9 Milvus tests passing, 8/8 Weaviate tests passing
 # 
-# Known Issues (TODO):
-# - test_milvus_document_operations: Documents not indexed properly - timing issues
-# - test_milvus_collection_specific_operations: Connection timeouts and ReadTimeout errors  
-# - test_milvus_resync_operations: Client connection timeout during initialization
-#
-# These 3 failing tests are currently marked as @pytest.mark.skip with detailed reasons
+# Both test suites now use shared backend-agnostic test functions from tests/e2e/test_functions.py
+# This ensures consistent test coverage and behavior across all vector database backends.
 # 
-# TODO List for Full E2E Coverage:
-# 1. Investigate Milvus document indexing timing - may need longer waits or different indexing strategy
-# 2. Fix connection timeout issues in collection-specific operations - possible async context management problem
-# 3. Resolve client initialization timeout in resync operations - may need longer initialization timeout
-# 4. Consider adding retry mechanisms for CI environment variability
-# 5. Add performance benchmarking once all tests are stable
+# Architecture:
+# - Milvus: 9 tests (includes document_retrieval_operations)
+# - Weaviate: 8 tests (document_retrieval_operations excluded due to setup_database tool compatibility)
+# - Both use common test logic with backend-specific configuration
 
 on:
   push:
@@ -209,7 +203,7 @@ jobs:
         echo "  CUSTOM_EMBEDDING_MODEL=${CUSTOM_EMBEDDING_MODEL}"
         echo "  E2E_INDEX_WAIT_TIME=${E2E_INDEX_WAIT_TIME}"
         echo "  E2E_CLIENT_TIMEOUT=${E2E_CLIENT_TIMEOUT}"
-        echo "Expected: 6 passing, 3 skipped (known issues marked with TODO)"
+        echo "Expected: 9 passing, 0 skipped (all tests using shared backend-agnostic functions)"
         timeout 1800 uv run pytest tests/e2e/test_mcp_milvus_e2e.py -v --tb=short -s -ra -m "e2e"
 
     - name: Upload test results
@@ -342,7 +336,7 @@ jobs:
         PYTHONPATH: src
       run: |
         echo "Running Weaviate E2E tests..."
-        echo "Expected: 8 passing, 0 skipped (all tests working)"
+        echo "Expected: 8 passing, 0 skipped (all tests using shared backend-agnostic functions)"
         timeout 600 uv run pytest tests/e2e/test_mcp_weaviate_e2e.py -v --tb=short -m "e2e"
 
     - name: Upload test results
