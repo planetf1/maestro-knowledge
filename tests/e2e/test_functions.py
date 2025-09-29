@@ -62,9 +62,11 @@ async def run_database_management_tests(client: Client, backend_name: str) -> No
     res = await client.call_tool("list_databases")
     assert hasattr(res, "data"), f"list_databases failed: {res}"
     # Verify our database appears in the list
-    assert db_name in str(res.data), f"Database {db_name} not found in list_databases result"
+    assert db_name in str(res.data), (
+        f"Database {db_name} not found in list_databases result"
+    )
 
-    # Test get_database_info - HIGH PRIORITY addition  
+    # Test get_database_info - HIGH PRIORITY addition
     res = await client.call_tool("get_database_info", {"input": {"db_name": db_name}})
     assert hasattr(res, "data"), f"get_database_info failed: {res}"
 
@@ -591,9 +593,7 @@ async def run_collection_specific_tests(client: Client, backend_name: str) -> No
             },
         )
         if not hasattr(res, "data"):
-            pytest.fail(
-                f"delete_collection failed for {backend_name}: {res}"
-            )
+            pytest.fail(f"delete_collection failed for {backend_name}: {res}")
 
         # Verify collection was deleted by checking it no longer appears in list
         res = await client.call_tool(

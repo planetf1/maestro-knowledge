@@ -96,7 +96,6 @@ async def test_configuration_discovery(mcp_http_server: dict) -> None:
         await run_configuration_discovery_tests(client, BACKEND_NAME)
 
 
-
 @pytest.mark.asyncio
 async def test_bulk_operations(mcp_http_server: dict) -> None:
     from fastmcp import Client
