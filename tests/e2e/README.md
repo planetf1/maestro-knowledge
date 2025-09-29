@@ -55,6 +55,20 @@ The MCP E2E tests validate the complete integration between:
 2. **Python Environment**: Python 3.11+ with uv
 3. **Network Ports**: 8080 (Weaviate), 19530 (Milvus), 11434 (Ollama), 2379 (etcd), 9000 (MinIO)
 
+### ⚠️ Important: Pytest Configuration
+
+**E2E tests require the `-m "e2e"` flag** because the default pytest configuration excludes them:
+
+```bash
+# ❌ This will select 0 tests (deselected by default config):
+uv run pytest tests/e2e/test_mcp_weaviate_e2e.py -v
+
+# ✅ This works (includes E2E marker):
+uv run pytest tests/e2e/test_mcp_weaviate_e2e.py -v -m "e2e"
+```
+
+The `pyproject.toml` has `addopts = "-m 'unit or integration'"` which excludes E2E tests by default to keep regular test runs fast. Always include `-m "e2e"` when running E2E tests manually.
+
 ### Local Testing
 
 #### Using the MCP E2E Script (Recommended)
@@ -115,13 +129,13 @@ CUSTOM_EMBEDDING_URL=http://localhost:11434/api/embeddings \
 CUSTOM_EMBEDDING_MODEL=nomic-embed-text \
 CUSTOM_EMBEDDING_VECTORSIZE=768 \
 E2E_BACKEND=milvus E2E_MILVUS=1 \
-uv run pytest tests/e2e/test_mcp_milvus_e2e.py -v
+uv run pytest tests/e2e/test_mcp_milvus_e2e.py -v -m "e2e"
 
 # Weaviate tests  
 WEAVIATE_URL=http://localhost:8080 \
 WEAVIATE_API_KEY=test-key \
 E2E_BACKEND=weaviate E2E_WEAVIATE=1 \
-uv run pytest tests/e2e/test_mcp_weaviate_e2e.py -v
+uv run pytest tests/e2e/test_mcp_weaviate_e2e.py -v -m "e2e"
 ```
 
 ### CI/CD Testing
@@ -230,7 +244,7 @@ Tests implement robust error handling:
 
 Enable verbose logging:
 ```bash
-LOG_LEVEL=debug VDB_LOG_LEVEL=debug uv run pytest tests/e2e/ -v -s --tb=long
+LOG_LEVEL=debug VDB_LOG_LEVEL=debug uv run pytest tests/e2e/ -v -s --tb=long -m "e2e"
 ```
 
 Check service health:

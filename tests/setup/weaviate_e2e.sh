@@ -96,7 +96,7 @@ echo "WEAVIATE_URL=http://localhost:8080 \\"
 echo "WEAVIATE_API_KEY=test-key \\"
 echo "E2E_BACKEND=weaviate \\"
 echo "E2E_WEAVIATE=1 \\"
-echo "uv run pytest tests/e2e/test_mcp_weaviate_e2e.py -v"
+echo "uv run pytest tests/e2e/test_mcp_weaviate_e2e.py -v -m \"e2e\""
 
 echo ""
 echo "📋 Container Management Commands:"

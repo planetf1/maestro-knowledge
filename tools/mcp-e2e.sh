@@ -171,7 +171,7 @@ run_milvus_tests() {
     export E2E_MCP_PORT="8030"
     export PYTHONPATH="src"
     
-    if timeout 600 uv run pytest tests/e2e/test_mcp_milvus_e2e.py -v --tb=short; then
+    if timeout 600 uv run pytest tests/e2e/test_mcp_milvus_e2e.py -v --tb=short -m "e2e"; then
         success "Milvus MCP E2E tests passed!"
     else
         error "Milvus MCP E2E tests failed!"
@@ -192,7 +192,7 @@ run_weaviate_tests() {
     export E2E_MCP_PORT="8031"
     export PYTHONPATH="src"
     
-    if timeout 600 uv run pytest tests/e2e/test_mcp_weaviate_e2e.py -v --tb=short; then
+    if timeout 600 uv run pytest tests/e2e/test_mcp_weaviate_e2e.py -v --tb=short -m "e2e"; then
         success "Weaviate MCP E2E tests passed!"
     else
         error "Weaviate MCP E2E tests failed!"
