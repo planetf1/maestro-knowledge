@@ -41,9 +41,8 @@ For Milvus E2E tests:
 ## Test Categories
 
 - **Unit**: Fast tests with no external dependencies
-- **Integration**: Component interaction tests with mocked externals
-- **Service**: Tests requiring real databases (Milvus/Weaviate)
-- **E2E**: Full end-to-end workflow tests
+- **Integration**: Component interaction tests with mocked externals  
+- **E2E**: Full end-to-end workflow tests with real databases
 
 Use pytest markers to run specific categories:
 ```bash

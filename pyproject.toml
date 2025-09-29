@@ -57,8 +57,7 @@ addopts = "-m 'unit or integration'"
 # Custom pytest markers
 markers = [
     "unit: Unit tests - fast, no external dependencies",
-    "integration: Integration tests - components working together with mocked externals",
-    "service: Service integration tests - requires real databases running",
+    "integration: Integration tests - components working together with mocked externals", 
     "e2e: End-to-end tests - full environment required",
     "slow: Tests that take >5 seconds",
     "requires_milvus: Tests that require Milvus database running",

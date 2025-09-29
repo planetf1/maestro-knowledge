@@ -5,10 +5,10 @@ This directory contains end-to-end tests for the Maestro Knowledge MCP (Model Co
 ## 🎯 **100% MCP API Test Coverage Achieved!**
 
 Our E2E testing framework now provides **complete coverage of all 26 MCP tools** across both vector database backends:
-- **Milvus**: 9/9 tests passing ✅ 
-- **Weaviate**: 9/9 tests passing ✅
-- **Total**: 18/18 tests passing across both backends
-- **API Coverage**: 26/26 MCP tools tested (100%)
+- **Milvus**: 10/10 tests passing ✅ (including health endpoint)
+- **Weaviate**: 10/10 tests passing ✅ (including health endpoint) 
+- **Total**: 20/20 tests passing across both backends
+- **API Coverage**: 26/26 MCP tools tested (100%) + Health endpoint
 
 This ensures robust validation of all MCP server functionality with comprehensive backend compatibility testing.
 
@@ -24,8 +24,8 @@ The MCP E2E tests validate the complete integration between:
 ## Test Structure
 
 ### Test Files
-- `test_mcp_milvus_e2e.py` - Milvus backend tests (**9 tests** - 100% MCP API coverage)
-- `test_mcp_weaviate_e2e.py` - Weaviate backend tests (**9 tests** - 100% MCP API coverage)
+- `test_mcp_milvus_e2e.py` - Milvus backend tests (**10 tests** - 100% MCP API coverage + Health endpoint)
+- `test_mcp_weaviate_e2e.py` - Weaviate backend tests (**10 tests** - 100% MCP API coverage + Health endpoint)
 - `test_mcp_weaviate_simple.py` - Simplified Weaviate tests (3 tests)
 - `test_functions.py` - Shared test logic for backend-agnostic testing
 - `test_functions_simple.py` - Simplified shared test functions
@@ -73,7 +73,7 @@ The MCP E2E tests validate the complete integration between:
 
 ### Test Categories by Function
 
-**9 Test Functions per Backend:**
+**10 Test Functions per Backend:**
 1. `test_database_management` - Database lifecycle and management
 2. `test_document_operations` - Document CRUD operations
 3. `test_query_operations` - Search and query functionality
@@ -82,7 +82,8 @@ The MCP E2E tests validate the complete integration between:
 6. `test_bulk_operations` - Bulk document operations
 7. `test_collection_specific_operations` - Collection-scoped operations
 8. `test_resync_operations` - Database synchronization
-9. `test_full_flow` - Complete workflow integration testing
+9. `test_health_check` - Health endpoint validation
+10. `test_full_flow` - Complete workflow integration testing
 
 ## Running Tests
 

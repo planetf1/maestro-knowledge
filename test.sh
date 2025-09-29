@@ -36,7 +36,6 @@ print_help() {
     echo "  ${GREEN}Basic Test Categories:${NC}"
     echo "  unit        Run only unit tests (fast, isolated, no external deps) (~5s)"
     echo "  integration Run only integration tests (components working together) (~5s)"
-    echo "  service     Run only service tests (requires external databases) (~20s)"
     echo "  e2e         Run only end-to-end tests (requires external dependencies)"
     echo ""
     echo "  ${GREEN}Combined Test Categories:${NC}"
@@ -47,7 +46,7 @@ print_help() {
     echo "  ./test.sh unit        # Fast unit tests"
     echo "  ./test.sh integration # Integration tests"
     echo "  ./test.sh standard    # Standard tests (unit + integration)"
-    echo "  ./test.sh service     # Service tests (requires external databases)"
+    echo "  ./test.sh e2e         # End-to-end tests (requires external dependencies)"
     echo "  ./test.sh all         # Everything (including tests with external deps)"
     echo "  ./test.sh             # Run standard tests (default)"
     echo ""
@@ -62,11 +61,7 @@ print_help() {
     echo "    - Database factories, chunking systems, etc."
     echo "    - Still uses mocks for external services"
     echo ""
-    echo "  ${GREEN}Service Tests:${NC}"
-    echo "    - Tests with mocked external services (Milvus, Weaviate)"
-    echo "    - API contract validation"
-    echo "    - Service integration patterns"
-    echo ""
+
     echo "  ${GREEN}End-to-End Python Tests:${NC}"
     echo "    - Full Python application stack"
     echo "    - MCP server with vector databases"
@@ -88,7 +83,6 @@ case "${1:-standard}" in  # Default to standard tests
     "unit")
         RUN_UNIT_TESTS=true
         RUN_INTEGRATION_TESTS=false
-        RUN_SERVICE_TESTS=false
         RUN_E2E_TESTS=false
         RUN_CLI_TESTS=false
         RUN_SYSTEM_E2E_TESTS=false
@@ -96,24 +90,19 @@ case "${1:-standard}" in  # Default to standard tests
     "integration")
         RUN_UNIT_TESTS=false
         RUN_INTEGRATION_TESTS=true
-        RUN_SERVICE_TESTS=false
         RUN_E2E_TESTS=false
         RUN_CLI_TESTS=false
         RUN_SYSTEM_E2E_TESTS=false
         ;;
     "service")
-        RUN_UNIT_TESTS=false
-        RUN_INTEGRATION_TESTS=false
-        RUN_SERVICE_TESTS=true
-        RUN_E2E_TESTS=false
-        RUN_CLI_TESTS=false
-        RUN_SYSTEM_E2E_TESTS=false
+        print_error "Service tests have been removed - they provided less coverage than E2E tests"
+        print_status "Use './test.sh e2e' for comprehensive backend testing instead"
+        exit 1
         ;;
     "e2e")
-        RUN_UNIT_TESTS=false
+        RUN_UNIT_TESTS=true
         RUN_INTEGRATION_TESTS=false
-        RUN_SERVICE_TESTS=false
-        RUN_E2E_TESTS=true
+        RUN_E2E_TESTS=false
         RUN_CLI_TESTS=false
         RUN_SYSTEM_E2E_TESTS=false
         ;;
@@ -122,7 +111,6 @@ case "${1:-standard}" in  # Default to standard tests
         # This is what most people would use and what CI should run
         RUN_UNIT_TESTS=true
         RUN_INTEGRATION_TESTS=true
-        RUN_SERVICE_TESTS=false
         RUN_E2E_TESTS=false
         RUN_CLI_TESTS=false
         RUN_SYSTEM_E2E_TESTS=false
@@ -131,7 +119,6 @@ case "${1:-standard}" in  # Default to standard tests
         # Everything (all tests including those with external dependencies)
         RUN_UNIT_TESTS=true
         RUN_INTEGRATION_TESTS=true
-        RUN_SERVICE_TESTS=true
         RUN_E2E_TESTS=true
         RUN_CLI_TESTS=true
         RUN_SYSTEM_E2E_TESTS=true
@@ -186,20 +173,7 @@ if [ "$RUN_INTEGRATION_TESTS" = true ]; then
     print_status "✓ Integration tests completed"
 fi
 
-# Run service tests if requested
-if [ "$RUN_SERVICE_TESTS" = true ]; then
-    print_header "Running Service Tests..."
-    
-    # Add some test .env variables
-    export OPENAI_API_KEY=fake-openai-key
-    export WEAVIATE_API_KEY=fake-weaviate-key
-    export WEAVIATE_URL=fake-weaviate-url.com
-
-    # Run service tests only
-    PYTHONWARNINGS="ignore:PydanticDeprecatedSince20" PYTHONPATH=src uv run pytest -m service -v
-    
-    print_status "✓ Service tests completed"
-fi
+# Service tests have been removed - E2E tests provide superior coverage
 
 # Run end-to-end Python tests if requested
 if [ "$RUN_E2E_TESTS" = true ]; then
@@ -294,9 +268,7 @@ fi
 if [ "$RUN_INTEGRATION_TESTS" = true ]; then
     TESTS_RUN="$TESTS_RUN Integration"
 fi
-if [ "$RUN_SERVICE_TESTS" = true ]; then
-    TESTS_RUN="$TESTS_RUN Service"
-fi
+# Service tests removed - use E2E tests for comprehensive backend testing
 if [ "$RUN_E2E_TESTS" = true ]; then
     TESTS_RUN="$TESTS_RUN E2E-Python"
 fi
