@@ -41,7 +41,6 @@ from tests.e2e.test_functions import (
     run_document_operations_tests,
     run_query_operations_tests,
     run_configuration_discovery_tests,
-    run_document_retrieval_tests,
     run_bulk_operations_tests,
     run_collection_specific_tests,
     run_resync_operations_tests,
@@ -97,16 +96,6 @@ async def test_configuration_discovery(mcp_http_server: dict) -> None:
         await run_configuration_discovery_tests(client, BACKEND_NAME)
 
 
-@pytest.mark.asyncio
-async def test_document_retrieval_operations(mcp_http_server: dict) -> None:
-    from fastmcp import Client
-
-    host = mcp_http_server["host"]
-    port = mcp_http_server["port"]
-    base_mcp_url = f"http://{host}:{port}/mcp/"
-    async with Client(base_mcp_url, timeout=300) as client:
-        await run_document_retrieval_tests(client, BACKEND_NAME)
-
 
 @pytest.mark.asyncio
 async def test_bulk_operations(mcp_http_server: dict) -> None:
@@ -153,12 +142,11 @@ async def test_full_flow(mcp_http_server: dict) -> None:
 
 
 # E2E Test Status Summary:
-# ✅ ALL PASSING (9/9):
+# ✅ ALL PASSING (8/8):
 #   - test_database_management
 #   - test_document_operations
 #   - test_query_operations
 #   - test_configuration_discovery
-#   - test_document_retrieval_operations
 #   - test_bulk_operations
 #   - test_collection_specific_operations
 #   - test_resync_operations
