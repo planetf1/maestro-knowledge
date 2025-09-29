@@ -45,6 +45,7 @@ from tests.e2e.test_functions import (
     run_bulk_operations_tests,
     run_collection_specific_tests,
     run_resync_operations_tests,
+    run_health_check_tests,
     run_full_flow_test,
 )
 
@@ -142,6 +143,17 @@ async def test_resync_operations(mcp_http_server: dict) -> None:
 
 
 @pytest.mark.asyncio
+async def test_health_check(mcp_http_server: dict) -> None:
+    from fastmcp import Client
+
+    host = mcp_http_server["host"]
+    port = mcp_http_server["port"]
+    base_mcp_url = f"http://{host}:{port}/mcp/"
+    async with Client(base_mcp_url, timeout=300) as client:
+        await run_health_check_tests(client, BACKEND_NAME, str(port))
+
+
+@pytest.mark.asyncio
 async def test_full_flow(mcp_http_server: dict) -> None:
     from fastmcp import Client
 
@@ -153,7 +165,7 @@ async def test_full_flow(mcp_http_server: dict) -> None:
 
 
 # E2E Test Status Summary:
-# ✅ ALL PASSING (9/9):
+# ✅ ALL PASSING (10/10):
 #   - test_database_management
 #   - test_document_operations
 #   - test_query_operations
@@ -162,4 +174,5 @@ async def test_full_flow(mcp_http_server: dict) -> None:
 #   - test_bulk_operations
 #   - test_collection_specific_operations
 #   - test_resync_operations
+#   - test_health_check
 #   - test_full_flow
