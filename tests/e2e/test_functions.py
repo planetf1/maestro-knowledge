@@ -338,13 +338,39 @@ async def run_document_retrieval_tests(client: Client, backend_name: str) -> Non
     config = get_backend_config(backend_name)
     db_name = get_db_name_for_test(backend_name, "Doc_Retrieval")
 
-    # Test setup_database (alternative to create_vector_database_tool)
+    # First create the database (setup_database requires database to exist first)
+    res = await client.call_tool(
+        "create_vector_database_tool",
+        {
+            "input": {
+                "db_name": db_name,
+                "db_type": config["db_type"],
+                "collection_name": f"{db_name}_Collection",
+            }
+        },
+    )
+    assert hasattr(res, "data")
+
+    # Test setup_database (for existing database configuration)
     res = await client.call_tool(
         "setup_database",
         {
             "input": {
                 "db_name": db_name,
                 "db_type": config["db_type"],
+                "collection_name": f"{db_name}_Collection",
+                "embedding": "default",
+            }
+        },
+    )
+    assert hasattr(res, "data")
+
+    # Create collection 
+    res = await client.call_tool(
+        "create_collection",
+        {
+            "input": {
+                "db_name": db_name,
                 "collection_name": f"{db_name}_Collection",
                 "embedding": "default",
             }
