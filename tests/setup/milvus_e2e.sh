@@ -25,16 +25,18 @@ echo "📦 Starting Milvus container (ARM64 compatible)..."
 $CONTAINER_CMD stop milvus-simple 2>/dev/null || true
 $CONTAINER_CMD rm milvus-simple 2>/dev/null || true
 
-# Start Milvus with ARM64 compatible image
+# Start Milvus with ARM64 compatible image and proper standalone configuration
 $CONTAINER_CMD run -d \
   --name milvus-simple \
   -p 19530:19530 \
   -p 9091:9091 \
   -v milvus-data:/var/lib/milvus \
-  -e ETCD_AUTO_COMPACTION_MODE=revision \
-  -e ETCD_AUTO_COMPACTION_RETENTION=1000 \
-  -e ETCD_QUOTA_BACKEND_BYTES=4294967296 \
-  milvusdb/milvus:v2.6.2-20250918-d1b40b77-arm64
+  -e ETCD_USE_EMBED=true \
+  -e ETCD_DATA_DIR=/var/lib/milvus/etcd \
+  -e COMMON_STORAGETYPE=local \
+  -e DEPLOY_MODE=STANDALONE \
+  milvusdb/milvus:v2.6.1 \
+  /milvus/bin/milvus run standalone
 
 echo "⏳ Waiting for Milvus to start..."
 sleep 15
@@ -68,7 +70,7 @@ echo "🔍 Final Service Status:"
 echo "Milvus container:"
 if $CONTAINER_CMD ps | grep milvus-simple | grep -q Up; then
     echo "  ✅ Container running"
-    echo "     Image: milvusdb/milvus:v2.6.2-20250918-d1b40b77-arm64"
+    echo "     Image: milvusdb/milvus:v2.6.1 (ARM64 compatible)"
     echo "     Ports: 19530:19530, 9091:9091"
 else
     echo "  ❌ Container not running"

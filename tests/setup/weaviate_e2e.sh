@@ -33,7 +33,7 @@ $CONTAINER_CMD run -d \
   -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true \
   -e PERSISTENCE_DATA_PATH=/var/lib/weaviate \
   -e DEFAULT_VECTORIZER_MODULE=none \
-  -e ENABLE_MODULES='text2vec-weaviate' \
+  -e ENABLE_MODULES= \
   -e CLUSTER_HOSTNAME=node1 \
   semitechnologies/weaviate:1.27.0
 

@@ -210,7 +210,7 @@ jobs:
         echo "  E2E_INDEX_WAIT_TIME=${E2E_INDEX_WAIT_TIME}"
         echo "  E2E_CLIENT_TIMEOUT=${E2E_CLIENT_TIMEOUT}"
         echo "Expected: 6 passing, 3 skipped (known issues marked with TODO)"
-        timeout 1800 uv run pytest tests/e2e/test_mcp_milvus_e2e.py -v --tb=short -s -ra
+        timeout 1800 uv run pytest tests/e2e/test_mcp_milvus_e2e.py -v --tb=short -s -ra -m "e2e"
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
@@ -343,7 +343,7 @@ jobs:
       run: |
         echo "Running Weaviate E2E tests..."
         echo "Expected: 8 passing, 0 skipped (all tests working)"
-        timeout 600 uv run pytest tests/e2e/test_mcp_weaviate_e2e.py -v --tb=short
+        timeout 600 uv run pytest tests/e2e/test_mcp_weaviate_e2e.py -v --tb=short -m "e2e"
 
     - name: Upload test results
       uses: actions/upload-artifact@v4

@@ -87,14 +87,19 @@ start_ollama() {
 
 # Start Milvus standalone with embedded etcd
 start_milvus() {
-    log "Starting Milvus standalone with embedded etcd..."
+    log "Starting Milvus standalone with embedded etcd (ARM64 compatible)..."
     
-    # Start Milvus with embedded etcd (no separate etcd/MinIO needed)
+    # Start Milvus with embedded etcd (no separate etcd/MinIO needed) - ARM64 compatible
     if ! $CONTAINER_CMD ps --filter "name=milvus-mcp-e2e" --format "{{.Names}}" | grep -q "milvus-mcp-e2e"; then
         $CONTAINER_CMD run -d --name milvus-mcp-e2e \
             -p 19530:19530 \
+            -p 9091:9091 \
             -e ETCD_USE_EMBED=true \
-            milvusdb/milvus:v2.4.4 /milvus/bin/milvus run standalone
+            -e ETCD_DATA_DIR=/var/lib/milvus/etcd \
+            -e COMMON_STORAGETYPE=local \
+            -e DEPLOY_MODE=STANDALONE \
+            milvusdb/milvus:v2.6.1 \
+            /milvus/bin/milvus run standalone
     fi
     
     # Wait for Milvus

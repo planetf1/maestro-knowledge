@@ -107,17 +107,23 @@ curl -X POST http://localhost:11434/api/pull -d '{"name":"nomic-embed-text:lates
 2. **Start Milvus standalone with embedded etcd:**
 
 ```bash
-# Milvus with embedded etcd (no separate etcd/MinIO needed)
-podman run -d --name milvus-mcp-e2e -p 19530:19530 \
+# Milvus with embedded etcd (no separate etcd/MinIO needed) - ARM64 compatible
+podman run -d --name milvus-mcp-e2e -p 19530:19530 -p 9091:9091 \
   -e ETCD_USE_EMBED=true \
-  milvusdb/milvus:v2.4.4 /milvus/bin/milvus run standalone
+  -e ETCD_DATA_DIR=/var/lib/milvus/etcd \
+  -e COMMON_STORAGETYPE=local \
+  -e DEPLOY_MODE=STANDALONE \
+  milvusdb/milvus:v2.6.1 /milvus/bin/milvus run standalone
 ```
 
 3. **Start Weaviate:**
 ```bash
 podman run -d --name weaviate-mcp-e2e -p 8080:8080 \
   -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true \
+  -e PERSISTENCE_DATA_PATH=/var/lib/weaviate \
   -e DEFAULT_VECTORIZER_MODULE=none \
+  -e ENABLE_MODULES= \
+  -e CLUSTER_HOSTNAME=node1 \
   semitechnologies/weaviate:1.27.0
 ```
 
