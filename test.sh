@@ -95,8 +95,9 @@ case "${1:-standard}" in  # Default to standard tests
         RUN_SYSTEM_E2E_TESTS=false
         ;;
     "service")
-        print_error "Service tests have been removed - they provided less coverage than E2E tests"
-        print_status "Use './test.sh e2e' for comprehensive backend testing instead"
+        print_error "Unknown command: service"
+        echo ""
+        print_help
         exit 1
         ;;
     "e2e")
@@ -173,7 +174,7 @@ if [ "$RUN_INTEGRATION_TESTS" = true ]; then
     print_status "✓ Integration tests completed"
 fi
 
-# Service tests have been removed - E2E tests provide superior coverage
+
 
 # Run end-to-end Python tests if requested
 if [ "$RUN_E2E_TESTS" = true ]; then
@@ -268,7 +269,7 @@ fi
 if [ "$RUN_INTEGRATION_TESTS" = true ]; then
     TESTS_RUN="$TESTS_RUN Integration"
 fi
-# Service tests removed - use E2E tests for comprehensive backend testing
+
 if [ "$RUN_E2E_TESTS" = true ]; then
     TESTS_RUN="$TESTS_RUN E2E-Python"
 fi

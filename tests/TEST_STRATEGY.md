@@ -61,17 +61,7 @@ async def test_mcp_server_with_mocked_database():
         # Test server functionality with mocked DB responses
 ```
 
-### ⚠️ Service Integration Tests (REMOVED)
 
-**Previous:** Service integration tests (`@pytest.mark.service`) have been removed as they provided less comprehensive coverage than E2E tests.
-
-**Migration Path:** Use E2E tests (`@pytest.mark.e2e`) instead for complete workflow testing with real external services.
-
-**Rationale:**
-- E2E tests provide full stack validation (Client → MCP Protocol → Server → Database)
-- Service tests only tested (Server → Database) missing critical layers
-- E2E tests cover 100% of MCP API tools vs. limited service test coverage
-- Reduces maintenance burden while improving test fidelity
 
 ### End-to-End Tests (`@pytest.mark.e2e`)
 
@@ -158,10 +148,11 @@ uv run pytest -m "unit" -v
 
 ## Environment Setup for E2E Tests
 
-For E2E testing setup, see the detailed documentation in `tests/e2e/README.md` which covers:
-- Container setup scripts (`tests/setup/milvus_e2e.sh`, `tests/setup/weaviate_e2e.sh`)
-- Environment configuration
-- Running comprehensive E2E test suites
+For E2E testing setup, see the detailed documentation in `tests/e2e/README.md` which covers container setup scripts, environment configuration, and running comprehensive E2E test suites.
+
+### Basic Test Categories
+
+```bash
 
 
 
@@ -185,6 +176,7 @@ The `./test.sh` script has been simplified to support intuitive test execution:
 ```
 
 ### Combined Test Categories
+
 ```bash
 # Standard tests (unit + integration) - no external dependencies
 ./test.sh standard     # ~10 seconds
@@ -197,6 +189,7 @@ The `./test.sh` script has been simplified to support intuitive test execution:
 ```
 
 ### Development Workflow Examples
+
 ```bash
 # Quick development cycle
 ./test.sh unit         # Fast unit tests for quick feedback (~5s)
@@ -221,6 +214,7 @@ The `./test.sh` script has been simplified to support intuitive test execution:
 ```
 
 ### CI/CD Integration
+
 ```bash
 # Standard CI validation
 ./test.sh standard     # Standard tests for CI pipelines (no external deps)
@@ -230,6 +224,7 @@ The `./test.sh` script has been simplified to support intuitive test execution:
 ```
 
 ### Consistency with pytest
+
 The test script behavior is consistent with direct pytest usage:
 
 ```bash
