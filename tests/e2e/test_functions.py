@@ -58,6 +58,16 @@ async def run_database_management_tests(client: Client, backend_name: str) -> No
     res = await client.call_tool("get_collection_info", {"input": {"db_name": db_name}})
     assert hasattr(res, "data"), f"get_collection_info failed: {res}"
 
+    # Test list_databases - HIGH PRIORITY addition
+    res = await client.call_tool("list_databases")
+    assert hasattr(res, "data"), f"list_databases failed: {res}"
+    # Verify our database appears in the list
+    assert db_name in str(res.data), f"Database {db_name} not found in list_databases result"
+
+    # Test get_database_info - HIGH PRIORITY addition  
+    res = await client.call_tool("get_database_info", {"input": {"db_name": db_name}})
+    assert hasattr(res, "data"), f"get_database_info failed: {res}"
+
     # Cleanup
     res = await client.call_tool("cleanup", {"input": {"db_name": db_name}})
     assert hasattr(res, "data"), f"cleanup failed: {res}"
@@ -123,6 +133,30 @@ async def run_document_operations_tests(client: Client, backend_name: str) -> No
         except Exception:
             res_data = res
         assert res_data, f"write_documents failed: {res}"
+
+    # Test write_document - LOW PRIORITY addition (individual document write)
+    res = await client.call_tool(
+        "write_document",
+        {
+            "input": {
+                "db_name": db_name,
+                "doc_name": f"single_doc_{backend_name}",
+                "text": f"This is a single document for {backend_name.title()}",
+                "url": "https://example.com/single-doc",
+                "metadata": {"source": "single_write_test", "backend": backend_name},
+                "embedding": "default",
+            }
+        },
+    )
+    # Accept string or object response for write_document
+    if not hasattr(res, "data"):
+        import json
+
+        try:
+            res_data = json.loads(res) if isinstance(res, str) else res
+        except Exception:
+            res_data = res
+        assert res_data, f"write_document failed: {res}"
 
     # Test list_documents
     res = await client.call_tool(
@@ -545,6 +579,31 @@ async def run_collection_specific_tests(client: Client, backend_name: str) -> No
             pytest.fail(
                 f"delete_document_from_collection failed for {backend_name}: {res}"
             )
+
+        # Test delete_collection - MEDIUM PRIORITY addition
+        res = await client.call_tool(
+            "delete_collection",
+            {
+                "input": {
+                    "db_name": db_name,
+                    "collection_name": collection_name,
+                }
+            },
+        )
+        if not hasattr(res, "data"):
+            pytest.fail(
+                f"delete_collection failed for {backend_name}: {res}"
+            )
+
+        # Verify collection was deleted by checking it no longer appears in list
+        res = await client.call_tool(
+            "list_collections", {"input": {"db_name": db_name}}
+        )
+        if hasattr(res, "data") and isinstance(res.data, list):
+            if collection_name in res.data:
+                pytest.fail(
+                    f"Collection '{collection_name}' still exists after deletion for {backend_name}"
+                )
 
     except Exception as e:
         if "pytest" in str(type(e)) and "Skip" in str(type(e)):
