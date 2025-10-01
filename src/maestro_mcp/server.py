@@ -11,6 +11,7 @@ from collections.abc import Awaitable, Callable
 
 from fastmcp import FastMCP
 from fastmcp.tools.tool import ToolResult
+from starlette.background import BackgroundTasks
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 from pydantic import BaseModel, Field
@@ -583,6 +584,33 @@ async def create_mcp_server() -> FastMCP:
 
     # Create FastMCP server directly
     app = FastMCP("maestro-vector-db")
+
+    # Conditionally add the debug endpoint for memory tracing
+    if os.getenv("ENABLE_TRACEMALLOC_DEBUG", "false").lower() in ("true", "1", "yes"):
+
+        @app.custom_route(
+            "/_debug/dump_memory", methods=["GET"], include_in_schema=False
+        )
+        async def dump_memory_endpoint(
+            request: Request,
+            background_tasks: BackgroundTasks,
+            limit: int | None = 0,
+        ) -> PlainTextResponse:
+            """Trigger a memory traceback dump in a background task.
+
+            This is a non-blocking endpoint that logs memory allocation details.
+            The output is sent to the server logs.
+            Limit controls the number of top entries to show (0 or None for all).
+            """
+            logger.info(
+                f"Memory dump requested via endpoint. Limit: {'all' if not limit else limit}."
+            )
+            background_tasks.add_task(debug_utils.dump_memory_trace, limit=limit)
+            return PlainTextResponse(
+                f"Memory dump triggered. Check server logs for output. Limit was set to {'all' if not limit else limit}.\n"
+            )
+
+        logger.info("💡 Memory dump endpoint enabled at /_debug/dump_memory")
 
     @app.custom_route("/health", methods=["GET"])
     async def health_check(request: Request) -> PlainTextResponse:
