@@ -52,15 +52,16 @@ def _check_milvus_service() -> bool:
     # Quick TCP port check first - fails fast if port is closed
     try:
         import socket
+
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(0.5)  # Very short timeout for port check
-        result = sock.connect_ex(('localhost', 19530))
+        result = sock.connect_ex(("localhost", 19530))
         sock.close()
         if result != 0:  # Port not open
             return False
     except Exception:
         return False
-    
+
     # Port is open, now verify it's actually Milvus with gRPC
     try:
         from pymilvus import connections, utility
