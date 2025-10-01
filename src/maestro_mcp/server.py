@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from ..chunking import ChunkingConfig
 from ..db.vector_db_base import VectorDatabase
 from ..db.vector_db_factory import create_vector_database
+from . import debug_utils
 
 
 # Load environment variables from .env file
@@ -37,6 +38,9 @@ def load_env_file() -> None:
 
 # Load environment variables
 load_env_file()
+
+# Setup memory debugging via signals
+debug_utils.setup_memory_debugging()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
