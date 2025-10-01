@@ -5,63 +5,67 @@
 Utility for on-demand memory debugging via process signals.
 """
 
+import logging
 import os
 import tracemalloc
 import signal
 import time
 import types
 
+logger = logging.getLogger(__name__)
+
 
 def _memory_dump_handler(signum: int, frame: types.FrameType | None) -> None:
     """
-    Signal handler for SIGUSR1. Dumps memory allocation tracebacks.
+    Signal handler for SIGUSR1. Dumps memory allocation tracebacks to the logger.
     - If TRACEMALLOC_FILTER_PATTERN is set, it filters for that pattern.
     - Otherwise, it dumps the top 15 overall memory allocations.
     """
-    print(f"Caught signal {signum} (SIGUSR1). Dumping memory allocation trace...")
+    logger.info(f"Caught signal {signum} (SIGUSR1). Dumping memory allocation trace...")
 
     snapshot = tracemalloc.take_snapshot()
 
     # Allow filtering the trace via an environment variable
     filter_pattern = os.getenv("TRACEMALLOC_FILTER_PATTERN")
 
+    report_lines = []
+
     if filter_pattern:
-        print(f"Filtering for pattern: {filter_pattern}")
+        logger.info(f"Filtering for pattern: {filter_pattern}")
         file_filter = tracemalloc.Filter(True, filter_pattern)
         snapshot = snapshot.filter_traces((file_filter,))
         stats = snapshot.statistics("traceback")
         report_title = f"Memory Traceback for allocations matching '{filter_pattern}'"
-        output_filename = f"memtrace-filtered-{time.strftime('%Y%m%d-%H%M%S')}.txt"
     else:
-        print("No filter pattern set. Reporting top 15 memory allocations.")
+        logger.info("No filter pattern set. Reporting top 15 memory allocations.")
         stats = snapshot.statistics("lineno")[:15]
         report_title = "Top 15 Memory Allocations by Line"
-        output_filename = f"memtrace-top15-{time.strftime('%Y%m%d-%H%M%S')}.txt"
 
-    output_path = os.path.join("/tmp", output_filename)
+    report_lines.append("=" * 80)
+    report_lines.append(report_title)
+    report_lines.append(
+        f"Triggered by SIGUSR1 at {time.strftime('%Y-%m-%d %H:%M:%S')}."
+    )
+    report_lines.append("=" * 80)
 
-    try:
-        with open(output_path, "w") as f:
-            f.write(report_title + "\n")
-            f.write("Triggered by SIGUSR1.\n")
-            f.write("=" * 80 + "\n\n")
+    if not stats:
+        report_lines.append("No matching allocations found in the current snapshot.")
+    else:
+        for i, stat in enumerate(stats):
+            report_lines.append(f"--- Stat #{i + 1} ---")
+            report_lines.append(str(stat))
+            # Full traceback is most useful when filtering
+            if filter_pattern:
+                report_lines.append("Traceback (most recent call last):")
+                for line in stat.traceback.format():
+                    report_lines.append(f"  {line.strip()}")
+            report_lines.append("")
 
-            if not stats:
-                f.write("No matching allocations found in the current snapshot.\n")
-            else:
-                for i, stat in enumerate(stats):
-                    f.write(f"--- Stat #{i + 1} ---\n")
-                    f.write(f"{stat}\n")
-                    # Full traceback is most useful when filtering
-                    if filter_pattern:
-                        f.write("Traceback (most recent call last):\n")
-                        for line in stat.traceback.format():
-                            f.write(f"  {line.strip()}\n")
-                    f.write("\n")
+    report_lines.append("=" * 80)
+    report_lines.append("End of memory trace dump.")
+    report_lines.append("=" * 80)
 
-        print(f"✅ Memory trace dump complete. Output written to: {output_path}")
-    except Exception as e:
-        print(f"❌ Failed to write memory trace dump: {e}")
+    logger.info("\n".join(report_lines))
 
 
 def setup_memory_debugging() -> None:
