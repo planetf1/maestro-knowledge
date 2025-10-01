@@ -81,7 +81,9 @@ def setup_memory_debugging() -> None:
     This feature is only enabled if the ENABLE_TRACEMALLOC_DEBUG environment
     variable is set to a truthy value (e.g., 'true', '1', 'yes').
     """
-    enable_tracemalloc = os.getenv("ENABLE_TRACEMALLOC_DEBUG", "false").lower() in (
+    enable_tracemalloc = os.getenv("ENABLE_TRACEMALLOC_DEBUG", "false").lower().strip(
+        "\"'"
+    ) in (
         "true",
         "1",
         "yes",

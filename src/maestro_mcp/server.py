@@ -586,7 +586,11 @@ async def create_mcp_server() -> FastMCP:
     app = FastMCP("maestro-vector-db")
 
     # Conditionally add the debug endpoint for memory tracing
-    if os.getenv("ENABLE_TRACEMALLOC_DEBUG", "false").lower() in ("true", "1", "yes"):
+    if os.getenv("ENABLE_TRACEMALLOC_DEBUG", "false").lower().strip("\"'") in (
+        "true",
+        "1",
+        "yes",
+    ):
 
         @app.custom_route(
             "/_debug/dump_memory", methods=["GET"], include_in_schema=False
