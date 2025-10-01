@@ -48,11 +48,9 @@ filterwarnings = [
 # Enable async test support
 asyncio_mode = "auto"
 
-# Run standard tests by default (unit + integration)
-# This matches the behavior of ./test.sh standard
+# Test configuration
 testpaths = ["tests"]
 python_files = "test_*.py"
-addopts = "-m 'unit or integration'"
 
 # Custom pytest markers
 markers = [

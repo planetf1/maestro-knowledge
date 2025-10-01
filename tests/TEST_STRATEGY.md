@@ -117,16 +117,7 @@ uv run pytest -m "unit or integration or e2e" -v
 ```
 
 ### Default Configuration
-The project is configured to run standard tests (unit + integration) by default when running `uv run pytest` without any markers. This is set in `pyproject.toml`:
-
-```toml
-# Run standard tests by default (unit + integration)
-testpaths = ["tests"]
-python_files = "test_*.py"
-addopts = "-m 'unit or integration'"
-```
-
-This matches the behavior of `./test.sh standard` for consistency.
+The project is configured to discover all tests when running `uv run pytest`. E2E tests will be skipped if milvus/weaviate is not available and report reason.
 
 ### Database-Specific Testing
 ```bash

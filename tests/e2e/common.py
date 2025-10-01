@@ -49,11 +49,24 @@ BACKEND_CONFIGS = {
 
 def _check_milvus_service() -> bool:
     """Check if Milvus service is available."""
+    # Quick TCP port check first - fails fast if port is closed
+    try:
+        import socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.5)  # Very short timeout for port check
+        result = sock.connect_ex(('localhost', 19530))
+        sock.close()
+        if result != 0:  # Port not open
+            return False
+    except Exception:
+        return False
+    
+    # Port is open, now verify it's actually Milvus with gRPC
     try:
         from pymilvus import connections, utility
 
         connections.connect(
-            alias="test_config", host="localhost", port="19530", timeout=5
+            alias="test_config", host="localhost", port="19530", timeout=2
         )
         utility.list_collections(using="test_config")
         connections.disconnect("test_config")
@@ -68,7 +81,7 @@ def _check_weaviate_service() -> bool:
         import httpx
 
         weaviate_url = os.getenv("WEAVIATE_URL", "http://localhost:8080")
-        with httpx.Client(timeout=5) as client:
+        with httpx.Client(timeout=2) as client:
             resp = client.get(f"{weaviate_url}/v1/meta")
             return resp.status_code < 500
     except Exception:

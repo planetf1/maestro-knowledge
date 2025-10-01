@@ -105,7 +105,7 @@ uv run pytest tests/e2e/test_mcp_weaviate_e2e.py -v
 uv run pytest tests/e2e/test_mcp_weaviate_e2e.py -v -m "e2e"
 ```
 
-The `pyproject.toml` has `addopts = "-m 'unit or integration'"` which excludes E2E tests by default to keep regular test runs fast. Always include `-m "e2e"` when running E2E tests manually.
+E2E tests are discovered by pytest but will skip if the required environment variables are not set or services are unavailable. You can run them explicitly with `-m "e2e"` or use the MCP E2E script.
 
 ### Local Testing
 
