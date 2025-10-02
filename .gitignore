@@ -64,9 +64,12 @@ db.sqlite3-journal
 # MCP Server files
 mcp_server.log
 mcp_server.pid
+mcp_server_e2e.log
+mcp_server_e2e.pid
 
 # Vector database files
 milvus_demo.db
+volumes/
 
 # Flask stuff:
 instance/

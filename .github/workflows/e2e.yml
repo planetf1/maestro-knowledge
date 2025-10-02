@@ -1,0 +1,359 @@
+name: E2E Tests
+
+# Current Status: 9/9 Milvus tests passing, 8/8 Weaviate tests passing
+# 
+# Both test suites now use shared backend-agnostic test functions from tests/e2e/test_functions.py
+# This ensures consistent test coverage and behavior across all vector database backends.
+# 
+# Architecture:
+# - Milvus: 9 tests (includes document_retrieval_operations)
+# - Weaviate: 8 tests (document_retrieval_operations excluded due to setup_database tool compatibility)
+# - Both use common test logic with backend-specific configuration
+
+on:
+  push:
+    branches: [ main, develop, dev/*/e2e*, dev/*/async-ext-more ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  e2e-milvus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    services:
+      # Ollama service - needed for embeddings
+      ollama:
+        image: ollama/ollama:latest
+        ports:
+          - 11434:11434
+        options: --name ollama-service
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/uv
+          .venv
+        key: ${{ runner.os }}-uv-e2e-milvus-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |
+          ${{ runner.os }}-uv-e2e-
+
+    - name: Create virtual environment
+      run: |
+        rm -rf .venv
+        uv venv
+
+    - name: Install dependencies
+      run: |
+        uv sync
+
+    - name: Start Milvus standalone (production config)
+      run: |
+        echo "Starting Milvus v2.6.1 with production configuration matching Kubernetes..."
+        # Create a directory on the host runner for Milvus data
+        mkdir -p milvus-data
+        docker run -d --name milvus-service \
+          -p 19530:19530 \
+          -p 9091:9091 \
+          -e ETCD_USE_EMBED=true \
+          -e ETCD_DATA_DIR=/var/lib/milvus/etcd \
+          -e COMMON_STORAGETYPE=local \
+          -e DEPLOY_MODE=STANDALONE \
+          -v $(pwd)/milvus-data:/var/lib/milvus \
+          milvusdb/milvus:v2.6.1 \
+          /milvus/bin/milvus run standalone
+
+    - name: Wait for services to be ready
+      run: |
+        echo "Waiting for Ollama service to be ready..."
+        for i in {1..60}; do
+          if curl -f http://localhost:11434/api/tags 2>/dev/null; then
+            echo "Ollama is ready"
+            break
+          fi
+          echo "Waiting for Ollama... ($i/60)"
+          sleep 5
+        done
+        
+        echo "Waiting for Milvus to be ready..."
+        echo "Checking Milvus container status..."
+        docker ps --filter name=milvus-service
+        echo "Checking Milvus logs..."
+        docker logs milvus-service --tail 20
+        
+        # Wait initially for Milvus to start (matching production initialDelaySeconds)
+        echo "Initial delay for Milvus startup..."
+        sleep 10
+        
+        # Health check matching production probe configuration
+        for i in {1..15}; do
+          echo "Attempt $i/15: Checking Milvus health endpoint..."
+          
+          # Check if container is still running
+          if ! docker ps --filter name=milvus-service --filter status=running | grep -q milvus-service; then
+            echo "Milvus container is not running!"
+            docker logs milvus-service --tail 50
+            exit 1
+          fi
+          
+          # Use the same health endpoint as production
+          if curl -f --max-time 5 http://localhost:9091/healthz 2>/dev/null; then
+            echo "✓ Milvus health endpoint is ready"
+            break
+          fi
+          
+          if [ $i -eq 8 ]; then
+            echo "Mid-check: Milvus container logs..."
+            docker logs milvus-service --tail 20
+          fi
+          
+          echo "Waiting for Milvus health check... ($i/15)"
+          sleep 10
+        done
+        
+        # Final verification
+        if ! curl -f --max-time 5 http://localhost:9091/healthz 2>/dev/null; then
+          echo "✗ Milvus failed to become healthy"
+          docker logs milvus-service
+          exit 1
+        fi
+        
+        echo "✓ Milvus is ready and healthy"
+
+    - name: Pull Ollama embedding model
+      run: |
+        echo "Pulling nomic-embed-text model..."
+        curl -X POST http://localhost:11434/api/pull -d '{"name":"nomic-embed-text:latest"}' || true
+        # Wait for model to be available
+        for i in {1..30}; do
+          if curl -s http://localhost:11434/api/tags | grep -q "nomic-embed-text"; then
+            echo "nomic-embed-text model is available"
+            break
+          fi
+          echo "Waiting for model download... ($i/30)"
+          sleep 10
+        done
+
+    - name: Test Ollama embedding endpoint
+      run: |
+        echo "Testing Ollama embedding endpoint..."
+        curl -X POST http://localhost:11434/api/embeddings \
+          -H "Content-Type: application/json" \
+          -d '{"model":"nomic-embed-text","prompt":"test"}' \
+          --max-time 30 || echo "Embedding test failed but continuing..."
+
+    - name: Test Milvus connection
+      run: |
+        echo "Testing basic Milvus connection..."
+        uv run python -c "
+        import sys
+        try:
+            from pymilvus import connections, utility
+            # Connect to Milvus (gRPC endpoint)
+            connections.connect('default', host='localhost', port='19530')
+            print('✓ Successfully connected to Milvus')
+            # Test if we can get server info
+            version = utility.get_server_version()
+            print('✓ Server version:', version)
+            connections.disconnect('default')
+            print('✓ Connection test passed')
+        except Exception as e:
+            print('✗ Milvus connection failed:', str(e))
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)
+        " || (echo "Milvus connection test failed, showing logs..." && docker logs milvus-service --tail 50 && exit 1)
+
+    - name: Run Milvus E2E tests
+      env:
+        MILVUS_URI: http://localhost:19530
+        CUSTOM_EMBEDDING_URL: http://localhost:11434/api/embeddings
+        CUSTOM_EMBEDDING_MODEL: nomic-embed-text
+        CUSTOM_EMBEDDING_VECTORSIZE: 768
+        E2E_BACKEND: milvus
+        E2E_MILVUS: 1
+        E2E_MCP_PORT: 8030
+        E2E_INDEX_WAIT_TIME: 20
+        E2E_CLIENT_TIMEOUT: 300
+        PYTHONPATH: src
+      run: |
+        echo "Running Milvus E2E tests..."
+        echo "Environment check:"
+        echo "  E2E_BACKEND=${E2E_BACKEND}"
+        echo "  E2E_MILVUS=${E2E_MILVUS}"
+        echo "  E2E_WEAVIATE=${E2E_WEAVIATE:-<not set>}"
+        echo "  MILVUS_URI=${MILVUS_URI}"
+        echo "  CUSTOM_EMBEDDING_URL=${CUSTOM_EMBEDDING_URL}"
+        echo "  CUSTOM_EMBEDDING_MODEL=${CUSTOM_EMBEDDING_MODEL}"
+        echo "  E2E_INDEX_WAIT_TIME=${E2E_INDEX_WAIT_TIME}"
+        echo "  E2E_CLIENT_TIMEOUT=${E2E_CLIENT_TIMEOUT}"
+        echo "Expected: 9 passing, 0 skipped (all tests using shared backend-agnostic functions)"
+        timeout 1800 uv run pytest tests/e2e/test_mcp_milvus_e2e.py -v --tb=short -s -ra -m "e2e"
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-test-results-milvus-${{ matrix.python-version }}
+        path: |
+          .pytest_cache/
+          pytest-*.xml
+          test-results/
+        retention-days: 7
+
+    - name: Show service logs on failure
+      if: failure()
+      run: |
+        echo "=== Ollama logs ==="
+        docker logs ollama-service || true
+        echo "=== Milvus logs ==="
+        docker logs milvus-service || true
+
+  e2e-weaviate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    services:
+      # Ollama service - needed for embeddings
+      ollama:
+        image: ollama/ollama:latest
+        ports:
+          - 11434:11434
+        options: --name ollama-service
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v2
+
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/uv
+          .venv
+        key: ${{ runner.os }}-uv-e2e-weaviate-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |
+          ${{ runner.os }}-uv-e2e-
+
+    - name: Create virtual environment
+      run: |
+        rm -rf .venv
+        uv venv
+
+    - name: Install dependencies
+      run: |
+        uv sync
+
+    - name: Start Weaviate
+      run: |
+        echo "Starting Weaviate v1.27.0..."
+        docker run -d --name weaviate-service \
+          -p 8080:8080 \
+          -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=true \
+          -e PERSISTENCE_DATA_PATH=/var/lib/weaviate \
+          -e DEFAULT_VECTORIZER_MODULE=none \
+          -e ENABLE_MODULES= \
+          -e CLUSTER_HOSTNAME=node1 \
+          semitechnologies/weaviate:1.27.0
+
+    - name: Wait for services to be ready
+      run: |
+        echo "Waiting for Ollama service to be ready..."
+        for i in {1..60}; do
+          if curl -f http://localhost:11434/api/tags 2>/dev/null; then
+            echo "Ollama is ready"
+            break
+          fi
+          echo "Waiting for Ollama... ($i/60)"
+          sleep 5
+        done
+        
+        echo "Waiting for Weaviate to be ready..."
+        for i in {1..30}; do
+          if curl -f http://localhost:8080/v1/meta 2>/dev/null; then
+            echo "Weaviate is ready"
+            break
+          fi
+          echo "Waiting for Weaviate... ($i/30)"
+          sleep 5
+        done
+
+    - name: Pull Ollama embedding model
+      run: |
+        echo "Pulling nomic-embed-text model..."
+        curl -X POST http://localhost:11434/api/pull -d '{"name":"nomic-embed-text:latest"}' || true
+        # Wait for model to be available
+        for i in {1..30}; do
+          if curl -s http://localhost:11434/api/tags | grep -q "nomic-embed-text"; then
+            echo "nomic-embed-text model is available"
+            break
+          fi
+          echo "Waiting for model download... ($i/30)"
+          sleep 10
+        done
+
+    - name: Test Ollama embedding endpoint
+      run: |
+        echo "Testing Ollama embedding endpoint..."
+        curl -X POST http://localhost:11434/api/embeddings \
+          -H "Content-Type: application/json" \
+          -d '{"model":"nomic-embed-text","prompt":"test"}' \
+          --max-time 30 || echo "Embedding test failed but continuing..."
+
+    - name: Run Weaviate E2E tests
+      env:
+        WEAVIATE_URL: http://localhost:8080
+        WEAVIATE_API_KEY: test-key
+        E2E_BACKEND: weaviate
+        E2E_WEAVIATE: 1
+        E2E_MCP_PORT: 8031
+        PYTHONPATH: src
+      run: |
+        echo "Running Weaviate E2E tests..."
+        echo "Expected: 8 passing, 0 skipped (all tests using shared backend-agnostic functions)"
+        timeout 600 uv run pytest tests/e2e/test_mcp_weaviate_e2e.py -v --tb=short -m "e2e"
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-test-results-weaviate-${{ matrix.python-version }}
+        path: |
+          .pytest_cache/
+          pytest-*.xml
+          test-results/
+        retention-days: 7
+
+    - name: Show service logs on failure
+      if: failure()
+      run: |
+        echo "=== Ollama logs ==="
+        docker logs ollama-service || true
+        echo "=== Weaviate logs ==="
+        docker logs weaviate-service || true

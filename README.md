@@ -53,6 +53,7 @@ chunks = chunk_text("Your document text here...", config)
 ```
 
 **Key Benefits**:
+
 - Preserves semantic meaning across chunk boundaries
 - Automatically finds natural break points in text
 - Respects size limits while maintaining context
@@ -136,6 +137,7 @@ db.cleanup()
 ```
 
 ### Weaviate Quick Start
+
 #### 1. Set Up Weaviate Cloud
 
 Get free account at weaviate.io, create a cluster/credentials and put into .env file in project root.
@@ -146,6 +148,7 @@ WEAVIATE_URL=https://your-cluster-name.weaviate.network
 ```
 
 #### 2. Install CLI and Start Services
+
 ```bash
 # Install maestro CLI (from separate repository)
 # See: https://github.com/AI4quantum/maestro-cli for installation instructions
@@ -157,6 +160,7 @@ WEAVIATE_URL=https://your-cluster-name.weaviate.network
 ```
 
 #### 3. Create Your First Database
+
 ```bash
 # Create config file (my_database.yaml)
 apiVersion: maestro/v1alpha1
@@ -181,8 +185,8 @@ maestro vectordb list
 
 As of now, document ingestion process is manual. This will be updated in the future.
 
-```
-#### Create a text file with your content
+```bash
+# Create a text file with your content
 echo "Your document content here" > my_doc.txt
 
 # Add document to database
@@ -196,6 +200,7 @@ maestro document list --vdb=my_first_database --collection=My_documents
 ```
 
 #### 5. Test Your Setup
+
 ```bash
 # Verify everything is working
 maestro vectordb list                    # Should show your database
@@ -213,6 +218,7 @@ maestro query "What is machine learning?" --vdb=my_first_database --collection=M
 The CLI tool has been moved to a separate repository: [AI4quantum/maestro-cli](https://github.com/AI4quantum/maestro-cli). This Go-based CLI tool manages vector databases through the MCP server.
 
 **Prerequisites:**
+
 - Install the maestro CLI from the separate repository: [AI4quantum/maestro-cli](https://github.com/AI4quantum/maestro-cli)
 - Build the CLI: `cd /path/to/maestro-cli && ./build.sh`
 - Add the CLI to your PATH or place it in a relative path from your project
@@ -241,6 +247,7 @@ maestro resync-databases
 The project includes a Model Context Protocol (MCP) server that exposes vector database functionality to AI agents.
 
 **Quick MCP Server Usage:**
+
 ```bash
 # Start the MCP server
 ./start.sh
@@ -267,11 +274,11 @@ Search result schema (normalized across Weaviate and Milvus):
 - url: source URL or file path
 - text: chunk text
 - metadata:
-    - doc_name: original document name/slug
-    - chunk_sequence_number: 1-based chunk index within the document
-    - total_chunks: total chunks for the document
-    - offset_start / offset_end: character offsets in the original text
-    - chunk_size: size of the chunk in characters
+  - doc_name: original document name/slug
+  - chunk_sequence_number: 1-based chunk index within the document
+  - total_chunks: total chunks for the document
+  - offset_start / offset_end: character offsets in the original text
+  - chunk_size: size of the chunk in characters
 - similarity: canonical relevance score in [0..1]
 - distance: cosine distance (approximately 1 − similarity); included for convenience
 - rank: 1-based rank in the current result set
@@ -353,6 +360,16 @@ The project includes several utility scripts for development and testing:
 # Monitor logs in real-time
 ./tools/tail-logs.sh status  # Show service status
 ./tools/tail-logs.sh all     # Tail all service logs
+
+ # Optional: Run E2E tests against a real backend (skipped by default)
+ # Choose exactly one backend using E2E_BACKEND to avoid conflicts.
+ # Milvus example:
+ # E2E_BACKEND=milvus E2E_MILVUS=1 MILVUS_URI=http://localhost:19530 \
+ # CUSTOM_EMBEDDING_URL=http://localhost:11434/v1 CUSTOM_EMBEDDING_MODEL=nomic-embed-text \
+ # CUSTOM_EMBEDDING_VECTORSIZE=768 pytest tests/e2e/test_mcp_milvus_e2e.py -m e2e -vv
+ # Weaviate example:
+ # E2E_BACKEND=weaviate E2E_WEAVIATE=1 WEAVIATE_API_KEY=... WEAVIATE_URL=... \
+ # pytest tests/e2e/test_mcp_weaviate_e2e.py -m e2e -vv
 ```
 
 ## Code Quality
@@ -420,6 +437,9 @@ maestro-knowledge/
 │   ├── test_query_*.py      # Query functionality tests
 │   ├── test_integration_*.py # Integration tests
 │   ├── test_vector_database_yamls.py # YAML schema validation tests
+│   ├── e2e/                 # Optional end-to-end tests (real backends)
+│   │   ├── test_mcp_milvus_e2e.py    # Milvus E2E (requires E2E_MILVUS=1 and env)
+│   │   └── test_mcp_weaviate_e2e.py  # Weaviate E2E (requires E2E_WEAVIATE=1 and env)
 │   └── yamls/               # YAML configuration examples
 │       ├── test_local_milvus.yaml
 │       └── test_remote_weaviate.yaml
@@ -445,11 +465,14 @@ maestro-knowledge/
 - `CUSTOM_EMBEDDING_HEADERS`: Custom headers for your embedding provider when using `embedding: custom_local`.
   **Important**: Due to shell parsing, the value **must be enclosed in single quotes** in your `.env` file to handle special characters correctly.
   - **Recommended format (JSON string):**
-    ```
+
+    ```bash
     CUSTOM_EMBEDDING_HEADERS='{"API_SECRET_KEY": "your-secret-key", "Another-Header": "value"}'
     ```
+
   - **Alternative format (key-value pairs):**
-    ```
+
+    ```bash
     CUSTOM_EMBEDDING_HEADERS='API_SECRET_KEY=your-secret-key,Another-Header=value'
     ```
 - Database-specific environment variables for Weaviate and Milvus connections

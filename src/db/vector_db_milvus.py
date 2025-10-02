@@ -365,10 +365,6 @@ class MilvusVectorDatabase(VectorDatabase):
         if self.client is None:
             warnings.warn("Milvus client is not available. Documents not written.")
             return
-        self._ensure_client()
-        if self.client is None:
-            warnings.warn("Milvus client is not available. Documents not written.")
-            return
 
         # Use the specified collection name or fall back to the default
         target_collection = (
@@ -1469,7 +1465,10 @@ class MilvusVectorDatabase(VectorDatabase):
         if self.client is not None:
             if self.collection_name:
                 if await self.client.has_collection(self.collection_name):
-                    self.client.drop_collection(self.collection_name)
+                    try:
+                        await self.client.drop_collection(self.collection_name)
+                    except Exception:
+                        pass
         self.client = None
 
     @property
