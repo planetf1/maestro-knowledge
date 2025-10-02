@@ -5,6 +5,8 @@
 
 import pytest
 
+pytestmark = pytest.mark.unit
+
 
 def test_server_imports_absolute() -> None:
     """Test that server.py imports work with absolute imports."""

@@ -44,6 +44,7 @@ from pymilvus.exceptions import MilvusException
 from src.db.vector_db_milvus import MilvusVectorDatabase
 
 
+@pytest.mark.unit
 class TestMilvusVectorDatabase:
     """Test cases for the MilvusVectorDatabase implementation."""
 
@@ -341,7 +342,7 @@ class TestMilvusVectorDatabase:
     @pytest.mark.asyncio
     @patch("pymilvus.AsyncMilvusClient")
     async def test_list_documents(self, mock_milvus_client: AsyncMock) -> None:
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         # Milvus query returns a list of dictionaries directly
         mock_client.query.return_value = [
             {
@@ -451,7 +452,7 @@ class TestMilvusVectorDatabase:
     @pytest.mark.asyncio
     @patch("pymilvus.AsyncMilvusClient")
     async def test_cleanup(self, mock_milvus_client: AsyncMock) -> None:
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
         await db.cleanup()
@@ -532,7 +533,7 @@ class TestMilvusVectorDatabase:
     @patch("pymilvus.AsyncMilvusClient")
     async def test_get_document_success(self, mock_milvus_client: AsyncMock) -> None:
         """Test successfully getting a document by name."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.has_collection = AsyncMock(return_value=True)
         mock_client.query.return_value = [
             {
@@ -614,7 +615,7 @@ class TestMilvusVectorDatabase:
         self, mock_milvus_client: AsyncMock
     ) -> None:
         """Test getting a document when document doesn't exist."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.has_collection = AsyncMock(return_value=True)
         mock_client.query.return_value = []  # No documents found
         mock_milvus_client.return_value = mock_client
@@ -645,7 +646,7 @@ class TestMilvusVectorDatabase:
         self, mock_milvus_client: AsyncMock
     ) -> None:
         """Test getting a document with invalid metadata JSON."""
-        mock_client = MagicMock()
+        mock_client = AsyncMock()
         mock_client.has_collection = AsyncMock(return_value=True)
         mock_client.query.return_value = [
             {
@@ -718,7 +719,7 @@ class TestMilvusVectorDatabase:
     ) -> None:
         """Test that write_documents raises a MilvusException on client error."""
         mock_client = AsyncMock()
-        mock_client.insert.side_effect = MilvusException("Insert failed")
+        mock_client.insert.side_effect = MilvusException(1, "Insert failed")
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
         db.client = mock_client  # Directly set the client for the test
@@ -740,7 +741,7 @@ class TestMilvusVectorDatabase:
     ) -> None:
         """Test that delete_documents raises a MilvusException on client error."""
         mock_client = AsyncMock()
-        mock_client.delete.side_effect = MilvusException("Delete failed")
+        mock_client.delete.side_effect = MilvusException(1, "Delete failed")
         mock_milvus_client.return_value = mock_client
         db = MilvusVectorDatabase()
         db.client = mock_client  # Directly set the client for the test

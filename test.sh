@@ -174,6 +174,11 @@ if [ "$RUN_INTEGRATION_TESTS" = true ]; then
     print_status "✓ Integration tests completed"
 fi
 
+if { [ "$RUN_UNIT_TESTS" = true ] || [ "$RUN_INTEGRATION_TESTS" = true ]; } && [ "$RUN_E2E_TESTS" = false ]; then
+    print_header "Running Catch-all Unmarked Tests..."
+    PYTHONWARNINGS="ignore:PydanticDeprecatedSince20" PYTHONPATH=src uv run pytest -m "not unit and not integration and not e2e" -v || true
+    print_status "✓ Catch-all unmarked tests completed"
+fi
 
 
 # Run end-to-end Python tests if requested
