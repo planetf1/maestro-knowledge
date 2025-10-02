@@ -15,9 +15,9 @@ from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
-from ..chunking import ChunkingConfig
-from ..db.vector_db_base import VectorDatabase
-from ..db.vector_db_factory import create_vector_database
+from src.chunking import ChunkingConfig
+from src.db.vector_db_base import VectorDatabase
+from src.db.vector_db_factory import create_vector_database
 
 
 # Load environment variables from .env file
@@ -156,7 +156,7 @@ async def resync_vector_databases() -> list[str]:
         MilvusVectorDatabase = getattr(module, "MilvusVectorDatabase", None)
         if MilvusVectorDatabase is None:
             # Import here to avoid optional-dependency import at module load time
-            from ..db.vector_db_milvus import MilvusVectorDatabase
+            from src.db.vector_db_milvus import MilvusVectorDatabase
 
         # Add timeout protection for the entire resync operation
         timeout_seconds = int(os.getenv("MILVUS_RESYNC_TIMEOUT", "15"))
@@ -272,7 +272,7 @@ async def resync_weaviate_databases() -> list[str]:
     added: list[str] = []
     try:
         # Import lazily to avoid mandatory dependency when Weaviate isn't used
-        from ..db.vector_db_weaviate import WeaviateVectorDatabase
+        from src.db.vector_db_weaviate import WeaviateVectorDatabase
 
         # Add timeout protection for the entire resync operation
         timeout_seconds = int(os.getenv("WEAVIATE_RESYNC_TIMEOUT", "10"))
@@ -1193,7 +1193,7 @@ async def create_mcp_server() -> FastMCP:
 
             return f"Successfully deleted collection '{input.collection_name}' from vector database '{input.db_name}'"
         try:
-            from ..db.vector_db_milvus import MilvusVectorDatabase
+            from src.db.vector_db_milvus import MilvusVectorDatabase
 
             if input.collection_name is None:
                 raise ValueError(
@@ -1226,7 +1226,7 @@ async def create_mcp_server() -> FastMCP:
                 f"Successfully cleaned up and removed vector database '{input.db_name}'"
             )
         try:
-            from ..db.vector_db_milvus import MilvusVectorDatabase
+            from src.db.vector_db_milvus import MilvusVectorDatabase
 
             temp_db = MilvusVectorDatabase(collection_name=input.db_name)
             ok, _ = await run_with_timeout(
